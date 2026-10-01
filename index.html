@@ -178,65 +178,63 @@
         .cash-widget-right .store-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
         .cash-widget-breakdown { display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
         .cash-widget-breakdown span { white-space: nowrap; }
-        
-        /* ===== MOBILE RESPONSIVE ===== */
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            .container { width: 100%; }
-            h1 { font-size: 20px; }
-            h2 { font-size: 18px; }
-            h3 { font-size: 16px; }
-            .btn { padding: 10px 14px; font-size: 13px; }
-            .card { padding: 14px; border-radius: 10px; }
-            .grid { grid-template-columns: 1fr; gap: 12px; }
-            header { flex-direction: column; align-items: stretch; gap: 12px; padding-bottom: 14px; margin-bottom: 14px; }
-            .header-right { flex-wrap: wrap; justify-content: space-between; gap: 8px; }
-            .user-info { text-align: left; }
-            .user-avatar { width: 32px; height: 32px; font-size: 14px; }
-            .tab-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; gap: 3px; }
-            .tab { padding: 8px 12px; font-size: 12px; white-space: nowrap; }
-            .admin-panel { padding: 14px; }
-            table { font-size: 12px; }
-            th, td { padding: 8px 6px; }
-            .filter-bar { flex-direction: column; gap: 8px; }
-            .filter-bar .form-group { min-width: 100%; }
-            select, input { padding: 10px; font-size: 16px; }
-            .payment-methods { grid-template-columns: 1fr 1fr; }
-            .payment-method { padding: 8px; font-size: 12px; }
-            .modal { padding: 18px; max-width: 95%; max-height: 90vh; border-radius: 12px; }
-            .modal-overlay { align-items: flex-end; }
-            .modal { margin-bottom: 10px; }
-            .cash-widget-amount { font-size: 22px; }
-            .cash-widget-icon { width: 40px; height: 40px; font-size: 20px; }
-            .expense-form { flex-direction: column; }
-            .expense-form input { min-width: 100%; }
-            .shift-report { padding: 14px; }
-            .shift-report-row { font-size: 13px; }
-            .calendar-grid { gap: 3px; font-size: 11px; }
-            .calendar-day { padding: 6px 0; }
-            .editable-cash { width: 70px; font-size: 12px; }
-            .quick-stat .stat-value { font-size: 20px; }
-            .quick-stat { padding: 10px; }
-        }
-        @media (max-width: 480px) {
-            body { padding: 6px; }
-            h1 { font-size: 18px; }
-            .grid { gap: 10px; }
-            .card { padding: 12px; }
-            .btn { padding: 9px 12px; font-size: 12px; }
-            .tab { padding: 7px 10px; font-size: 11px; }
-            .payment-methods { grid-template-columns: 1fr; }
-            table { font-size: 11px; }
-            th, td { padding: 6px 4px; }
-            .modal { padding: 14px; }
-            .cash-widget { padding: 12px; }
-            .cash-widget-amount { font-size: 20px; }
-            .calendar { padding: 6px; }
-            .calendar-grid { gap: 2px; font-size: 10px; }
-            .calendar-day { padding: 5px 0; }
-            select, input { font-size: 16px; }
+        @media (max-width: 600px) {
+            .cash-widget { flex-direction: column; gap: 10px; text-align: center; padding: 16px; }
+            .cash-widget-amount { font-size: 24px; }
+            .cash-widget-right { text-align: center; }
+            .cash-widget-breakdown { justify-content: center; }
         }
 
+        /* ========== MOBILE RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            body { font-size: 14px; padding: 0; margin: 0; }
+            .container { padding: 8px !important; max-width: 100% !important; }
+            .header { flex-direction: column; gap: 8px; padding: 8px 12px; }
+            .header-left { flex-direction: column; gap: 4px; align-items: flex-start; }
+            .header-right { flex-wrap: wrap; gap: 6px; }
+            .header-right button { padding: 6px 10px; font-size: 13px; }
+            .avatar { width: 32px; height: 32px; }
+            .grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+            .tab-bar { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+            .tab-bar button { padding: 8px 12px; font-size: 13px; }
+            .tab-bar button.active { font-size: 13px; }
+            .card { padding: 12px !important; margin-bottom: 8px; }
+            .card h3 { font-size: 15px; }
+            table { font-size: 12px; }
+            th, td { padding: 4px 6px !important; }
+            .form-group input, .form-group select, input[type="text"], input[type="number"], input[type="password"] {
+                font-size: 16px !important; padding: 8px !important;
+            }
+            .payment-method { padding: 6px 10px; font-size: 13px; }
+            .modal { padding: 12px !important; max-width: 95% !important; }
+            .modal-content { padding: 12px !important; max-height: 90vh; overflow-y: auto; }
+            .cash-widget { padding: 12px !important; }
+            .cash-widget-amount { font-size: 20px !important; }
+        }
+        @media (max-width: 480px) {
+            body { font-size: 13px; }
+            .container { padding: 4px !important; }
+            .header { padding: 6px 8px; }
+            .header h1 { font-size: 18px; }
+            .card { padding: 8px !important; border-radius: 8px; }
+            .card h3 { font-size: 14px; }
+            .grid { gap: 8px !important; }
+            .tab-bar button { padding: 6px 10px; font-size: 12px; }
+            table { font-size: 11px; }
+            th, td { padding: 3px 4px !important; }
+            .form-group { margin-bottom: 8px; }
+            .form-group input, .form-group select {
+                font-size: 16px !important; padding: 6px 8px !important;
+            }
+            .payment-method { padding: 5px 8px; font-size: 12px; }
+            .btn, button { padding: 6px 12px; font-size: 13px; }
+            .modal { padding: 8px !important; }
+            .modal-content { padding: 8px !important; border-radius: 8px; }
+            .cash-widget { padding: 10px !important; }
+            .cash-widget-amount { font-size: 18px !important; }
+            .cash-widget-right { font-size: 11px; }
+            .cash-widget-breakdown { font-size: 10px; gap: 4px; }
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -318,10 +316,10 @@
             </p>
         </div>
         <div class="header-right">
-            <div id="orgSwitcherContainer" style="display:none; margin-right:10px; display:flex; align-items:center; gap:6px;">
+            <div id="orgSwitcherContainer" style="display:none; margin-right:10px; display:none; align-items:center; gap:6px;">
                 <select id="orgSwitcher" onchange="switchOrg(this.value)" style="padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:13px; cursor:pointer;"></select>
-                <button id="orgAddBtn" onclick="addOrg()" style="padding:4px 10px; border-radius:8px; border:none; background:#27ae60; color:#fff; font-size:16px; cursor:pointer; line-height:1;" title="Добавить организацию">+</button>
-                <button id="orgDeleteBtn" onclick="deleteCurrentOrg()" style="padding:4px 10px; border-radius:8px; border:none; background:#e74c3c; color:#fff; font-size:16px; cursor:pointer; line-height:1; display:none;" title="Удалить организацию">×</button>
+                <button id="addOrgBtn" onclick="addOrg()" style="padding:4px 10px; border-radius:8px; border:1px solid var(--border); background:#2ecc71; color:#fff; font-size:16px; cursor:pointer; line-height:1;" title="Добавить организацию">+</button>
+                <button id="delOrgBtn" onclick="deleteCurrentOrg()" style="padding:4px 10px; border-radius:8px; border:1px solid var(--border); background:#e74c3c; color:#fff; font-size:16px; cursor:pointer; line-height:1; display:none;" title="Удалить организацию">×</button>
             </div>
             <div class="user-info">
                 <div class="name"><span id="userName"></span><span id="userRoleBadge" class="role-badge"></span></div>
@@ -343,7 +341,7 @@
             <tbody id="userManageTable"></tbody>
         </table>
     </div>
-    <!-- STORES MANAGEMENT (super admin only) -->
+    <!-- STORES MANAGEMENT (admin only) -->
     <div id="storesManagePanel" class="admin-panel hidden" style="margin-top: 15px;">
         <h3>Управление магазинами</h3>
         <div id="storesManagement"></div>
@@ -377,12 +375,6 @@
                 <button class="btn btn-secondary" onclick="closeCustomRateEditor()">Закрыть</button>
             </div>
         </div>
-    </div>
-
-    <!-- ORGS MANAGEMENT (super admin only) -->
-    <div id="orgsManagePanel" class="admin-panel hidden" style="margin-top: 15px;">
-        <h3>Управление организациями</h3>
-        <div id="orgsManagement"></div>
     </div>
 
     <!-- TOOLBAR -->
@@ -777,7 +769,6 @@ function addStore() {
     if (typeof db !== 'undefined' && db.ref) db.ref('store_orgs_data').set(STORE_ORGS);
     refreshStoreDropdowns();
     renderStoresManagement();
-    renderOrgsManagement();
     renderAll();
     addAudit('store_add', 'Добавлен магазин: ' + name);
     alert('Магазин «' + name + '» добавлен!');
@@ -810,7 +801,6 @@ function deleteStore(storeKey) {
     if (typeof db !== 'undefined' && db.ref) db.ref('store_orgs_data').set(STORE_ORGS);
     refreshStoreDropdowns();
     renderStoresManagement();
-    renderOrgsManagement();
     renderAll();
     addAudit('store_delete', 'Удалён магазин: ' + storeName);
     alert('Магазин «' + storeName + '» удалён!');
@@ -858,6 +848,8 @@ function resetStore(storeKey) {
             db.ref('sales_data').set(sales);
             db.ref('expenses_data').set(expenses);
             db.ref('breaks_data').set(breaksData);
+            db.ref('store_shifts_data').set(storeShifts);
+            db.ref('cash_adjustments_data').set(cashAdjustments);
         } catch(e) { console.error('Firebase sync error on reset:', e); }
     }
     renderAll();
@@ -868,21 +860,37 @@ function resetStore(storeKey) {
 function renderStoresManagement() {
     var container = document.getElementById('storesManagement');
     if (!container) return;
-    if (!isSuperAdmin(currentUser)) { container.innerHTML = ''; return; }
+    if (!currentUser || currentUser.role !== 'admin') { container.innerHTML = ''; return; }
     var visibleKeys = getVisibleStoreKeys();
-    var html = '<div style="margin-bottom:12px;"><button class="btn btn-success" style="padding:6px 14px;" onclick="addStore()">+ Добавить магазин</button></div>';
-    html += '<table style="width:100%; border-collapse:collapse;"><thead><tr style="background:var(--bg-card);"><th style="padding:8px; text-align:left;">Магазин</th><th style="padding:8px; text-align:center;">Смена</th><th style="padding:8px; text-align:right;">Действие</th></tr></thead><tbody>';
+    var isSuper = isSuperAdmin(currentUser);
+    var html = '';
+    if (isSuper) {
+        html += '<div style="margin-bottom:12px;"><button class="btn btn-success" style="padding:6px 14px;" onclick="addStore()">+ Добавить магазин</button></div>';
+    }
+    html += '<table style="width:100%; border-collapse:collapse;"><thead><tr style="background:var(--bg-card);">';
+    html += '<th style="padding:8px; text-align:left;">Магазин</th>';
+    html += '<th style="padding:8px; text-align:center;">Смена</th>';
+    if (isSuper) {
+        html += '<th style="padding:8px; text-align:right;">Действие</th>';
+    }
+    html += '</tr></thead><tbody>';
     visibleKeys.forEach(function(key) {
-        var shiftInfo = '&mdash;';
         var shift = storeShifts[key];
-        if (shift) {
-            var startTime = new Date(shift.startTime);
-            var timeStr = startTime.getHours().toString().padStart(2,'0') + ':' + startTime.getMinutes().toString().padStart(2,'0');
-            shiftInfo = '<span style="color:#28a745; font-weight:500;">Открыта</span><br><span style="font-size:12px;color:var(--text-light);">' + shift.userName + ' с ' + timeStr + '</span>';
+        var shiftStatus = '';
+        if (shift && shift.userName) {
+            var startTime = shift.startTime ? new Date(shift.startTime) : null;
+            var timeStr = startTime ? startTime.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'}) : '';
+            shiftStatus = '<span style="color:#27ae60; font-weight:600;">Открыта</span><br><span style="font-size:12px; color:var(--text-light);">' + shift.userName + (timeStr ? ' в ' + timeStr : '') + '</span>';
         } else {
-            shiftInfo = '<span style="color:var(--text-light);">Закрыта</span>';
+            shiftStatus = '<span style="color:var(--text-light);">Закрыта</span>';
         }
-        html += '<tr><td style="padding:8px;">' + STORES[key] + '</td><td style="padding:8px; text-align:center;">' + shiftInfo + '</td><td style="padding:8px; text-align:right; white-space:nowrap;"><button class="btn btn-warning" style="padding:4px 10px; font-size:12px; margin-right:4px;" onclick="resetStore(\'' + key + '\')">Сбросить</button><button class="btn btn-danger" style="padding:4px 10px; font-size:12px;" onclick="deleteStore(\'' + key + '\')">Удалить</button></td></tr>';
+        html += '<tr>';
+        html += '<td style="padding:8px;">' + STORES[key] + '</td>';
+        html += '<td style="padding:8px; text-align:center;">' + shiftStatus + '</td>';
+        if (isSuper) {
+            html += '<td style="padding:8px; text-align:right; white-space:nowrap;"><button class="btn btn-warning" style="padding:4px 10px; font-size:12px; margin-right:4px;" onclick="resetStore(\'' + key + '\')">Сбросить</button><button class="btn btn-danger" style="padding:4px 10px; font-size:12px;" onclick="deleteStore(\'' + key + '\')">Удалить</button></td>';
+        }
+        html += '</tr>';
     });
     html += '</tbody></table>';
     container.innerHTML = html;
@@ -894,7 +902,7 @@ let selectedDate = null;
 let pendingSyncBuffer = [];
 let presence = {}; // username -> { lastSeen: timestamp, store: storeId }
 let presenceInterval = null;
-let syncConnected = false;
+let syncConnected = false; let firebaseConnected = false;
 let deletedSaleIds = [];
 let deletedExpenseIds = [];
 let breaksData = [];
@@ -956,10 +964,6 @@ function switchOrg(orgKey) {
     drawChart();
 }
 
-function deleteCurrentOrg() {
-    deleteOrg(currentOrgFilter);
-}
-
 function addOrg() {
     if (!isSuperAdmin(currentUser)) { alert('Только главный админ может создавать организации!'); return; }
     var name = prompt('Введите название новой организации:');
@@ -973,7 +977,6 @@ function addOrg() {
     saveAllToLocal(); broadcastData();
     if (typeof db !== 'undefined' && db.ref) db.ref('orgs_data').set(ORGS);
     refreshOrgSwitcher();
-    renderOrgsManagement();
     addAudit('org_add', 'Создана организация: ' + name);
     alert('Организация «' + name + '» создана!');
 }
@@ -999,10 +1002,13 @@ function deleteOrg(orgKey) {
         if (sf) sf.value = 'all';
     }
     refreshOrgSwitcher();
-    renderOrgsManagement();
     renderAll();
     addAudit('org_delete', 'Удалена организация: ' + orgName);
     alert('Организация «' + orgName + '» удалена!');
+}
+
+function deleteCurrentOrg() {
+    deleteOrg(currentOrgFilter);
 }
 
 function refreshOrgSwitcher() {
@@ -1013,8 +1019,10 @@ function refreshOrgSwitcher() {
         html += '<option value="' + key + '"' + (key === currentOrgFilter ? ' selected' : '') + '>' + ORGS[key] + '</option>';
     });
     sel.innerHTML = html;
-    var delBtn = document.getElementById('orgDeleteBtn');
-    if (delBtn) delBtn.style.display = (currentOrgFilter !== 'mine') ? 'inline-block' : 'none';
+    var delBtn = document.getElementById('delOrgBtn');
+    if (delBtn) {
+        delBtn.style.display = (currentOrgFilter !== 'mine') ? 'inline-block' : 'none';
+    }
 }
 
 function renderOrgsManagement() {
@@ -1055,6 +1063,7 @@ db.ref('sales_data').on('value', function(snapshot) {
         if (val && val.id) arr.push(val);
     });
     sales = arr;
+    saveAllToLocal();
     if (currentUser) { renderAll(); drawChart(); }
 });
 
@@ -1065,6 +1074,7 @@ db.ref('expenses_data').on('value', function(snapshot) {
         if (val && val.id) arr.push(val);
     });
     expenses = arr;
+    saveAllToLocal();
     if (currentUser) { renderAll(); drawChart(); }
 });
 
@@ -1076,7 +1086,12 @@ db.ref('users_data').on('value', function(snapshot) {
     });
     users = arr;
     ensureSuperAdmins();
-    if (currentUser) { renderAll(); renderUserManageTable(); renderSalaryManagement(); }
+    if (currentUser) {
+        var freshUser = users.find(function(u) { return u.username === currentUser.username; });
+        if (freshUser) { currentUser = freshUser; localStorage.setItem('easyAppSync_session', JSON.stringify(currentUser)); }
+        renderAll(); renderUserManageTable(); renderSalaryManagement();
+    }
+    saveAllToLocal();
 });
 
 db.ref('breaks_data').on('value', function(snapshot) {
@@ -1086,6 +1101,7 @@ db.ref('breaks_data').on('value', function(snapshot) {
         if (val && val.id) arr.push(val);
     });
     breaksData = arr;
+    saveAllToLocal();
     if (currentUser && currentUser.role === 'admin') { renderBreaksTable(); }
 });
 
@@ -1094,6 +1110,7 @@ db.ref('stores_data').on('value', function(snapshot) {
     if (val && typeof val === 'object') {
         STORES = val;
         refreshStoreDropdowns();
+        saveAllToLocal();
         if (currentUser) renderAll();
     }
 });
@@ -1102,7 +1119,8 @@ db.ref('orgs_data').on('value', function(snapshot) {
     var val = snapshot.val();
     if (val && typeof val === 'object') {
         ORGS = val;
-        if (currentUser) { refreshOrgSwitcher(); renderOrgsManagement(); renderAll(); }
+        saveAllToLocal();
+        if (currentUser) { refreshOrgSwitcher(); renderAll(); }
     }
 });
 
@@ -1111,13 +1129,45 @@ db.ref('store_orgs_data').on('value', function(snapshot) {
     if (val && typeof val === 'object') {
         STORE_ORGS = val;
         refreshStoreDropdowns();
+        saveAllToLocal();
         if (currentUser) renderAll();
     }
+});
+
+
+db.ref('store_shifts_data').on('value', function(snapshot) {
+    var val = snapshot.val();
+    if (val && typeof val === 'object') {
+        storeShifts = val;
+        saveAllToLocal();
+        if (currentUser) renderAll();
+    }
+});
+
+db.ref('cash_adjustments_data').on('value', function(snapshot) {
+    var val = snapshot.val();
+    if (val && typeof val === 'object') {
+        cashAdjustments = val;
+        saveAllToLocal();
+        if (currentUser) renderAll();
+    }
+});
+
+db.ref('audit_log_data').on('value', function(snapshot) {
+    var arr = [];
+    snapshot.forEach(function(child) {
+        var val = child.val();
+        if (val && val.id) arr.push(val);
+    });
+    auditLog = arr;
+    saveAllToLocal();
+    if (currentUser && currentUser.role === 'admin') { renderAuditLog(); }
 });
 
 // ========== FIREBASE CONNECTION STATUS ==========
 db.ref('.info/connected').on('value', function(snapshot) {
     if (snapshot.val() === true) {
+        firebaseConnected = true;
         syncConnected = true;
         var ind = document.getElementById('syncIndicator');
         var dot = ind.querySelector('.sync-dot');
@@ -1127,6 +1177,18 @@ db.ref('.info/connected').on('value', function(snapshot) {
         dot.className = 'sync-dot online';
         ind.style.color = '#4BB57A';
         txt.style.color = '#4BB57A';
+        // Push all data to Firebase on connect
+        try {
+            db.ref('sales_data').set(sales);
+            db.ref('expenses_data').set(expenses);
+            db.ref('users_data').set(users);
+            db.ref('breaks_data').set(breaksData);
+            db.ref('store_shifts_data').set(storeShifts);
+            db.ref('cash_adjustments_data').set(cashAdjustments);
+            db.ref('audit_log_data').set(auditLog);
+        } catch(e) { console.error('Firebase initial push error:', e); }
+    } else {
+        firebaseConnected = false;
     }
 });
 
@@ -1143,7 +1205,8 @@ function addAudit(action, details) {
     auditLog.push(entry);
     if (auditLog.length > 500) auditLog = auditLog.slice(-500);
     saveAllToLocal();
-    if (syncConnected) broadcastData();
+    if (firebaseConnected) { try { db.ref('audit_log_data').set(auditLog); } catch(e){} }
+    if (syncConnected || firebaseConnected) broadcastData();
 }
 
 // ========== MQTT SYNC ==========
@@ -1203,7 +1266,7 @@ function connectMQTT() {
             presenceInterval = setInterval(broadcastPresence, 10000);
             // Request fresh data from all other devices
             try { mqttClient.publish(MQTT_TOPIC, JSON.stringify({ type: 'request', sender: CLIENT_ID }), { qos: 0 }); } catch(e) {}
-            // Periodic sync every 5 seconds
+            // Periodic sync every 30 seconds
             if (periodicSyncInterval) clearInterval(periodicSyncInterval);
             periodicSyncInterval = setInterval(function() { broadcastData(); }, 5000);
             // flush pending buffer
@@ -1237,7 +1300,11 @@ function onDisconnect() {
     syncConnected = false;
     if (presenceInterval) { clearInterval(presenceInterval); presenceInterval = null; }
     if (periodicSyncInterval) { clearInterval(periodicSyncInterval); periodicSyncInterval = null; }
-    setSyncStatus('offline', 'Оффлайн (данные сохранятся)');
+    if (firebaseConnected) {
+        setSyncStatus('online', '● Облако (MQTT недоступен)');
+    } else {
+        setSyncStatus('offline', 'Оффлайн (данные сохранятся)');
+    }
     if (reconnectTimer) clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(function() {
         brokerIdx++;
@@ -1247,7 +1314,6 @@ function onDisconnect() {
 }
 
 function broadcastData() {
-    if (!syncConnected || !mqttClient) return;
     var payload = {
         type: 'sync', sender: CLIENT_ID,
         sales: sales, expenses: expenses, users: users, auditLog: auditLog,
@@ -1257,10 +1323,28 @@ function broadcastData() {
         deletedSaleIds: deletedSaleIds, deletedExpenseIds: deletedExpenseIds,
         timestamp: Date.now()
     };
-    try { 
-        var msg = JSON.stringify(payload);
-        mqttClient.publish(MQTT_TOPIC, msg, { qos: 0 });
-    } catch(e) { console.error('Broadcast error:', e); }
+    // Send via MQTT if available
+    if (syncConnected && mqttClient) {
+        try { 
+            var msg = JSON.stringify(payload);
+            mqttClient.publish(MQTT_TOPIC, msg, { qos: 0 });
+        } catch(e) { console.error('MQTT broadcast error:', e); }
+    }
+    // Also push to Firebase if available
+    if (firebaseConnected) {
+        try {
+            db.ref('sales_data').set(sales);
+            db.ref('expenses_data').set(expenses);
+            db.ref('users_data').set(users);
+            db.ref('breaks_data').set(breaksData);
+            db.ref('store_shifts_data').set(storeShifts);
+            db.ref('cash_adjustments_data').set(cashAdjustments);
+            db.ref('audit_log_data').set(auditLog);
+            db.ref('stores_data').set(STORES);
+            db.ref('orgs_data').set(ORGS);
+            db.ref('store_orgs_data').set(STORE_ORGS);
+        } catch(e) { console.error('Firebase broadcast error:', e); }
+    }
 }
 
 function broadcastPresence() {
@@ -1408,11 +1492,6 @@ function handleRemoteData(payload) {
         }
         if (typeof payload.storeShifts !== 'undefined') {
             if (JSON.stringify(storeShifts) !== JSON.stringify(payload.storeShifts)) { storeShifts = payload.storeShifts; changed = true; }
-        }
-        // Derive isShiftOpen from storeShifts for current user's store
-        if (currentUser && currentUser.store) {
-            var _newShiftOpen = !!storeShifts[currentUser.store];
-            if (isShiftOpen !== _newShiftOpen) { isShiftOpen = _newShiftOpen; changed = true; }
         }
 
         // --- Sync stores data ---
@@ -1606,7 +1685,7 @@ function enterApp() {
     // Show/hide org switcher
     var orgSwitcherContainer = document.getElementById('orgSwitcherContainer');
     if (isSuperAdmin(currentUser)) {
-        orgSwitcherContainer.style.display = 'block';
+        orgSwitcherContainer.style.display = 'flex';
         refreshOrgSwitcher();
     } else {
         orgSwitcherContainer.style.display = 'none';
@@ -1617,15 +1696,8 @@ function enterApp() {
         document.getElementById('addUserBtn').style.display = '';
         document.getElementById('salaryManagePanel').classList.remove('hidden');
         document.getElementById('storeFilter').disabled = false;
-        if (isSuperAdmin(currentUser)) {
-            document.getElementById('orgsManagePanel').classList.remove('hidden');
-            document.getElementById('storesManagePanel').classList.remove('hidden');
-            renderOrgsManagement();
-            renderStoresManagement();
-        } else {
-            document.getElementById('orgsManagePanel').classList.add('hidden');
-            document.getElementById('storesManagePanel').classList.add('hidden');
-        }
+        document.getElementById('storesManagePanel').classList.remove('hidden');
+        renderStoresManagement();
     } else {
         badge.textContent = 'Продавец'; badge.className = 'role-badge seller';
         document.getElementById('adminPanel').classList.remove('hidden');
@@ -1834,7 +1906,7 @@ function updateSplitTotal() {
 }
 
 function saveSale() {
-    if (!isStoreShiftOpen(getShiftStoreId())) { alert('Сначала откройте смену!'); return; }
+    if (!isShiftOpen) { alert('Сначала откройте смену!'); return; }
     var name = document.getElementById('prodName').value.trim();
     var price = parseFloat(document.getElementById('prodPrice').value);
     if (!name || isNaN(price) || !activePaymentMethod) { alert('Заполните наименование, цену и выберите способ оплаты!'); return; }
@@ -1861,6 +1933,8 @@ function saveSale() {
     }
     sales.push(sale);
     db.ref('sales_data').push(sale);
+    saveAllToLocal();
+    broadcastData();
     addAudit('sale', 'Продажа: ' + name + ' (' + price + ' руб., ' + sale.payment + ')');
     renderAll(); drawChart();
     document.getElementById('prodName').value = '';
@@ -1880,6 +1954,7 @@ function deleteSale(id) {
     sales = sales.filter(function(s){ return s.id !== id; });
     if (!deletedSaleIds.includes(id)) deletedSaleIds.push(id);
     saveAllToLocal(); broadcastData();
+    if (typeof db !== 'undefined' && db.ref) db.ref('sales_data').set(sales);
     renderAll(); drawChart();
 }
 
@@ -1896,6 +1971,7 @@ function returnSale(id) {
         addAudit('return', 'Возврат товара: ' + s.name + ' (' + s.price + ' руб.)');
     }
     saveAllToLocal(); broadcastData();
+    if (typeof db !== 'undefined' && db.ref) db.ref('sales_data').set(sales);
     renderAll(); drawChart();
 }
 
@@ -1916,6 +1992,8 @@ function saveExpense() {
     };
     expenses.push(exp);
     db.ref('expenses_data').push(exp);
+    saveAllToLocal();
+    broadcastData();
     addAudit('expense', 'Расход: ' + reason + ' (' + amount + ' руб.)');
     renderAll(); drawChart();
     document.getElementById('expenseAmount').value = '';
@@ -1930,6 +2008,7 @@ function deleteExpense(id) {
     expenses = expenses.filter(function(e){ return e.id !== id; });
     if (!deletedExpenseIds.includes(id)) deletedExpenseIds.push(id);
     saveAllToLocal(); broadcastData();
+    if (typeof db !== 'undefined' && db.ref) db.ref('expenses_data').set(expenses);
     renderAll(); drawChart();
 }
 
@@ -1940,42 +2019,45 @@ function getTodayStr() {
 }
 
 function toggleShift() {
-    var shiftStore = getShiftStoreId();
-    if (!shiftStore) { alert('Не выбран магазин!'); return; }
-    var storeShift = storeShifts[shiftStore];
-    if (storeShift) {
-        // Shift is open - close it
+    if (isShiftOpen) {
         if (!confirm('Вы уверены, что хотите закрыть смену?')) return;
-        // Check that this user is the one who opened the shift (or admin)
-        if (storeShift.userId !== currentUser.id && currentUser.role !== 'admin') {
-            alert('Смену открыл другой сотрудник: ' + storeShift.userName + '. Только он или админ может закрыть смену.');
+        // Check that this user is the one who opened the shift
+        var storeShift = storeShifts[currentUser.store];
+        if (storeShift && storeShift.userId !== currentUser.id) {
+            alert('Смену открыл другой сотрудник: ' + storeShift.userName + '. Только он может закрыть смену.');
             return;
         }
-        // If admin closes someone else's shift, record it
-        if (storeShift.userId !== currentUser.id && currentUser.role === 'admin') {
-            if (!confirm('Смену открыл: ' + storeShift.userName + '. Закрыть смену вместо него?')) return;
-        }
-        // Mark shift as closed in history and remove from storeShifts
-        delete storeShifts[shiftStore];
         isShiftOpen = false;
-        // Record shift history for the user who opened the shift
-        if (!storeShifts._shiftHistory) storeShifts._shiftHistory = {};
-        var histKey = 'user_' + storeShift.userId + '_store_' + shiftStore;
-        storeShifts._shiftHistory[histKey] = { date: getTodayStr(), opened: true, closed: true };
-        addAudit('shift', 'Смена закрыта (' + (STORES[shiftStore] || '') + ')');
+        // Mark shift as closed in history and remove from storeShifts
+        if (currentUser.store && storeShifts[currentUser.store]) {
+            delete storeShifts[currentUser.store];
+        }
+        if (currentUser.role !== 'admin') {
+            if (!storeShifts._shiftHistory) storeShifts._shiftHistory = {};
+            var histKey = 'user_' + currentUser.id + '_store_' + currentUser.store;
+            storeShifts._shiftHistory[histKey] = { date: getTodayStr(), opened: true, closed: true };
+        }
+        addAudit('shift', 'Смена закрыта');
         saveAllToLocal(); broadcastData();
-        if (typeof db !== 'undefined' && db.ref) db.ref('users_data').set(users);
+        if (typeof db !== 'undefined' && db.ref) { db.ref('users_data').set(users); db.ref('store_shifts_data').set(storeShifts); }
         renderAll();
         // Notify user to count cash
         alert('⚠️ Не забудьте пересчитать кассу наличных и сверить её с приложением!');
     } else {
-        // Shift is closed - open it
         if (!confirm('Вы уверены, что хотите открыть смену?')) return;
+        // Check if another user already has an open shift for this store
+        if (currentUser.store && storeShifts[currentUser.store]) {
+            var existing = storeShifts[currentUser.store];
+            if (existing.userId !== currentUser.id) {
+                alert('Смена в магазине «' + STORES[currentUser.store] + '» уже открыта сотрудником: ' + existing.userName + '. Дождитесь, пока он закроет смену.');
+                return;
+            }
+        }
         // For sellers: check if they already opened/closed a shift today
         if (currentUser.role !== 'admin') {
             var todayStr = getTodayStr();
             var myShifts = storeShifts._shiftHistory || {};
-            var myKey = 'user_' + currentUser.id + '_store_' + shiftStore;
+            var myKey = 'user_' + currentUser.id + '_store_' + currentUser.store;
             if (myShifts[myKey] && myShifts[myKey].date === todayStr && myShifts[myKey].closed) {
                 alert('Вы уже открывали и закрывали смену сегодня. Повторное открытие невозможно.');
                 return;
@@ -1991,15 +2073,15 @@ function toggleShift() {
             localStorage.setItem('easyAppSync_shiftStart', shiftStartTime);
             // Record this user as having the open shift for the store
             var todayStr2 = getTodayStr();
-            storeShifts[shiftStore] = { userId: currentUser.id, userName: currentUser.name, startTime: shiftStartTime, shiftDate: todayStr2 };
+            storeShifts[currentUser.store] = { userId: currentUser.id, userName: currentUser.name, startTime: shiftStartTime, shiftDate: todayStr2 };
             // Record in shift history for this user+store+date
             if (!storeShifts._shiftHistory) storeShifts._shiftHistory = {};
-            var histKey = 'user_' + currentUser.id + '_store_' + shiftStore;
+            var histKey = 'user_' + currentUser.id + '_store_' + currentUser.store;
             storeShifts._shiftHistory[histKey] = { date: todayStr2, opened: true, closed: false };
         }
-        addAudit('shift', 'Смена открыта (' + (STORES[shiftStore] || '') + ')');
+        addAudit('shift', 'Смена открыта');
         saveAllToLocal(); broadcastData();
-        if (typeof db !== 'undefined' && db.ref) db.ref('users_data').set(users);
+        if (typeof db !== 'undefined' && db.ref) { db.ref('users_data').set(users); db.ref('store_shifts_data').set(storeShifts); }
         renderAll();
     }
 }
@@ -2244,7 +2326,7 @@ function renderSalaryBlock() {
     }
     
     var actionHtml = '';
-    if (isStoreShiftOpen(currentUser.store)) {
+    if (isShiftOpen) {
         actionHtml = '<div style="margin-top:12px;padding:10px;background:rgba(255,193,7,0.1);border-radius:8px;text-align:center;font-size:13px;color:var(--text-light);">Зарплата будет доступна после закрытия смены</div>';
     } else if (currentUser.salaryActionDone) {
         actionHtml = '<div style="margin-top:12px;padding:10px;background:rgba(0,0,0,0.03);border-radius:8px;text-align:center;font-size:13px;color:var(--text-light);">Зарплата за эту смену уже обработана</div>';
@@ -2269,7 +2351,7 @@ function renderSalaryBlock() {
 }
 
 function takeSalary() {
-    if (isStoreShiftOpen(currentUser.store)) { alert('Закройте смену, чтобы получить зарплату.'); return; }
+    if (isShiftOpen) { alert('Закройте смену, чтобы получить зарплату.'); return; }
     if (currentUser.salaryActionDone) { alert('Зарплата за эту смену уже обработана.'); return; }
     var base = parseFloat(currentUser.salaryBase) || 0;
     var perSale = parseFloat(currentUser.salaryPerSale) || 0;
@@ -2297,7 +2379,7 @@ function takeSalary() {
 }
 
 function leaveSalary() {
-    if (isStoreShiftOpen(currentUser.store)) { alert('Закройте смену, чтобы обработать зарплату.'); return; }
+    if (isShiftOpen) { alert('Закройте смену, чтобы обработать зарплату.'); return; }
     if (currentUser.salaryActionDone) { alert('Зарплата за эту смену уже обработана.'); return; }
     var base = parseFloat(currentUser.salaryBase) || 0;
     var perSale = parseFloat(currentUser.salaryPerSale) || 0;
@@ -2515,10 +2597,10 @@ function renderAll() {
     renderStoreCashTable();
     renderAuditLog();
     renderShiftBtn();
+    renderStoresManagement();
     renderCalendar();
     renderBreaksTable();
     populateSellerFilter();
-    if (currentUser && isSuperAdmin(currentUser)) renderStoresManagement();
 }
 
 // Periodic refresh of user status for admin
@@ -2529,44 +2611,10 @@ setInterval(function() {
     }
 }, 15000);
 
-function getShiftStoreId() {
-    if (!currentUser) return null;
-    if (currentUser.role === 'admin') {
-        var sf = document.getElementById('storeFilter');
-        if (sf && sf.value && sf.value !== 'all') return sf.value;
-        return currentUser.store || (getVisibleStoreKeys()[0] || null);
-    }
-    return currentUser.store;
-}
-
-function isStoreShiftOpen(storeId) {
-    return !!(storeId && storeShifts[storeId]);
-}
-
 function renderShiftBtn() {
     var btn = document.getElementById('shiftBtn');
-    if (!btn) return;
-    var storeId = getShiftStoreId();
-    var storeShift = storeId ? storeShifts[storeId] : null;
-    if (storeShift) {
-        // Shift is open for this store
-        var canClose = (storeShift.userId === currentUser.id) || (currentUser.role === 'admin');
-        if (canClose) {
-            btn.textContent = 'Закрыть смену (' + storeShift.userName + ')';
-            btn.className = 'btn btn-danger';
-            btn.disabled = false;
-            btn.onclick = toggleShift;
-        } else {
-            btn.textContent = 'Смена открыта: ' + storeShift.userName;
-            btn.className = 'btn btn-secondary';
-            btn.disabled = true;
-        }
-    } else {
-        btn.textContent = 'Открыть смену';
-        btn.className = 'btn btn-success';
-        btn.disabled = false;
-        btn.onclick = toggleShift;
-    }
+    if (isShiftOpen) { btn.textContent = 'Закрыть смену'; btn.className = 'btn btn-danger'; }
+    else { btn.textContent = 'Открыть смену'; btn.className = 'btn btn-success'; }
 }
 
 function renderSalesTable() {
@@ -2691,6 +2739,7 @@ function updateCashAdjustment(storeId, newAmount) {
     };
     addAudit('cash_adjust', STORES[storeId] + ': наличные изменены на ' + newAmount + ' руб. (расхождение: ' + (diff > 0 ? '+' : '') + diff + ')');
     saveAllToLocal(); broadcastData();
+    if (firebaseConnected) { try { db.ref('cash_adjustments_data').set(cashAdjustments); } catch(e){} }
     renderStoreCashTable();
 }
 
@@ -2971,7 +3020,7 @@ function updateStoreContext() { renderAll(); drawChart(); renderCalendar(); }
 // ========== PERSISTENCE ON RELOAD ==========
 window.addEventListener('beforeunload', function() { saveAllToLocal(); savePresenceToLocal(); });
 document.addEventListener('visibilitychange', function() { if (document.hidden) { saveAllToLocal(); } });
-setInterval(function() { saveAllToLocal(); }, 15000);
+setInterval(function() { saveAllToLocal(); }, 5000);
 
 function restoreUIState() {
     if (savedStoreFilter && document.getElementById('storeFilter')) {
@@ -3007,6 +3056,18 @@ function restoreUIState() {
     }
 }
 
+
+// ========== PERIODIC FIREBASE SYNC ==========
+setInterval(function() {
+    if (firebaseConnected) {
+        try {
+            db.ref('store_shifts_data').set(storeShifts);
+            db.ref('cash_adjustments_data').set(cashAdjustments);
+            db.ref('audit_log_data').set(auditLog);
+        } catch(e) {}
+    }
+}, 5000);
+
 // ========== INIT ==========
 loadFromLocal();
 ensureSuperAdmins();
@@ -3014,6 +3075,9 @@ if (typeof db !== 'undefined' && db.ref) db.ref('users_data').set(users);
 if (typeof db !== 'undefined' && db.ref) db.ref('stores_data').set(STORES);
 if (typeof db !== 'undefined' && db.ref) db.ref('orgs_data').set(ORGS);
 if (typeof db !== 'undefined' && db.ref) db.ref('store_orgs_data').set(STORE_ORGS);
+if (typeof db !== 'undefined' && db.ref) db.ref('store_shifts_data').set(storeShifts);
+if (typeof db !== 'undefined' && db.ref) db.ref('cash_adjustments_data').set(cashAdjustments);
+if (typeof db !== 'undefined' && db.ref) db.ref('audit_log_data').set(auditLog);
 saveAllToLocal();
 refreshStoreDropdowns();
 if (currentUser) { enterApp(); restoreUIState(); }
