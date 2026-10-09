@@ -572,8 +572,9 @@
                     <div id="salesCityFilterContainer" style="display: flex; align-items: center; gap: 8px;">
                         <div style="display: inline-flex; align-items: center; gap: 8px;">
     <label style="margin: 0; font-size: 13px; white-space: nowrap;">Дата:</label>
-    <input type="date" id="salesHistoryDateFilter" onchange="if(typeof renderSalesTable==='function')renderSalesTable()" style="padding: 4px 8px; font-size: 13px; width: 140px; border: 1px solid var(--border); border-radius: 6px;">
-</div>
+            <input type="date" id="salesHistoryDateFilter" onchange="renderAll()" style="padding: 4px 8px; font-size: 13px; width: 140px; border: 1px solid var(--border); border-radius: 6px;">
+    </div>
+
 
                         <label style="margin: 0; font-size: 13px; white-space: nowrap;">Магазин:</label>
                         <select id="salesCityFilter" onchange="renderSalesTable()" style="padding: 6px 10px; font-size: 13px; min-width: 160px;">
@@ -2914,7 +2915,7 @@ function renderShiftBtn() {
 function renderSalesTable() {
     if (!currentUser) return;
     var tbody = document.getElementById('salesHistoryTable');
-    var filtered = getFilteredSales();
+    var filtered = sales;
     tbody.innerHTML = '';
     if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-light);">Нет продаж</td></tr>';
