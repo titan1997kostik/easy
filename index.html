@@ -530,8 +530,16 @@
 
     <!-- CHART -->
     <div class="card" style="margin-bottom: 20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3 style="border:none; padding:0; margin:0;">График выручки</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <h3 style="border-none; padding:0; margin:0; display:inline-block;">График</h3>
+                <select id="chartMetricSelect" onchange="if(typeof drawChart==='function')drawChart()" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); font-size:13px; font-weight:600; width:160px;">
+                    <option value="revenue">Выручка (руб)</option>
+                    <option value="cash">Наличные (руб)</option>
+                    <option value="checks">Чеки (шт)</option>
+                    <option value="expenses">Расходы (руб)</option>
+                </select>
+            </div>
             <div style="display:flex; gap:5px;">
                 <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;" id="chartWeekBtn" onclick="setChartPeriod('week')">Неделя</button>
                 <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;" id="chartMonthBtn" onclick="setChartPeriod('month')">Месяц</button>
@@ -541,6 +549,9 @@
         <div class="chart-container">
             <canvas id="revenueChart"></canvas>
         </div>
+        <!-- Новый блок для вывода процентного сравнения периодов -->
+        <div id="chartAnalyticsBlock" style="margin-top:15px; padding:12px; background:#fdf2f7; border:1px solid var(--border); border-radius:10px; font-size:13px; line-height:1.6;"></div>
+
     </div>
 
     <!-- TAB BAR -->
@@ -3074,15 +3085,14 @@ function switchTab(name, el) {
 // ========== CHART ==========
 function setChartPeriod(period) {
     chartPeriod = period;
-    document.getElementById('chartWeekBtn').className = 'btn ' + (period === 'week' ? 'btn-success' : 'btn-secondary');
-    document.getElementById('chartMonthBtn').className = 'btn ' + (period === 'month' ? 'btn-success' : 'btn-secondary');
-    document.getElementById('chartYearBtn').className = 'btn ' + (period === 'year' ? 'btn-success' : 'btn-secondary');
-    document.getElementById('chartWeekBtn').style.padding = '6px 12px';
-    document.getElementById('chartWeekBtn').style.fontSize = '12px';
-    document.getElementById('chartMonthBtn').style.padding = '6px 12px';
-    document.getElementById('chartMonthBtn').style.fontSize = '12px';
-    document.getElementById('chartYearBtn').style.padding = '6px 12px';
-    document.getElementById('chartYearBtn').style.fontSize = '12px';
+    var btnWeek = document.getElementById('chartWeekBtn');
+    var btnMonth = document.getElementById('chartMonthBtn');
+    var btnYear = document.getElementById('chartYearBtn');
+    
+    if (btnWeek) btnWeek.className = 'btn ' + (period === 'week' ? 'btn-success' : 'btn-secondary');
+    if (btnMonth) btnMonth.className = 'btn ' + (period === 'month' ? 'btn-success' : 'btn-secondary');
+    if (btnYear) btnYear.className = 'btn ' + (period === 'year' ? 'btn-success' : 'btn-secondary');
+    
     drawChart();
 }
 
@@ -3090,76 +3100,228 @@ function drawChart() {
     var canvas = document.getElementById('revenueChart');
     if (!canvas) return;
     var ctx = canvas.getContext('2d');
-    var rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-    var w = canvas.width, h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
+    if (!ctx) return;
 
-    var filtered = getFilteredSales();
-    var days = chartPeriod === 'week' ? 7 : (chartPeriod === 'month' ? 30 : 365);
-    var labels = [];
-    var data = [];
-    var now = new Date();
-    for (var i = days - 1; i >= 0; i--) {
-        var d = new Date(now);
-        d.setDate(d.getDate() - i);
-        var dateStr = d.toISOString().slice(0, 10);
-        var dayTotal = 0;
-        filtered.forEach(function(s) {
-            if (!s.returned && s.timestamp.slice(0, 10) === dateStr) dayTotal += s.price;
-        });
-        if (chartPeriod === 'year') {
-            labels.push((d.getMonth()+1) + '/' + d.getDate());
-        } else {
-            labels.push(d.getDate());
+    var selectMetric = document.getElementById('chartMetricSelect');
+    var analyticsBlock = document.getElementById('chartAnalyticsBlock');
+    
+    if (currentUser && currentUser.role === 'seller') {
+        if (selectMetric) {
+            selectMetric.value = 'checks';
+            selectMetric.style.display = 'none';
         }
-        data.push(dayTotal);
+        if (analyticsBlock) analyticsBlock.style.display = 'none';
+    } else {
+        if (selectMetric) selectMetric.style.display = 'inline-block';
+        if (analyticsBlock) analyticsBlock.style.display = 'block';
     }
 
-    var maxVal = Math.max.apply(null, data);
-    if (maxVal === 0) maxVal = 1;
-    var padLeft = 50, padRight = 10, padTop = 10, padBottom = 25;
-    var chartW = w - padLeft - padRight;
-    var chartH = h - padTop - padBottom;
-    var barW = chartW / data.length;
-    var gap = barW * 0.2;
-
-    // Y axis labels
-    ctx.fillStyle = '#c9b0b8';
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'right';
-    for (var j = 0; j <= 4; j++) {
-        var val = Math.round(maxVal * j / 4);
-        var y = padTop + chartH - (chartH * j / 4);
-        ctx.fillText(val, padLeft - 5, y + 4);
-        ctx.strokeStyle = '#fbeef3';
-        ctx.beginPath(); ctx.moveTo(padLeft, y); ctx.lineTo(w - padRight, y); ctx.stroke();
+    var metric = selectMetric ? selectMetric.value : 'revenue';
+    var targetStore = 'all';
+    if (currentUser && currentUser.role === 'seller') {
+        targetStore = currentUser.store;
+    } else {
+        var f = document.getElementById('storeFilter');
+        if (f) targetStore = f.value;
     }
 
-    // Bars
-    for (var k = 0; k < data.length; k++) {
-        var barH = (data[k] / maxVal) * chartH;
-        var x = padLeft + k * barW + gap/2;
-        var y = padTop + chartH - barH;
-        ctx.fillStyle = data[k] > 0 ? '#e87fb0' : '#f0d4dd';
-        ctx.fillRect(x, y, barW - gap, barH);
-        // Label
-        if (chartPeriod === 'week' || (chartPeriod === 'month' && k % 5 === 0) || (chartPeriod === 'year' && k % 30 === 0)) {
+    var visibleKeys = typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys() : [];
+
+    var activeSales = sales.filter(function(s) {
+        return visibleKeys.indexOf(s.storeId) !== -1 && (targetStore === 'all' || s.storeId === targetStore);
+    });
+    var activeExpenses = expenses.filter(function(e) {
+        return visibleKeys.indexOf(e.storeId) !== -1 && (targetStore === 'all' || e.storeId === targetStore);
+    });
+
+    var labels = [];
+    var currentValues = [];
+    
+    var now = new Date();
+    var currentSum = 0, pastSum = 0;
+    var currentSalesCount = 0, pastSalesCount = 0;
+    var currentExpSum = 0, pastExpSum = 0;
+
+    function getMetricValueForDay(dateStr, isCurrentPeriod) {
+        var daySales = activeSales.filter(function(s) { return (s.timestamp || '').slice(0, 10) === dateStr; });
+        var dayExpenses = activeExpenses.filter(function(e) { return (e.timestamp || '').slice(0, 10) === dateStr; });
+        
+        var totalRev = 0, totalCash = 0, totalChecks = 0, totalExp = 0;
+        
+        daySales.forEach(function(s) {
+            if (!s.returned) {
+                totalChecks++;
+                if (s.splitPayment) {
+                    totalRev += (Number(s.amount1) || 0) + (Number(s.amount2) || 0);
+                    if (s.payment1 && s.payment1.includes('Наличные')) totalCash += (Number(s.amount1) || 0);
+                    if (s.payment2 && s.payment2.includes('Наличные')) totalCash += (Number(s.amount2) || 0);
+                } else {
+                    totalRev += (Number(s.price) || 0);
+                    if (s.payment && s.payment.includes('Наличные')) totalCash += (Number(s.price) || 0);
+                }
+            } else {
+                if (s.payment && s.payment.includes('Наличные')) totalCash -= (Number(s.price) || 0);
+            }
+        });
+        
+        dayExpenses.forEach(function(e) { totalExp += (Number(e.amount) || 0); });
+        totalCash = totalCash - totalExp;
+
+        if (isCurrentPeriod) {
+            currentSalesCount += daySales.filter(function(s){ return !s.returned; }).length;
+            currentExpSum += totalExp;
+        } else {
+            pastSalesCount += daySales.filter(function(s){ return !s.returned; }).length;
+            pastExpSum += totalExp;
+        }
+
+        if (metric === 'revenue') return totalRev;
+        if (metric === 'cash') return totalCash;
+        if (metric === 'checks') return totalChecks;
+        if (metric === 'expenses') return totalExp;
+        return 0;
+    }
+
+    if (chartPeriod === 'week') {
+        for (var i = 6; i >= 0; i--) {
+            var dCurr = new Date(); dCurr.setDate(now.getDate() - i);
+            var dPast = new Date(); dPast.setDate(now.getDate() - i - 7);
+            
+            var strCurr = dCurr.toISOString().slice(0, 10);
+            var strPast = dPast.toISOString().slice(0, 10);
+            
+            labels.push(dCurr.getDate() + '.' + (dCurr.getMonth() + 1));
+            
+            var valCurr = getMetricValueForDay(strCurr, true);
+            var valPast = getMetricValueForDay(strPast, false);
+            
+            currentValues.push(valCurr);
+            currentSum += valCurr;
+            pastSum += valPast;
+        }
+    } 
+    else if (chartPeriod === 'month') {
+        for (var i = 29; i >= 0; i--) {
+            var dCurr = new Date(); dCurr.setDate(now.getDate() - i);
+            var dPast = new Date(); dPast.setDate(now.getDate() - i - 30);
+            
+            var strCurr = dCurr.toISOString().slice(0, 10);
+            var strPast = dPast.toISOString().slice(0, 10);
+            
+            if (i % 5 === 0 || i === 0) {
+                labels.push(dCurr.getDate() + '.' + (dCurr.getMonth() + 1));
+            } else {
+                labels.push('');
+            }
+            
+            var valCurr = getMetricValueForDay(strCurr, true);
+            var valPast = getMetricValueForDay(strPast, false);
+            
+            currentValues.push(valCurr);
+            currentSum += valCurr;
+            pastSum += valPast;
+        }
+    } 
+    else if (chartPeriod === 'year') {
+        var monthNames = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+        for (var i = 11; i >= 0; i--) {
+            var dCurr = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            var dPast = new Date(now.getFullYear() - 1, now.getMonth() - i, 1);
+            
+            labels.push(monthNames[dCurr.getMonth()]);
+            
+            var mCurrSum = 0, mPastSum = 0;
+            for (var day = 1; day <= 31; day++) {
+                var cDay = new Date(dCurr.getFullYear(), dCurr.getMonth(), day);
+                var pDay = new Date(dPast.getFullYear(), dPast.getMonth(), day);
+                if (cDay.getMonth() === dCurr.getMonth()) mCurrSum += getMetricValueForDay(cDay.toISOString().slice(0, 10), true);
+                if (pDay.getMonth() === dPast.getMonth()) mPastSum += getMetricValueForDay(pDay.toISOString().slice(0, 10), false);
+            }
+            currentValues.push(mCurrSum);
+            currentSum += mCurrSum;
+            pastSum += mPastSum;
+        }
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    var maxVal = 0;
+    currentValues.forEach(function(v) { if (v > maxVal) maxVal = v; });
+    if (maxVal === 0) maxVal = 10;
+
+    var padding = 30;
+    var graphHeight = canvas.height - padding * 2;
+    var graphWidth = canvas.width - padding * 2;
+    var barWidth = (graphWidth / currentValues.length) * 0.6;
+    var barGap = (graphWidth / currentValues.length) * 0.4;
+
+    ctx.strokeStyle = '#f0d4dd';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padding, canvas.height - padding);
+    ctx.lineTo(canvas.width - padding, canvas.height - padding);
+    ctx.stroke();
+
+    for (var i = 0; i < currentValues.length; i++) {
+        var val = currentValues[i];
+        var h = (val / maxVal) * graphHeight;
+        var x = padding + i * (barWidth + barGap) + barGap / 2;
+        var y = canvas.height - padding - h;
+
+        ctx.fillStyle = '#e87fb0';
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(x, y, barWidth, h, 4);
+        } else {
+            ctx.rect(x, y, barWidth, h);
+        }
+        ctx.fill();
+
+        if (labels[i]) {
             ctx.fillStyle = '#b89ea0';
             ctx.font = '10px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(labels[k], x + (barW - gap)/2, h - 8);
-        }
-        // Value on top of bar
-        if (data[k] > 0 && chartPeriod === 'week') {
-            ctx.fillStyle = '#4a3a40';
-            ctx.font = 'bold 10px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(data[k], x + (barW - gap)/2, y - 3);
+            ctx.fillText(labels[i], x + barWidth / 2, canvas.height - padding + 15);
         }
     }
+
+    if (analyticsBlock && currentUser && currentUser.role !== 'seller') {
+        var periodName = chartPeriod === 'week' ? 'прошлой неделей' : (chartPeriod === 'month' ? 'прошлым месяцем' : 'прошлым годом');
+        
+        function calcPct(curr, past) {
+            if (past === 0) return curr > 0 ? '+100%' : '0%';
+            var diff = ((curr - past) / past) * 100;
+            return (diff >= 0 ? '+' : '') + diff.toFixed(1) + '%';
+        }
+
+        var pctRev = calcPct(currentSum, pastSum);
+        var pctSales = calcPct(currentSalesCount, pastSalesCount);
+        var pctExp = calcPct(currentExpSum, pastExpSum);
+        
+        var currentAvg = currentSalesCount > 0 ? Math.round(currentSum / currentSalesCount) : 0;
+        var pastAvg = pastSalesCount > 0 ? Math.round(pastSum / pastSalesCount) : 0;
+        var pctAvg = calcPct(currentAvg, pastAvg);
+
+        var upIcon = ' <b style="color:#4BB57A;">▲</b>';
+        var downIcon = ' <b style="color:#e85a7a;">▼</b>';
+
+        var trendRev = pctRev.indexOf('-') === -1 ? upIcon : downIcon;
+        var trendSales = pctSales.indexOf('-') === -1 ? upIcon : downIcon;
+        var trendAvg = pctAvg.indexOf('-') === -1 ? upIcon : downIcon;
+        var trendExp = pctExp.indexOf('-') === -1 ? upIcon : downIcon;
+
+        var metricTitles = { revenue: 'Выручка', cash: 'Чистые наличные', checks: 'Количество чеков', expenses: 'Расходы' };
+        var currentTitle = metricTitles[metric] || 'Показатель';
+
+        analyticsBlock.innerHTML = '<h4 style="margin-top:0; margin-bottom:8px; color:var(--text); font-size:14px;">📊 Сравнительный анализ (по сравнению с ' + periodName + '):</h4>' +
+            '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-top:5px;">' +
+                '<div>• Суммарная ' + currentTitle + ': <b>' + currentSum.toLocaleString('ru-RU') + ' руб</b> (' + pctRev + trendRev + ')</div>' +
+                '<div>• Количество продаж: <b>' + currentSalesCount + ' шт</b> (' + pctSales + trendSales + ')</div>' +
+                '<div>• Средний чек: <b>' + currentAvg + ' руб</b> (' + pctAvg + trendAvg + ')</div>' +
+                '<div>• Общие расходы: <b>' + currentExpSum + ' руб</b> (' + pctExp + trendExp + ')</div>' +
+            '</div>';
+    }
 }
+
 
 // ========== BREAKS TABLE ==========
 function renderBreaksTable() {
