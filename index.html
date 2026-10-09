@@ -2255,55 +2255,121 @@ function allowReopenShift() {
 }
 
 function showShiftReport() {
-    var filtered = getFilteredSales();
-    var exp = getFilteredExpenses();
+    // 1. Считываем выбранные админом даты периода (если они уже есть в DOM)
+    var dateFromInput = document.getElementById('reportDateFrom');
+    var dateToInput = document.getElementById('reportDateTo');
+    var fromDate = dateFromInput ? dateFromInput.value : '';
+    var toDate = dateToInput ? dateToInput.value : '';
+
+    var targetStore = 'all';
+    if (currentUser.role === 'seller') {
+        targetStore = currentUser.store;
+    } else {
+        var f = document.getElementById('storeFilter');
+        if (f) targetStore = f.value;
+    }
+
+    var visibleKeys = typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys() : [];
+
+    // 2. Базовая фильтрация сырых массивов по магазинам
+    var baseSales = sales.filter(function(s) {
+        return visibleKeys.indexOf(s.storeId) !== -1 && (targetStore === 'all' || s.storeId === targetStore);
+    });
+    var baseExpenses = expenses.filter(function(e) {
+        return visibleKeys.indexOf(e.storeId) !== -1 && (targetStore === 'all' || e.storeId === targetStore);
+    });
+
+    // 3. Фильтрация по выбранному периоду дат
+    if (fromDate && toDate) {
+        baseSales = baseSales.filter(function(s) {
+            var sDate = (s.timestamp || '').slice(0, 10);
+            return sDate >= fromDate && sDate <= toDate;
+        });
+        baseExpenses = baseExpenses.filter(function(e) {
+            var eDate = (e.timestamp || '').slice(0, 10);
+            return eDate >= fromDate && eDate <= toDate;
+        });
+    } else {
+        // Если период не выбран, по умолчанию считаем строго за СЕГОДНЯ
+        var todayStr = new Date().toISOString().slice(0, 10);
+        baseSales = baseSales.filter(function(s) { return (s.timestamp || '').slice(0, 10) === todayStr; });
+        baseExpenses = baseExpenses.filter(function(e) { return (e.timestamp || '').slice(0, 10) === todayStr; });
+    }
+
+    // 4. Математический расчёт сумм
     var total = 0, cash = 0, card = 0, transfer = 0, returns = 0, expTotal = 0;
-    filtered.forEach(function(s) {
+
+    baseSales.forEach(function(s) {
         if (!s.returned) {
-            total += s.price;
             if (s.splitPayment) {
-                if (s.payment1.includes('Наличные')) cash += s.amount1;
-                else if (s.payment1 === 'Перевод') transfer += s.amount1;
-                else card += s.amount1;
-                if (s.payment2.includes('Наличные')) cash += s.amount2;
-                else if (s.payment2 === 'Перевод') transfer += s.amount2;
-                else card += s.amount2;
+                total += (Number(s.amount1) || 0) + (Number(s.amount2) || 0);
+                
+                if (s.payment1 && s.payment1.includes('Наличные')) cash += (Number(s.amount1) || 0);
+                else if (s.payment1 === 'Перевод') transfer += (Number(s.amount1) || 0);
+                else card += (Number(s.amount1) || 0);
+
+                if (s.payment2 && s.payment2.includes('Наличные')) cash += (Number(s.amount2) || 0);
+                else if (s.payment2 === 'Перевод') transfer += (Number(s.amount2) || 0);
+                else card += (Number(s.amount2) || 0);
             } else {
-                if (s.payment.includes('Наличные')) cash += s.price;
-                else if (s.payment === 'Перевод') transfer += s.price;
-                else card += s.price;
+                total += (Number(s.price) || 0);
+                if (s.payment && s.payment.includes('Наличные')) cash += (Number(s.price) || 0);
+                else if (s.payment === 'Перевод') transfer += (Number(s.price) || 0);
+                else card += (Number(s.price) || 0);
             }
         } else {
-            returns += s.price;
-            if (s.splitPayment) {
-                if (s.payment1.includes('Наличные')) cash -= s.amount1;
-                else if (s.payment1 === 'Перевод') transfer -= s.amount1;
-                else card -= s.amount1;
-                if (s.payment2.includes('Наличные')) cash -= s.amount2;
-                else if (s.payment2 === 'Перевод') transfer -= s.amount2;
-                else card -= s.amount2;
-            } else {
-                if (s.payment.includes('Наличные')) cash -= s.price;
-                else if (s.payment === 'Перевод') transfer -= s.price;
-                else card -= s.price;
-            }
+            returns += (Number(s.price) || 0);
         }
     });
-    exp.forEach(function(e) { expTotal += e.amount; });
-    var netCash = cash - expTotal;
-    var html = '<div class="shift-report">';
-    html += '<div class="shift-report-row"><span>Всего продаж (без возвратов):</span><span>' + total + ' руб.</span></div>';
-    html += '<div class="shift-report-row"><span>Наличные:</span><span>' + cash + ' руб.</span></div>';
-    html += '<div class="shift-report-row"><span>Безналичный расчёт:</span><span>' + card + ' руб.</span></div>';
-    html += '<div class="shift-report-row"><span>Переводы:</span><span>' + transfer + ' руб.</span></div>';
-    html += '<div class="shift-report-row"><span>Возвраты:</span><span style="color:var(--danger);">-' + returns + ' руб.</span></div>';
-    html += '<div class="shift-report-row"><span>Расходы из кассы:</span><span style="color:var(--danger);">-' + expTotal + ' руб.</span></div>';
-    html += '<div class="shift-report-row"><span>Итого наличных к сдаче:</span><span>' + netCash + ' руб.</span></div>';
-    html += '</div>';
-    html += '<p style="margin-top:15px; font-size:13px; color:var(--text-light);">Сотрудник: ' + currentUser.name + '<br>Дата: ' + new Date().toLocaleString('ru-RU') + '</p>';
-    document.getElementById('shiftReportContent').innerHTML = html;
-    document.getElementById('shiftReportModal').classList.remove('hidden');
+
+    baseExpenses.forEach(function(e) { expTotal += (Number(e.amount) || 0); });
+
+    var totalCash = cash - expTotal - returns;
+
+    // 5. Формируем HTML-интерфейс модального окна
+    var modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.onclick = function(e) { if(e.target === modal) modal.remove(); };
+
+    // Генерируем блок выбора дат только для администраторов
+    var dateSelectionHtml = '';
+    if (currentUser.role === 'admin' || currentUser.username === 'Костя' || currentUser.username === 'Оля' || currentUser.username === 'Вова') {
+        dateSelectionHtml = '<div style="margin-bottom:15px; padding:12px; background:#fdf2f7; border-radius:10px; border:1px solid var(--border); display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--text);">' +
+            '<label style="font-weight:bold;">Период с:</label><input type="date" id="reportDateFrom" value="' + fromDate + '" style="width:125px; padding:4px; border:1px solid var(--border); border-radius:6px;">' +
+            '<label style="font-weight:bold;">по:</label><input type="date" id="reportDateTo" value="' + toDate + '" style="width:125px; padding:4px; border:1px solid var(--border); border-radius:6px;">' +
+            '<button class="btn" style="padding:5px 12px; font-size:12px; height:28px;" onclick="var m=document.querySelector(\'.modal-overlay\'); if(m)m.remove(); showShiftReport();">Показать</button>' +
+        '</div>';
+    }
+
+    var storeTitle = 'Все магазины';
+    if (currentUser.role === 'seller') {
+        storeTitle = STORES[currentUser.store] || '';
+    } else {
+        var filterEl = document.getElementById('storeFilter');
+        if (filterEl && filterEl.value !== 'all') storeTitle = STORES[filterEl.value] || 'Все магазины';
+    }
+
+    modal.innerHTML = '<div class="modal" style="max-width:460px;">' +
+        '<h3 style="margin-top:0; margin-bottom:10px;">Отчёт за период</h3>' +
+        '<p style="font-size:12px; color:var(--text-light); margin-bottom:15px;">Магазин: <b>' + storeTitle + '</b></p>' +
+        dateSelectionHtml +
+        '<div class="shift-report" style="margin-top:0;">' +
+            '<div class="shift-report-row"><span>Всего продаж (без возвратов):</span><span>' + total.toLocaleString('ru-RU') + ' руб.</span></div>' +
+            '<div class="shift-report-row"><span>Наличные:</span><span>' + cash.toLocaleString('ru-RU') + ' руб.</span></div>' +
+            '<div class="shift-report-row"><span>Безналичный расчёт:</span><span>' + card.toLocaleString('ru-RU') + ' руб.</span></div>' +
+            '<div class="shift-report-row"><span>Переводы:</span><span>' + transfer.toLocaleString('ru-RU') + ' руб.</span></div>' +
+            '<div class="shift-report-row" style="color:var(--danger);"><span>Возвраты:</span><span>' + returns.toLocaleString('ru-RU') + ' руб.</span></div>' +
+            '<div class="shift-report-row" style="color:var(--danger);"><span>Расходы из кассы:</span><span>' + expTotal.toLocaleString('ru-RU') + ' руб.</span></div>' +
+            '<div class="shift-report-row"><span>Итого наличных к сдаче:</span><span style="color:' + (totalCash >= 0 ? 'var(--success)' : 'var(--danger)') + '; font-weight:bold;">' + totalCash.toLocaleString('ru-RU') + ' руб.</span></div>' +
+        '</div>' +
+        '<div style="margin-top:20px; text-align:right;">' +
+            '<button class="btn btn-secondary" onclick="this.closest(\'.modal-overlay\').remove()">Закрыть</button>' +
+        '</div>' +
+    '</div>';
+
+    document.body.appendChild(modal);
 }
+
 
 function closeShiftReport() { document.getElementById('shiftReportModal').classList.add('hidden'); }
 
