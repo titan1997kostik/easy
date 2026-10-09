@@ -2912,6 +2912,24 @@ function renderSalesTable() {
     if (!currentUser) return;
     var tbody = document.getElementById('salesHistoryTable');
     var filtered = sales;
+        var dateInput = document.getElementById('salesHistoryDateFilter');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().slice(0, 10);
+    }
+    var targetDate = dateInput ? dateInput.value : new Date().toISOString().slice(0, 10);
+
+    var targetStore = 'all';
+    var filterEl = document.getElementById('salesCityFilter');
+    if (filterEl) targetStore = filterEl.value;
+
+    var visibleKeys = typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys() : [];
+
+    filtered = sales.filter(function(s) {
+        var matchStore = visibleKeys.indexOf(s.storeId) !== -1 && (targetStore === 'all' || s.storeId === targetStore);
+        var sDate = (s.timestamp || '').slice(0, 10);
+        return matchStore && (sDate === targetDate);
+    });
+
     tbody.innerHTML = '';
     if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-light);">Нет продаж</td></tr>';
