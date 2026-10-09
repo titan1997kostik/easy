@@ -570,6 +570,11 @@
                 <h3>История продаж</h3>
                 <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                     <div id="salesCityFilterContainer" style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: inline-flex; align-items: center; gap: 8px;">
+    <label style="margin: 0; font-size: 13px; white-space: nowrap;">Дата:</label>
+    <input type="date" id="salesHistoryDateFilter" onchange="if(typeof renderSalesTable==='function')renderSalesTable()" style="padding: 4px 8px; font-size: 13px; width: 140px; border: 1px solid var(--border); border-radius: 6px;">
+</div>
+
                         <label style="margin: 0; font-size: 13px; white-space: nowrap;">Магазин:</label>
                         <select id="salesCityFilter" onchange="renderSalesTable()" style="padding: 6px 10px; font-size: 13px; min-width: 160px;">
                             <option value="all">Все магазины</option>
@@ -2939,18 +2944,54 @@ function renderSalesTable() {
 function renderExpensesTable() {
     if (!currentUser) return;
     var tbody = document.getElementById('expensesTable');
-    var filtered = getFilteredExpenses();
+    if (!tbody) return;
     tbody.innerHTML = '';
+
+    // Используем тот же календарь для синхронного переключения дня во всех таблицах
+    var dateInput = document.getElementById('salesHistoryDateFilter');
+    var targetDate = dateInput && dateInput.value ? dateInput.value : new Date().toISOString().slice(0, 10);
+
+    var targetStore = 'all';
+    var filterEl = document.getElementById('salesCityFilter');
+    if (filterEl) targetStore = filterEl.value;
+
+    var visibleKeys = typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys() : [];
+
+    // Ограничиваем выгрузку расходов СТРОГО выбранным днем и магазином
+    var filtered = expenses.filter(function(e) {
+        var matchStore = visibleKeys.indexOf(e.storeId) !== -1 && (targetStore === 'all' || e.storeId === targetStore);
+        var eDate = (e.timestamp || '').slice(0, 10);
+        var matchDate = (eDate === targetDate);
+        return matchStore && matchDate;
+    });
+
+    // Свежие расходы сверху
+    filtered.sort(function(a, b) {
+        return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
+    });
+
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-light);">Расходов нет</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-light);">Расходов за выбранный день нет</td></tr>';
         return;
     }
+
     filtered.forEach(function(e) {
-        var date = new Date(e.timestamp).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        var delBtn = (currentUser.role === 'admin' || e.seller === currentUser.name)
-            ? '<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteExpense(' + e.id + ')">Удалить</button>'
-            : '<span style="color:var(--text-light); font-size:12px;">\u2014</span>';
-        tbody.innerHTML += '<tr><td style="white-space:nowrap;">' + date + '</td><td>' + (e.storeName||'') + '</td><td style="color:var(--danger);">-' + e.amount + ' руб.</td><td>' + e.reason + '</td><td>' + (e.seller||'') + '</td><td>' + delBtn + '</td></tr>';
+        var tr = document.createElement('tr');
+        var d = e.timestamp ? new Date(e.timestamp) : new Date();
+        var timeText = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        
+        var delBtn = (currentUser.role === 'admin' || currentUser.username === 'Костя' || currentUser.username === 'Оля' || currentUser.username === 'Вова')
+            ? '<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteExpense(\'' + e.id + '\')">Удалить</button>'
+            : '<span style="color:var(--text-light); font-size:12px;">🔒</span>';
+
+        var storeName = typeof STORES !== 'undefined' ? (STORES[e.storeId] || e.storeId) : e.storeId;
+
+        tr.innerHTML = '<td>' + (e.category || '-') + '</td>' +
+                       '<td>' + (e.description || '-') + '</td>' +
+                       '<td style="color:var(--danger); font-weight:600;">-' + (e.amount || 0) + ' руб.</td>' +
+                       '<td>' + storeName + ' (' + timeText + ')</td>' +
+                       '<td>' + delBtn + '</td>';
+        tbody.appendChild(tr);
     });
 }
 
@@ -3325,30 +3366,70 @@ function drawChart() {
 
 // ========== BREAKS TABLE ==========
 function renderBreaksTable() {
-    var tbody = document.getElementById('breaksTable');
+    if (!currentUser) return;
+    var tbody = document.getElementById('breaksTable') || document.getElementById('breaksTableBody');
     if (!tbody) return;
-    if (currentUser && currentUser.role !== 'admin') return;
-    var visibleKeys = getVisibleStoreKeys();
-    var sorted = breaksData.filter(function(b) { return visibleKeys.indexOf(b.storeId) !== -1; }).sort(function(a,b){ return (b.timestamp||0) - (a.timestamp||0); });
     tbody.innerHTML = '';
-    if (sorted.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-light);">Записей о перерывах нет</td></tr>';
+
+    // Подхватываем ту же самую дату из нашего главного календаря истории
+    var dateInput = document.getElementById('salesHistoryDateFilter');
+    var targetDate = dateInput && dateInput.value ? dateInput.value : new Date().toISOString().slice(0, 10);
+
+    var targetStore = 'all';
+    var filterEl = document.getElementById('salesCityFilter');
+    if (filterEl) targetStore = filterEl.value;
+
+    var visibleKeys = typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys() : [];
+    var breaksList = window.breaks || (typeof breaksData !== 'undefined' ? breaksData : []);
+
+    // Ограничиваем перерывы выбранным днем и магазином
+    var filtered = [];
+    if (Array.isArray(breaksList)) {
+        filtered = breaksList.filter(function(b) {
+            if (!b) return false;
+            var matchStore = visibleKeys.indexOf(b.storeId) !== -1 && (targetStore === 'all' || b.storeId === targetStore);
+            var bDate = (b.timestamp || b.date || '').slice(0, 10);
+            return matchStore && (bDate === targetDate);
+        });
+    } else {
+        Object.keys(breaksList).forEach(function(key) {
+            var b = breaksList[key];
+            if (b) {
+                var matchStore = visibleKeys.indexOf(b.storeId) !== -1 && (targetStore === 'all' || b.storeId === targetStore);
+                var bDate = (b.timestamp || b.date || '').slice(0, 10);
+                if (matchStore && bDate === targetDate) {
+                    filtered.push(b);
+                }
+            }
+        });
+    }
+
+    // Новые перерывы сверху
+    filtered.sort(function(a, b) {
+        return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-light);">Записей о перерывах за выбранный день нет</td></tr>';
         return;
     }
-    sorted.forEach(function(b) {
+
+    filtered.forEach(function(b) {
         var tr = document.createElement('tr');
-        var startStr = new Date(b.startTime).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        var endStr = new Date(b.endTime).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        var mins = Math.floor(b.durationSec / 60);
-        var secs = b.durationSec % 60;
-        var durStr = mins + ' мин ' + secs + ' сек';
-        var statusHtml = b.overtime
-            ? '<span style="color:var(--danger); font-weight:600;">Превышен</span>'
-            : '<span style="color:#4BB57A; font-weight:600;">В норме</span>';
-        tr.innerHTML = '<td>' + (b.employee||'') + '</td><td>' + (b.storeName||'') + '</td><td style="white-space:nowrap;">' + startStr + '</td><td style="white-space:nowrap;">' + endStr + '</td><td>' + durStr + '</td><td>' + statusHtml + '</td>';
+        var d = b.timestamp ? new Date(b.timestamp) : new Date();
+        var timeText = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        
+        var storeName = typeof STORES !== 'undefined' ? (STORES[b.storeId] || b.storeId) : b.storeId;
+        var durationText = b.duration ? b.duration + ' мин.' : (b.closed ? 'Завершен' : 'В процессе');
+
+        tr.innerHTML = '<td>' + (b.userName || b.username || '-') + '</td>' +
+                       '<td>' + storeName + '</td>' +
+                       '<td>' + timeText + '</td>' +
+                       '<td style="font-weight:600; color:var(--primary);">' + durationText + '</td>';
         tbody.appendChild(tr);
     });
 }
+
 
 // ========== CALENDAR ==========
 function renderCalendar() {
