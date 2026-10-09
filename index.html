@@ -2926,7 +2926,8 @@ function renderSalesTable() {
 
     filtered = sales.filter(function(s) {
         var matchStore = visibleKeys.indexOf(s.storeId) !== -1 && (targetStore === 'all' || s.storeId === targetStore);
-        var sDate = (s.timestamp || '').slice(0, 10);
+        var sDate = s.timestamp ? new Date(s.timestamp).toLocaleDateString('sv-SE') : '';
+
         return matchStore && (sDate === targetDate);
     });
 
@@ -2975,7 +2976,8 @@ function renderExpensesTable() {
     // Ограничиваем выгрузку расходов СТРОГО выбранным днем и магазином
     var filtered = expenses.filter(function(e) {
         var matchStore = visibleKeys.indexOf(e.storeId) !== -1 && (targetStore === 'all' || e.storeId === targetStore);
-        var eDate = (e.timestamp || '').slice(0, 10);
+        var eDate = e.timestamp ? new Date(e.timestamp).toLocaleDateString('sv-SE') : '';
+
         var matchDate = (eDate === targetDate);
         return matchStore && matchDate;
     });
@@ -3403,7 +3405,8 @@ function renderBreaksTable() {
         filtered = breaksList.filter(function(b) {
             if (!b) return false;
             var matchStore = visibleKeys.indexOf(b.storeId) !== -1 && (targetStore === 'all' || b.storeId === targetStore);
-            var bDate = (b.timestamp || b.date || '').slice(0, 10);
+                var bDate = b.timestamp ? new Date(b.timestamp).toLocaleDateString('sv-SE') : '';
+
             return matchStore && (bDate === targetDate);
         });
     } else {
@@ -3411,7 +3414,6 @@ function renderBreaksTable() {
             var b = breaksList[key];
             if (b) {
                 var matchStore = visibleKeys.indexOf(b.storeId) !== -1 && (targetStore === 'all' || b.storeId === targetStore);
-                var bDate = (b.timestamp || b.date || '').slice(0, 10);
                 if (matchStore && bDate === targetDate) {
                     filtered.push(b);
                 }
