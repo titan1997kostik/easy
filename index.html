@@ -1466,12 +1466,14 @@ function broadcastPresence() {
 }
 
 function handleRemoteData(payload) {
-    if (payload.sender === CLIENT_ID) return;
-    // Новый тип: просто сигнал "обновись через Firebase"
-    if (payload.type === 'refresh') {
-        // Ничего не делаем — Firebase-слушатели сами обновят данные
-        return;
+    if (!payload || payload.sender === CLIENT_ID) return;
+    
+    // Блокируем затирание массивов из старых пакетов MQTT
+    if (payload.type === 'refresh' || payload.type === 'sync' || payload.type === 'update') {
+        return; 
     }
+    
+    // Оставляем только отслеживание статуса Онлайн/Офлайн сотрудников
     if (payload.type === 'presence') {
         if (payload.username) {
             presence[payload.username] = { lastSeen: payload.timestamp, store: payload.store };
@@ -1482,51 +1484,13 @@ function handleRemoteData(payload) {
         }
         return;
     }
+    
     if (payload.type === 'request') {
-        // Another device is asking for fresh data — send ours
         broadcastData();
         return;
     }
-    if (payload.type === 'sync' || payload.type === 'update') {
-        var changed = false;
-
-        // --- Sync deletions ---
-        if (payload.deletedSaleIds && payload.deletedSaleIds.length > 0) {
-            payload.deletedSaleIds.forEach(function(id) {
-                if (!deletedSaleIds.includes(id)) deletedSaleIds.push(id);
-                var before = sales.length;
-                sales = sales.filter(function(s) { return s.id !== id; });
-                if (sales.length !== before) changed = true;
-            });
-        }
-        if (payload.deletedExpenseIds && payload.deletedExpenseIds.length > 0) {
-            payload.deletedExpenseIds.forEach(function(id) {
-                if (!deletedExpenseIds.includes(id)) deletedExpenseIds.push(id);
-                var before = expenses.length;
-                expenses = expenses.filter(function(e) { return e.id !== id; });
-                if (expenses.length !== before) changed = true;
-            });
-        }
-
-        // --- Sync sales (add new + update existing) ---
-        if (payload.sales) {
-            payload.sales.forEach(function(remote) {
-                if (deletedSaleIds.includes(remote.id)) return; // skip deleted
-                var existing = sales.find(function(s) { return s.id === remote.id; });
-                if (!existing) {
-                    sales.push(remote); changed = true;
-                } else {
-                    // Update all fields from remote if they differ
-                    var fields = ['name','price','payment','storeId','storeName','seller','returned','timestamp','lastModified'];
-                    var updated = false;
-                    fields.forEach(function(f) {
-                        if (remote[f] !== undefined && existing[f] !== remote[f]) {
-                            existing[f] = remote[f]; updated = true;
-                        }
-                    });
-                    if (updated) changed = true;
-                }
-            });
+}
+);
         }
 
         // --- Sync expenses (add new + update existing) ---
@@ -2133,7 +2097,14 @@ function saveSale() {
     if (!name || isNaN(price) || !activePaymentMethod) { alert('Заполните наименование, цену и выберите способ оплаты!'); return; }
     var storeId = currentUser.role === 'admin' ? document.getElementById('storeFilter').value : currentUser.store;
     if (storeId === 'all') { alert('Выберите конкретный магазин!'); return; }
+        var dateMinuteStr = useAdminDate ? new Date(adminDateInput.value).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16);
+    var rawIdString = (name || '') + '_' + (price || 0) + '_' + (storeId || '') + '_' + dateMinuteStr;
+    var cleanId = rawIdString.replace(/[^a-zA-Z0-9_]/g, '');
+    var saleId = 'sale_' + cleanId;
+
     var saleData = {
+        id: saleId,
+
         name: name, price: price, payment: activePaymentMethod,
         storeId: storeId, storeName: STORES[storeId],
         seller: currentUser.name, returned: false,
