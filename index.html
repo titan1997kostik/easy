@@ -893,13 +893,22 @@ function resetStore(storeKey) {
     // Sync to Firebase - remove individual records
     if (typeof db !== 'undefined' && db.ref) {
         try {
-            storeSales.forEach(function(s) { db.ref('sales_data/' + s.id).remove(); });
-            storeExpenses.forEach(function(e) { db.ref('expenses_data/' + e.id).remove(); });
-            storeBreaks.forEach(function(b) { db.ref('breaks_data/' + b.id).remove(); });
-            db.ref('cash_adjustments_data/' + storeKey).remove();
-            db.ref('store_shifts_data/' + storeKey).remove();
-            if (storeShifts._shiftHistory) db.ref('store_shifts_data/_shiftHistory').set(storeShifts._shiftHistory);
-        } catch(e) { console.error('Firebase sync error on reset:', e); }
+            if (typeof storeSales !== 'undefined' && storeSales && storeSales.length > 0) {
+                storeSales.forEach(function(s) { if (s && s.id) db.ref('sales_data/' + s.id).set(null); });
+            }
+            if (typeof storeExpenses !== 'undefined' && storeExpenses && storeExpenses.length > 0) {
+                storeExpenses.forEach(function(e) { if (e && e.id) db.ref('expenses_data/' + e.id).set(null); });
+            }
+            if (typeof storeBreaks !== 'undefined' && storeBreaks && storeBreaks.length > 0) {
+                storeBreaks.forEach(function(b) { if (b && b.id) db.ref('breaks_data/' + b.id).set(null); });
+            }
+            db.ref('cash_adjustments_data/' + storeKey).set(null);
+            db.ref('store_shifts_data/' + storeKey).set(null);
+            if (storeShifts && storeShifts._shiftHistory) {
+                db.ref('store_shifts_data/' + storeKey + '/_shiftHistory').set(null);
+            }
+        }
+
     }
     renderAll();
     drawChart();
@@ -3728,20 +3737,23 @@ var html = '<h4 style="margin-bottom:10px;">' + formattedDisplayDate + '</h4>';
         
         // 2. ИСТОРИЯ РАСХОДОВ (Выровнено строго по колонкам)
         if (dayExp && dayExp.length > 0) {
-            html += '<table style="font-size:13px; margin-top:15px;"><thead><tr><th>Расход</th><th>Магазин</th><th>Сумма</th><th>Причина</th><th>Кто записал</th></tr></thead><tbody>';
+            html += '<h5 style="margin-top:15px; margin-bottom:5px;">Расходы за день:</h5>';
+            html += '<table style="font-size:13px; width:100%; border-collapse:collapse;"><thead><tr style="background:#f5f5f5;"><th style="padding:6px; border:1px solid #ddd;">Категория</th><th style="padding:6px; border:1px solid #ddd;">Магазин</th><th style="padding:6px; border:1px solid #ddd;">Сумма</th><th style="padding:6px; border:1px solid #ddd;">Причина</th><th style="padding:6px; border:1px solid #ddd;">Кто записал</th></tr></thead><tbody>';
             dayExp.forEach(function(e) {
-                var expStoreName = e.storeName || (typeof STORES !== 'undefined' && STORES[e.storeId]) || '';
-                var displayTime = e.time ? ' (' + e.time + ')' : '';
-                html += '<tr><td>' + (e.category || 'Расход из кассы') + '</td><td>' + expStoreName + '</td><td style="color:#d9534f; font-weight:bold;">' + e.amount + ' руб.</td><td>' + (e.reason || e.description || '-') + '</td><td>' + (e.userName || '') + displayTime + '</td></tr>';
+                if (e) {
+                    var expStoreName = e.storeName || (typeof STORES !== 'undefined' && STORES[e.storeId]) || '';
+                    var displayTime = e.time ? ' (' + e.time + ')' : '';
+                    html += '<tr><td style="padding:6px; border:1px solid #ddd;">' + (e.category || 'Расход из кассы') + '</td><td style="padding:6px; border:1px solid #ddd;">' + expStoreName + '</td><td style="padding:6px; border:1px solid #ddd; color:#d9534f; font-weight:bold;">' + (e.amount || 0) + ' руб.</td><td style="padding:6px; border:1px solid #ddd;">' + (e.reason || e.description || '-') + '</td><td style="padding:6px; border:1px solid #ddd;">' + (e.userName || '') + displayTime + '</td></tr>';
+                }
             });
             html += '</tbody></table>';
         }
         
         html += '<div style="text-align:right; font-weight:bold; margin-top:15px;">Итого продаж: ' + total + ' руб.</div>';
         container.innerHTML = html;
+        container.classList.remove('hidden');
+    }
 
-    container.classList.remove('hidden');
-}
 
 
 
