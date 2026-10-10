@@ -3589,8 +3589,9 @@ function selectCalendarDay(dateStr) {
 
 function renderCalendarDetail() {
     var container = document.getElementById('calendarDetail');
-    var daySales = getFilteredSales().filter(function(s){ return s.timestamp.slice(0, 10) === selectedDate; });
-    var dayExp = getFilteredExpenses().filter(function(e){ return e.timestamp.slice(0, 10) === selectedDate; });
+var daySales = sales.filter(function(s){ return s.timestamp && s.timestamp.slice(0, 10) === selectedDate; });
+var dayExp = expenses.filter(function(e){ return e.timestamp && e.timestamp.slice(0, 10) === selectedDate; });
+
     if (daySales.length === 0 && dayExp.length === 0) {
         container.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:10px;">В этот день продаж и расходов не было</p>';
         container.classList.remove('hidden');
