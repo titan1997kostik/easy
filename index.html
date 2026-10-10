@@ -2964,12 +2964,18 @@ function renderSalesTable() {
 
     var visibleKeys = typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys() : [];
 
-    filtered = sales.filter(function(s) {
-        var matchStore = visibleKeys.indexOf(s.storeId) !== -1 && (targetStore === 'all' || s.storeId === targetStore);
-        var sDate = s.timestamp ? new Date(s.timestamp).toLocaleDateString('sv-SE') : '';
+filtered = sales.filter(function(s) {
+    var matchStore = visibleKeys.indexOf(s.storeId) !== -1 && (targetStore === 'all' || s.storeId === targetStore);
+    
+    // Безопасное текстовое отсечение даты (берём первые 10 символов YYYY-MM-DD)
+    var sDate = "";
+    if (s.timestamp) {
+        sDate = s.timestamp.slice(0, 10);
+    }
+    
+    return matchStore && (sDate === targetDate);
+});
 
-        return matchStore && (sDate === targetDate);
-    });
 
     tbody.innerHTML = '';
     if (filtered.length === 0) {
