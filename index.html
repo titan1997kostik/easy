@@ -2001,103 +2001,120 @@ function updateSplitTotal() {
 
 function saveSale() {
     if (!checkSessionBeforeAction()) return;
+
     var adminDateInput = document.getElementById('adminSaleDate') || document.getElementById('adminDate') || document.getElementById('saleDate');
-    var useAdminDate = false;
     var todayStr = new Date().toISOString().slice(0, 10);
     
-    // Пытаемся найти элемент календаря на экране («Касса и календарь»)
-    var calendarEl = document.getElementById('calendarDate') || document.getElementById('mainCalendar') || document.getElementById('dateFilter') || document.getElementById('reportDate');
-    var currentDisplayDate = (calendarEl && calendarEl.value) ? calendarEl.value : (typeof selectedDate !== 'undefined' ? selectedDate : todayStr);
+    // Автоматически определяем открытый день в календаре приложения
+    var currentDisplayDate = (typeof selectedDate !== 'undefined' && selectedDate) ? selectedDate : todayStr;
     
-    // Если на экране открыт НЕ сегодняшний день ИЛИ заполнен инпут в форме:
-    if ((currentDisplayDate && currentDisplayDate !== todayStr) || (adminDateInput && adminDateInput.value)) {
+    // ЖЕСТКОЕ ВКЛЮЧЕНИЕ: если открыт прошлый день в календаре кассы — это ВСЕГДА админ-режим записи
+    var useAdminDate = (currentDisplayDate !== todayStr);
+    
+    // Если мы на сегодняшнем дне, но админ заполнил поле даты вручную в форме
+    if (!useAdminDate && adminDateInput && adminDateInput.value) {
         useAdminDate = true;
+        currentDisplayDate = adminDateInput.value.replace(' ', 'T').slice(0, 10);
     }
-
-
     
+    // Защита для обычных продавцов (проверка открытой смены)
     if (!useAdminDate && !isStoreShiftOpen(getShiftStoreId())) { 
         alert('Сначала откройте смену!'); 
         return; 
     }
-    
-    var name = document.getElementById('prodName').value.trim();
-    var price = parseFloat(document.getElementById('prodPrice').value);
-    if (!name || isNaN(price) || !activePaymentMethod) { 
-        alert('Заполните наименование, цену и выберите способ оплаты!'); 
-        return; 
+
+    // Собираем данные полей товара
+    var name = document.getElementById('prodName') ? document.getElementById('prodName').value.trim() : '';
+    var price = document.getElementById('prodPrice') ? parseFloat(document.getElementById('prodPrice').value) : NaN;
+    var storeId = (typeof currentStoreId !== 'undefined') ? currentStoreId : 'all';
+
+    // Проверка заполнения полей товара
+    if (!name || isNaN(price) || !activePaymentMethod) {
+        alert('Заполните наименование, цену и выберите способ оплаты!');
+        return;
     }
-    
-    var storeId = currentUser.role === 'admin' ? document.getElementById('storeFilter').value : currentUser.store;
-    if (storeId === 'all') { 
-        alert('Выберите конкретный магазин!'); 
-        return; 
+
+    if (storeId === 'all') {
+        alert('Выберите конкретный магазин!');
+        return;
     }
 
     // Универсальное получение локальной даты и времени без ломающего UTC сдвига
     var dateMinuteStr = "";
     if (useAdminDate) {
-        // Безопасно берём дату из инпута формы, а если он пуст — из календаря на экране
         var rawVal = (adminDateInput && adminDateInput.value) ? adminDateInput.value.replace(' ', 'T') : currentDisplayDate;
-        
         if (rawVal && rawVal.length === 10) {
-            var curTime = new Date().toTimeString().split(' ').slice(0, 5); // Исправлено "toTimeString"
+            var curTime = new Date().toTimeString().split(' ').slice(0, 5); // "HH:MM"
             dateMinuteStr = rawVal + 'T' + curTime;
         } else if (rawVal) {
             dateMinuteStr = rawVal.slice(0, 16);
         }
-    }
-
-     else {
-        // Для обычных продавцов — строго текущее локальное время устройства
+    } else {
         var now = new Date();
         var offset = now.getTimezoneOffset() * 60000;
         var localISOTime = new Date(now.getTime() - offset).toISOString();
         dateMinuteStr = localISOTime.slice(0, 16);
     }
 
-
+    // Генерируем уникальный ID
     var rawIdString = (name || '') + '_' + (price || 0) + '_' + (storeId || '') + '_' + dateMinuteStr;
     var cleanId = rawIdString.replace(/[^a-zA-Z0-9_-]/g, '_');
     var saleId = 'sale_' + cleanId;
 
-var saleData = {
-    id: saleId,
-    name: name, 
-    price: price, 
-    payment: activePaymentMethod,
-    storeId: storeId, 
-    storeName: STORES[storeId],
-    seller: currentUser.name, 
-    returned: false,
-    timestamp: dateMinuteStr, // Используем нашу чистую локальную переменную без UTC сдвигов!
-    backdated: useAdminDate ? true : false
-};
+    // Сборка объекта продажи с правильной локальной датой
+    var saleData = {
+        id: saleId,
+        name: name,
+        price: price,
+        payment: activePaymentMethod,
+        storeId: storeId,
+        storeName: (typeof STORES !== 'undefined' && STORES[storeId]) ? STORES[storeId] : storeId,
+        seller: (typeof currentUser !== 'undefined' && currentUser && currentUser.name) ? currentUser.name : 'Администратор',
+        returned: false,
+        timestamp: dateMinuteStr, 
+        backdated: useAdminDate ? true : false
+    };
 
+    // Логика раздельной оплаты
     if (activePaymentMethod === 'Раздельная оплата') {
-        var p1 = document.getElementById('splitPay1').value;
-        var p2 = document.getElementById('splitPay2').value;
-        var a1 = parseFloat(document.getElementById('splitAmt1').value) || 0;
-        var a2 = parseFloat(document.getElementById('splitAmt2').value) || 0;
+        var p1 = document.getElementById('splitPay1') ? document.getElementById('splitPay1').value : '';
+        var p2 = document.getElementById('splitPay2') ? document.getElementById('splitPay2').value : '';
+        var a1 = document.getElementById('splitAmt1') ? parseFloat(document.getElementById('splitAmt1').value) || 0 : 0;
+        var a2 = document.getElementById('splitAmt2') ? parseFloat(document.getElementById('splitAmt2').value) || 0 : 0;
         if (a1 <= 0 || a2 <= 0) { alert('Укажите суммы для обоих способов оплаты!'); return; }
         if (a1 + a2 !== price) { alert('Сумма частей (' + (a1+a2) + ') не совпадает с ценой (' + price + ')!'); return; }
         saleData.splitPayment = true;
-        saleData.payment1 = p1; saleData.payment2 = p2;
-        saleData.amount1 = a1; saleData.amount2 = a2;
+        saleData.payment1 = p1; saleData.amount1 = a1;
+        saleData.payment2 = p2; saleData.amount2 = a2;
         saleData.payment = p1 + ' + ' + p2;
     }
-    handleSecureSaveSale(saleData);
-    addAudit('sale', 'Продажа: ' + name + ' (' + price + ' руб., ' + saleData.payment + ')');
-    document.getElementById('prodName').value = '';
-    document.getElementById('prodPrice').value = '';
-    document.querySelectorAll('.payment-method').forEach(function(e){ e.classList.remove('active'); });
-    document.getElementById('splitPaymentFields').style.display = 'none';
-    document.getElementById('splitAmt1').value = '';
-    document.getElementById('splitAmt2').value = '';
-    document.getElementById('splitTotalDisplay').textContent = 'Итого: 0 руб.';
+
+    // Сохранение напрямую в Firebase и локальные массивы
+    if (typeof db !== 'undefined' && db.ref) {
+        db.ref('sales_data/' + saleId).set(saleData);
+    }
+    if (typeof sales !== 'undefined') sales.push(saleData);
+    
+    // Журнал действий и очистка интерфейса
+    if (typeof addAudit === 'function') addAudit('sale', 'Продажа: ' + name + ' (' + price + ' руб., ' + saleData.payment + ')');
+    
+    if (document.getElementById('prodName')) document.getElementById('prodName').value = '';
+    if (document.getElementById('prodPrice')) document.getElementById('prodPrice').value = '';
+    
+    document.querySelectorAll('.payment-method').forEach(function(e) { e.classList.remove('active'); });
+    if (document.getElementById('splitPaymentFields')) document.getElementById('splitPaymentFields').style.display = 'none';
+    if (document.getElementById('splitAmt1')) document.getElementById('splitAmt1').value = '';
+    if (document.getElementById('splitAmt2')) document.getElementById('splitAmt2').value = '';
+    if (document.getElementById('splitTotalDisplay')) document.getElementById('splitTotalDisplay').textContent = 'Итого: 0 руб.';
+    
     activePaymentMethod = '';
     if (adminDateInput) adminDateInput.value = '';
+
+    if (typeof renderSalesTable === 'function') renderSalesTable();
+    if (typeof updateCashTotals === 'function') updateCashTotals();
+    if (typeof saveAllToLocal === 'function') saveAllToLocal();
 }
+
 
 // Безопасная функция записи продажи
 function handleSecureSaveSale(saleData) {
