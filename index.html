@@ -2050,15 +2050,19 @@ function saveSale() {
     var cleanId = rawIdString.replace(/[^a-zA-Z0-9_-]/g, '_');
     var saleId = 'sale_' + cleanId;
 
-    var saleData = {
-        id: saleId,
+var saleData = {
+    id: saleId,
+    name: name, 
+    price: price, 
+    payment: activePaymentMethod,
+    storeId: storeId, 
+    storeName: STORES[storeId],
+    seller: currentUser.name, 
+    returned: false,
+    timestamp: dateMinuteStr, // Используем нашу чистую локальную переменную без UTC сдвигов!
+    backdated: useAdminDate ? true : false
+};
 
-        name: name, price: price, payment: activePaymentMethod,
-        storeId: storeId, storeName: STORES[storeId],
-        seller: currentUser.name, returned: false,
-        timestamp: useAdminDate ? new Date(adminDateInput.value).toISOString() : new Date().toISOString(),
-        backdated: useAdminDate ? true : false
-    };
     if (activePaymentMethod === 'Раздельная оплата') {
         var p1 = document.getElementById('splitPay1').value;
         var p2 = document.getElementById('splitPay2').value;
