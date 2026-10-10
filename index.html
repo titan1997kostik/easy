@@ -528,7 +528,19 @@
         </div>
     </div>
 
-    <!-- CHART -->
+   
+    <!-- TAB BAR -->
+    <div class="tab-bar">
+        <div class="tab active" onclick="switchTab('sales', this)">История продаж</div>
+        <div class="tab" onclick="switchTab('expenses', this)">Расходы</div>
+        <div class="tab" id="tabBtn-cashStores" onclick="switchTab('cashStores', this)">Касса магазинов</div>
+        <div class="tab" id="tabBtn-breaks" class="hidden" onclick="switchTab('breaks', this)" style="display:none;">Перерывы</div>
+        <div class="tab" id="tabBtn-audit" onclick="switchTab('audit', this)">Журнал действий</div>
+    </div>
+
+    <!-- TAB: SALES -->
+    <div id="tab-sales" class="nav-section">
+         <!-- CHART -->
     <div class="card" style="margin-bottom: 20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
             <div style="display:flex; align-items:center; gap:10px;">
@@ -554,17 +566,6 @@
 
     </div>
 
-    <!-- TAB BAR -->
-    <div class="tab-bar">
-        <div class="tab active" onclick="switchTab('sales', this)">История продаж</div>
-        <div class="tab" onclick="switchTab('expenses', this)">Расходы</div>
-        <div class="tab" id="tabBtn-cashStores" onclick="switchTab('cashStores', this)">Касса магазинов</div>
-        <div class="tab" id="tabBtn-breaks" class="hidden" onclick="switchTab('breaks', this)" style="display:none;">Перерывы</div>
-        <div class="tab" id="tabBtn-audit" onclick="switchTab('audit', this)">Журнал действий</div>
-    </div>
-
-    <!-- TAB: SALES -->
-    <div id="tab-sales" class="nav-section">
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <h3>История продаж</h3>
