@@ -2368,10 +2368,9 @@ function allowReopenShift() {
             alert('Разрешение на ОДНО повторное открытие смены для магазина ' + (STORES[shiftStore] || shiftStore) + ' успешно выдано продавцу!');
         }).catch(function(err) {
             alert('Ошибка выдачи разрешения в Firebase: ' + err.message);
-        });
+        })
     } else {
-        alert('Ошибка: База данных Firebase недоступна.');
-    }
+        alert('Ошибка: База данных Firebase недоступна.');   
 }
 
     // 1. Считываем выбранные админом даты периода (если они уже есть в DOM)
