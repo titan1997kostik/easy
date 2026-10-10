@@ -1270,16 +1270,30 @@ db.ref('audit_log_data').on('value', function(snapshot) {
 
 db.ref('store_shifts_data').on('value', function(snapshot) {
     isRemoteChange = true;
-    var val = snapshot.val();
+    var val = snapshot.val() || {};
+    
+    // Синхронизируем историю, если она прилетела из базы
     if (val && typeof val === 'object') {
-        if (storeShifts._shiftHistory && val._shiftHistory) {
+        if (storeShifts && storeShifts._shiftHistory && val._shiftHistory) {
             Object.keys(storeShifts._shiftHistory).forEach(function(k) {
                 if (!val._shiftHistory[k]) val._shiftHistory[k] = storeShifts._shiftHistory[k];
             });
         }
-        storeShifts = val;
-        if (currentUser) renderAll();
     }
+    
+    // Умное обновление статуса кнопки: если для текущего магазина кассы в базе нет — гасим флаг!
+    var shiftStore = getShiftStoreId();
+    if (shiftStore && shiftStore !== 'all') {
+        if (!val[shiftStore]) {
+            isShiftOpen = false;
+        } else {
+            isShiftOpen = true;
+        }
+    }
+    
+    storeShifts = val;
+    if (currentUser) renderAll();
+
     isRemoteChange = false;
 });
 
