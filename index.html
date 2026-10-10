@@ -2287,62 +2287,93 @@ function toggleShift() {
     } else {
         // Shift is closed - open it
         if (!confirm('Вы уверены, что хотите открыть смену?')) return;
-        // For sellers: check if they already opened/closed a shift today
-        if (currentUser.role !== 'admin') {
-            var todayStr = getTodayStr();
-            var myShifts = storeShifts._shiftHistory || {};
-            var myKey = 'user_' + currentUser.id + '_store_' + shiftStore;
-            if (myShifts[myKey] && myShifts[myKey].date === todayStr && myShifts[myKey].closed) {
-                alert('Вы уже открывали и закрывали смену сегодня. Повторное открытие невозможно.');
-                return;
+        
+        var todayStr = getTodayStr();
+        
+        // Проверяем по истории, закрывал ли уже текущий продавец смену сегодня
+        var myShifts = storeShifts._shiftHistory || {};
+        var myKey = 'user_' + currentUser.id + '_store_' + shiftStore;
+        var hasClosedToday = (myShifts[myKey] && myShifts[myKey].date === todayStr && myShifts[myKey].closed);
+
+        // Если смена уже закрывалась и это обычный продавец — проверяем одноразовый допуск админа
+        if (hasClosedToday && currentUser.role !== 'admin') {
+            if (typeof db !== 'undefined' && db.ref) {
+                db.ref('reopen_permissions/' + shiftStore).once('value').then(function(snapshot) {
+                    var permActive = snapshot.val();
+                    if (permActive === true) {
+                        // Разрешение есть! Мгновенно сжигаем его в базе (одно нажатие - один допуск)
+                        db.ref('reopen_permissions/' + shiftStore).set(false);
+                        // Вызываем функцию открытия смены дальше
+                        executeShiftOpening(shiftStore, todayStr);
+                    } else {
+                        alert('Вы уже открывали и закрывали смену сегодня. Повторное открытие невозможно! Обратитесь к администратору за разрешением.');
+                    }
+                });
+                return; // Прерываем текущее выполнение, ждем ответа от Firebase
             }
         }
-        isShiftOpen = true;
-        if (currentUser) {
-            currentUser.salaryActionDone = false;
-            shiftStartTime = new Date().toISOString();
-            var u = users.find(function(x) { return x.id === currentUser.id; });
-            if (u) u.salaryActionDone = false;
-            localStorage.setItem('easyAppSync_session', JSON.stringify(currentUser));
-            localStorage.setItem('easyAppSync_shiftStart', shiftStartTime);
-            // Record this user as having the open shift for the store
-            var todayStr2 = getTodayStr();
-            storeShifts[shiftStore] = { userId: currentUser.id, userName: currentUser.name, startTime: shiftStartTime, shiftDate: todayStr2 };
-            // Record in shift history for this user+store+date
-            if (!storeShifts._shiftHistory) storeShifts._shiftHistory = {};
-            var histKey = 'user_' + currentUser.id + '_store_' + shiftStore;
-            storeShifts._shiftHistory[histKey] = { date: todayStr2, opened: true, closed: false };
-        }
-        renderShiftBtn();
-        addAudit('shift', 'Смена открыта (' + (STORES[shiftStore] || '') + ')');
-        saveAllToLocal(); broadcastData();
-        if (typeof db !== 'undefined' && db.ref) { try { var _u = users.find(function(x){ return x.id === currentUser.id; }); if (_u) db.ref('users_data/' + _u.id).set(_u); } catch(e){} db.ref('store_shifts_data/' + shiftStore).set(storeShifts[shiftStore]); if (storeShifts._shiftHistory) db.ref('store_shifts_data/_shiftHistory').set(storeShifts._shiftHistory); }
-        renderAll();
+        
+        // Если это админ или продавец открывает кассу впервые за день — сразу открываем смену
+        executeShiftOpening(shiftStore, todayStr);
     }
 }
 
+// Выносим вашу оригинальную инициализацию смены со всеми сохранениями Firebase и localStorage
+function executeShiftOpening(shiftStore, todayStr2) {
+    isShiftOpen = true;
+    if (currentUser) {
+        currentUser.salaryActionDone = false;
+        shiftStartTime = new Date();
+        var u = users.find(function(x) { return x.id === currentUser.id; });
+        if (u) u.salaryActionDone = false;
+        localStorage.setItem('easyAppSync_session', JSON.stringify(currentUser));
+    }
+    localStorage.setItem('easyAppSync_shiftStart', shiftStartTime);
+    
+    // Запись смены в глобальный рабочий объект (ваш родной код со строк 2308-2314)
+    storeShifts[shiftStore] = { userID: currentUser.id, userName: currentUser.name, startTime: shiftStartTime, shiftDate: todayStr2 };
+    if (!storeShifts._shiftHistory) storeShifts._shiftHistory = {};
+    var histKey = 'user_' + currentUser.id + '_store_' + shiftStore;
+    storeShifts._shiftHistory[histKey] = { date: todayStr2, opened: true, closed: false };
+    
+    renderShiftBtn();
+    addAudit('shift', 'Смена открыта (' + (STORES[shiftStore] || '') + ')');
+    saveAllToLocal();
+    broadcastData();
+    
+    if (typeof db !== 'undefined' && db.ref) {
+        try {
+            var _u = users.find(function(x) { return x.id === currentUser.id; });
+            if (_u) db.ref('users_data/' + _u.id).set(currentUser);
+        } catch(e) {}
+        db.ref('store_shifts_data/' + shiftStore).set(storeShifts[shiftStore]);
+    }
+    renderAll();
+}
 
 function allowReopenShift() {
     if (!currentUser || currentUser.role !== 'admin') { alert('Только админ может разрешить повторное открытие смены!'); return; }
     var shiftStore = getShiftStoreId();
-    if (!shiftStore) { alert('Не выбран магазин!'); return; }
+    
+    if (!shiftStore || shiftStore === 'all') {
+        alert('Выберите конкретный магазин в фильтре вверху для выдачи разрешения!');
+        return;
+    }
+    
     if (!confirm('Разрешить повторное открытие смены для магазина: ' + (STORES[shiftStore] || '') + '?')) return;
-    var todayStr = getTodayStr();
-    if (!storeShifts._shiftHistory) storeShifts._shiftHistory = {};
-    // Удаляем запись о закрытии смены для всех пользователей этого магазина за сегодня
-    Object.keys(storeShifts._shiftHistory).forEach(function(key) {
-        if (key.indexOf('_store_' + shiftStore) !== -1 && storeShifts._shiftHistory[key].date === todayStr) {
-            storeShifts._shiftHistory[key].closed = false;
-        }
-    });
-    saveAllToLocal(); broadcastData();
-    if (typeof db !== 'undefined' && db.ref) { try { if (storeShifts._shiftHistory) db.ref('store_shifts_data/_shiftHistory').set(storeShifts._shiftHistory); } catch(e) {} }
-    addAudit('shift_reopen', 'Разрешено повторное открытие смены (' + (STORES[shiftStore] || '') + ')');
-    renderAll();
-    alert('Повторное открытие смены разрешено!');
+
+    if (typeof db !== 'undefined' && db.ref) {
+        // Отправляем одноразовый допуск в облако Firebase
+        db.ref('reopen_permissions/' + shiftStore).set(true).then(function() {
+            alert('Разрешение на ОДНО повторное открытие смены для магазина ' + (STORES[shiftStore] || shiftStore) + ' успешно выдано продавцу!');
+        }).catch(function(err) {
+            alert('Ошибка выдачи разрешения в Firebase: ' + err.message);
+        });
+    } else {
+        alert('Ошибка: База данных Firebase недоступна.');
+    }
 }
 
-function showShiftReport() {
     // 1. Считываем выбранные админом даты периода (если они уже есть в DOM)
     var dateFromInput = document.getElementById('reportDateFrom');
     var dateToInput = document.getElementById('reportDateTo');
