@@ -905,11 +905,12 @@ function resetStore(storeKey) {
             db.ref('cash_adjustments_data/' + storeKey).set(null);
             db.ref('store_shifts_data/' + storeKey).set(null);
             if (storeShifts && storeShifts._shiftHistory) {
-                db.ref('store_shifts_data/' + storeKey + '/_shiftHistory').set(null);
-            }
+            db.ref('store_shifts_data/' + storeKey + '/_shiftHistory').set(null);
         }
+    } catch(e) { console.error(e); }
+}
 
-    }
+
     renderAll();
     drawChart();
     alert('Магазин «' + storeName + '» сброшен. Все данные очищены.');
