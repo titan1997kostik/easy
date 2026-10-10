@@ -2026,18 +2026,25 @@ function saveSale() {
     // Собираем данные полей товара
     var name = document.getElementById('prodName') ? document.getElementById('prodName').value.trim() : '';
     var price = document.getElementById('prodPrice') ? parseFloat(document.getElementById('prodPrice').value) : NaN;
-    var storeId = (typeof currentStoreId !== 'undefined') ? currentStoreId : 'all';
+    // Улучшенный универсальный поиск выбранного магазина на экране
+    var storeSelectEl = document.getElementById('storeFilter') || document.getElementById('storeSelect') || document.getElementById('saleStore') || document.getElementById('shopSelect');
+    var storeId = (storeSelectEl && storeSelectEl.value) ? storeSelectEl.value : ((typeof currentStoreId !== 'undefined') ? currentStoreId : 'all');
 
-    // Проверка заполнения полей товара
-    if (!name || isNaN(price) || !activePaymentMethod) {
-        alert('Заполните наименование, цену и выберите способ оплаты!');
+    // Если админ просматривает все точки ('all'), но пытается записать продажу, берем первый рабочий магазин из списка
+    if (storeId === 'all' && storeSelectEl && storeSelectEl.options && storeSelectEl.options.length > 1) {
+        for (var i = 0; i < storeSelectEl.options.length; i++) {
+            if (storeSelectEl.options[i].value !== 'all') {
+                storeId = storeSelectEl.options[i].value;
+                break;
+            }
+        }
+    }
+
+    if (storeId === 'all' || !storeId) {
+        alert('Выберите конкретный магазин в выпадающем списке!');
         return;
     }
 
-    if (storeId === 'all') {
-        alert('Выберите конкретный магазин!');
-        return;
-    }
 
     // Универсальное получение локальной даты и времени без ломающего UTC сдвига
     var dateMinuteStr = "";
