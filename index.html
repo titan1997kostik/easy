@@ -1100,19 +1100,37 @@ if (typeof firebase !== 'undefined' && firebase.database) {
 
 // ========== FIREBASE REALTIME LISTENERS ==========
 // СЛУШАТЕЛЬ ПРОДАЖ: Берет строго актуальный снимок, не смешивая с мусором из localStorage
-db.ref('sales_data').on('value', function(snapshot) {
-    var data = snapshot.val();
-    var arr = [];
-    if (data) {
-        Object.keys(data).forEach(function(key) {
-            if (data[key]) {
-                var item = data[key];
-                item.id = key;
-                arr.push(item);
-            }
-        });
-    }
-    sales = arr;
+    db.ref('sales_data').on('value', function(snapshot) {
+        var data = snapshot.val();
+        var arr = [];
+        if (data) {
+            Object.keys(data).forEach(function(key) {
+                if (data[key]) {
+                    var item = data[key];
+                    item.id = key;
+                    arr.push(item);
+                }
+            });
+        }
+        
+        // УМНАЯ ОФЛАЙН-СИНХРОНИЗАЦИЯ: защищаем локальные чеки устройства Б от удаления
+        if (typeof sales !== 'undefined' && sales && sales.length > 0) {
+            sales.forEach(function(localSale) {
+                if (localSale && localSale.id) {
+                    var exists = arr.some(function(s) { return s && s.id === localSale.id; });
+                    // Если чека еще нет на сервере, добавляем его в массив и принудительно пушим в облако
+                    if (!exists) {
+                        arr.push(localSale);
+                        if (typeof db !== 'undefined' && db.ref) {
+                            db.ref('sales_data/' + localSale.id).set(localSale);
+                        }
+                    }
+                }
+            });
+        }
+        
+        sales = arr;
+
     
     if (typeof renderCashWidget === 'function') renderCashWidget();
     if (typeof renderCashMetrics === 'function') renderCashMetrics();
@@ -1123,19 +1141,37 @@ db.ref('sales_data').on('value', function(snapshot) {
 });
 
 // СЛУШАТЕЛЬ РАСХОДОВ: Полная синхронизация без затирания
-db.ref('expenses_data').on('value', function(snapshot) {
-    var data = snapshot.val();
-    var arr = [];
-    if (data) {
-        Object.keys(data).forEach(function(key) {
-            if (data[key]) {
-                var item = data[key];
-                item.id = key;
-                arr.push(item);
-            }
-        });
-    }
-    expenses = arr;
+    db.ref('expenses_data').on('value', function(snapshot) {
+        var data = snapshot.val();
+        var arr = [];
+        if (data) {
+            Object.keys(data).forEach(function(key) {
+                if (data[key]) {
+                    var item = data[key];
+                    item.id = key;
+                    arr.push(item);
+                }
+            });
+        }
+        
+        // УМНАЯ ОФЛАЙН-СИНХРОНИЗАЦИЯ: защищаем локальные расходы устройства Б от удаления
+        if (typeof expenses !== 'undefined' && expenses && expenses.length > 0) {
+            expenses.forEach(function(localExpense) {
+                if (localExpense && localExpense.id) {
+                    var exists = arr.some(function(e) { return e && e.id === localExpense.id; });
+                    // Если расхода еще нет на сервере, сохраняем его в массив и принудительно пушим в облако
+                    if (!exists) {
+                        arr.push(localExpense);
+                        if (typeof db !== 'undefined' && db.ref) {
+                            db.ref('expenses_data/' + localExpense.id).set(localExpense);
+                        }
+                    }
+                }
+            });
+        }
+        
+        expenses = arr;
+
     
     if (typeof renderCashWidget === 'function') renderCashWidget();
     if (typeof renderCashMetrics === 'function') renderCashMetrics();
