@@ -2001,11 +2001,15 @@ function updateSplitTotal() {
 
 function saveSale() {
     if (!checkSessionBeforeAction()) return;
-    var adminDateInput = document.getElementById('adminSaleDate');
-    var useAdminDate = false;
-    if (currentUser && currentUser.role === 'admin' && adminDateInput && adminDateInput.value) {
+var adminDateInput = document.getElementById('adminSaleDate') || document.getElementById('adminDate') || document.getElementById('saleDate');
+var useAdminDate = false;
+    var todayStr = new Date().toISOString().slice(0, 10);
+    var isSelectedPastDate = typeof selectedDate !== 'undefined' && selectedDate && selectedDate !== todayStr;
+    
+    if (currentUser && currentUser.role === 'admin' && ((adminDateInput && adminDateInput.value) || isSelectedPastDate)) {
         useAdminDate = true;
     }
+
     
     if (!useAdminDate && !isStoreShiftOpen(getShiftStoreId())) { 
         alert('Сначала откройте смену!'); 
@@ -2029,12 +2033,11 @@ function saveSale() {
     var dateMinuteStr = "";
     if (useAdminDate) {
         // Поддерживает и type="date" (YYYY-MM-DD), и type="datetime-local" (YYYY-MM-DDTHH:mm)
-        var rawVal = adminDateInput.value.replace(' ', 'T'); 
-        if (rawVal.length === 10) {
-            // Если админ ввёл только дату, добавляем текущее время смартфона
+        var rawVal = (adminDateInput && adminDateInput.value) ? adminDateInput.value.replace(' ', 'T') : selectedDate;
+        if (rawVal && rawVal.length === 10) {
             var curTime = new Date().toTimeString().split(' ')[0].slice(0, 5); // "HH:MM"
             dateMinuteStr = rawVal + 'T' + curTime;
-        } else {
+
             dateMinuteStr = rawVal.slice(0, 16);
         }
     } else {
