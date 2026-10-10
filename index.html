@@ -3716,22 +3716,30 @@ if (typeof selectedDate === 'string' && selectedDate.includes('-')) {
 }
 var html = '<h4 style="margin-bottom:10px;">' + formattedDisplayDate + '</h4>';
 
-    html += '<table style="font-size:13px;"><thead><tr><th>Товар</th><th>Магазин</th><th>Цена</th><th>Оплата</th><th>Продавец</th></tr></thead><tbody>';
-    daySales.forEach(function(s) {
-        var retBadge = s.returned ? '<span class="return-badge">Возврат</span>' : '';
-        html += '<tr' + (s.returned ? ' class="returned-row"' : '') + '><td>' + s.name + retBadge + '</td><td>' + (s.storeName||'') + '</td><td>' + s.price + ' руб.</td><td>' + s.payment + '</td><td>' + (s.seller||'') + '</td></tr>';
-        if (!s.returned) total += s.price;
-    });
-    html += '</tbody></table>';
-    if (dayExp.length > 0) {
-        html += '<table style="font-size:13px; margin-top:10px;"><thead><tr><th>Расход</th><th>Магазин</th><th>Сумма</th><th>Причина</th></tr></thead><tbody>';
-        dayExp.forEach(function(e) {
-            html += '<tr><td>Расход</td><td>' + (e.storeName||'') + '</td><td style="color:var(--danger);">-' + e.amount + ' руб.</td><td>' + e.reason + '</td></tr>';
-        });
+        html += '<table style="font-size:13px;"><thead><tr><th>Товар</th><th>Магазин</th><th>Цена</th><th>Оплата</th><th>Продавец</th></tr></thead><tbody>';
+        if (daySales && daySales.length > 0) {
+            daySales.forEach(function(s) {
+                var retBadge = s.returned ? ' <span class="return-badge">Возврат</span>' : '';
+                html += '<tr' + (s.returned ? ' class="returned-row"' : '') + '><td>' + s.name + retBadge + '</td><td>' + (s.storeName || '') + '</td><td>' + s.price + ' руб</td><td>' + (s.paymentType === 'cash' ? 'Наличные' : 'Карта') + '</td><td>' + (s.userName || '') + '</td></tr>';
+                if (!s.returned) total += s.price;
+            });
+        }
         html += '</tbody></table>';
-    }
-    html += '<div style="text-align:right; font-weight:bold; margin-top:10px;">Итого: ' + total + ' руб.</div>';
-    container.innerHTML = html;
+        
+        // 2. ИСТОРИЯ РАСХОДОВ (Выровнено строго по колонкам)
+        if (dayExp && dayExp.length > 0) {
+            html += '<table style="font-size:13px; margin-top:15px;"><thead><tr><th>Расход</th><th>Магазин</th><th>Сумма</th><th>Причина</th><th>Кто записал</th></tr></thead><tbody>';
+            dayExp.forEach(function(e) {
+                var expStoreName = e.storeName || (typeof STORES !== 'undefined' && STORES[e.storeId]) || '';
+                var displayTime = e.time ? ' (' + e.time + ')' : '';
+                html += '<tr><td>' + (e.category || 'Расход из кассы') + '</td><td>' + expStoreName + '</td><td style="color:#d9534f; font-weight:bold;">' + e.amount + ' руб.</td><td>' + (e.reason || e.description || '-') + '</td><td>' + (e.userName || '') + displayTime + '</td></tr>';
+            });
+            html += '</tbody></table>';
+        }
+        
+        html += '<div style="text-align:right; font-weight:bold; margin-top:15px;">Итого продаж: ' + total + ' руб.</div>';
+        container.innerHTML = html;
+
     container.classList.remove('hidden');
 }
 
