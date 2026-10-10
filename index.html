@@ -3026,13 +3026,16 @@ function renderExpensesTable() {
     var visibleKeys = typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys() : [];
 
     // Ограничиваем выгрузку расходов СТРОГО выбранным днем и магазином
-    var filtered = expenses.filter(function(e) {
-        var matchStore = visibleKeys.indexOf(e.storeId) !== -1 && (targetStore === 'all' || e.storeId === targetStore);
-        var eDate = e.timestamp ? new Date(e.timestamp).toLocaleDateString('sv-SE') : '';
+var filtered = expenses.filter(function(e) {
+    var matchStore = visibleKeys.indexOf(e.storeId) !== -1 && (targetStore === 'all' || e.storeId === targetStore);
+    
+    var eDate = "";
+    if (e.timestamp) {
+        eDate = e.timestamp.slice(0, 10);
+    }
 
-        var matchDate = (eDate === targetDate);
-        return matchStore && matchDate;
-    });
+    return matchStore && (eDate === targetDate);
+});
 
     // Свежие расходы сверху
     filtered.sort(function(a, b) {
@@ -3463,7 +3466,7 @@ function renderBreaksTable() {
         filtered = breaksList.filter(function(b) {
             if (!b) return false;
             var matchStore = visibleKeys.indexOf(b.storeId) !== -1 && (targetStore === 'all' || b.storeId === targetStore);
-                var bDate = b.timestamp ? new Date(b.timestamp).toLocaleDateString('sv-SE') : '';
+            var bDate = b.timestamp ? b.timestamp.slice(0, 10) : '';
 
             return matchStore && (bDate === targetDate);
         });
@@ -3472,6 +3475,7 @@ function renderBreaksTable() {
             var b = breaksList[key];
             if (b) {
                 var matchStore = visibleKeys.indexOf(b.storeId) !== -1 && (targetStore === 'all' || b.storeId === targetStore);
+                var bDate = b.timestamp ? b.timestamp.slice(0, 10) : '';
                 if (matchStore && bDate === targetDate) {
                     filtered.push(b);
                 }
@@ -3593,7 +3597,17 @@ function renderCalendarDetail() {
         return;
     }
     var total = 0;
-    var html = '<h4 style="margin-bottom:10px;">' + new Date(selectedDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + '</h4>';
+    // НАДО ПОСТАВИТЬ:
+var formattedDisplayDate = selectedDate;
+if (typeof selectedDate === 'string' && selectedDate.includes('-')) {
+    var parts = selectedDate.split('-');
+    if (parts.length === 3) {
+        var months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+        formattedDisplayDate = parseInt(parts[2], 10) + ' ' + months[parseInt(parts[1], 10) - 1];
+    }
+}
+var html = '<h4 style="margin-bottom:10px;">' + formattedDisplayDate + '</h4>';
+
     html += '<table style="font-size:13px;"><thead><tr><th>Товар</th><th>Магазин</th><th>Цена</th><th>Оплата</th><th>Продавец</th></tr></thead><tbody>';
     daySales.forEach(function(s) {
         var retBadge = s.returned ? '<span class="return-badge">Возврат</span>' : '';
