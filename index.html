@@ -2273,32 +2273,53 @@ function toggleShift() {
     if (!shiftStore) { alert('Не выбран магазин!'); return; }
         var activeShifts = (typeof storeShifts !== 'undefined' && storeShifts) ? storeShifts : (JSON.parse(localStorage.getItem('easyAppSync_storeShifts')) || {});
         var storeShift = activeShifts[shiftStore];
-        if (storeShift || isShiftOpen) {
-
-        // Shift is open - close it
-        if (!confirm('Вы уверены, что хотите закрыть смену?')) return;
-        // Check that this user is the one who opened the shift (or admin)
-        if (storeShift.userId !== currentUser.id && currentUser.role !== 'admin') {
-            alert('Смену открыл другой сотрудник: ' + storeShift.userName + '. Только он или админ может закрыть смену.');
+    if (storeShift || isShiftOpen) {
+        // Проверка: если смену закрывает не тот, кто открыл, и это не админ
+        if (storeShift && storeShift.userId && storeShift.userId !== currentUser.id && currentUser.role !== 'admin') {
+            alert('Смену открыл другой сотрудник: ' + (storeShift.userName || '') + '. Только он или админ может закрыть смену.');
             return;
         }
-        // If admin closes someone else's shift, record it
-        if (storeShift.userId !== currentUser.id && currentUser.role === 'admin') {
-            if (!confirm('Смену открыл: ' + storeShift.userName + '. Закрыть смену вместо него?')) return;
+        
+        // Предупреждение для админа, если он закрывает смену за продавца
+        if (storeShift && storeShift.userId && storeShift.userId !== currentUser.id && currentUser.role === 'admin') {
+            if (!confirm('Смену открыл: ' + (storeShift.userName || '') + '. Закрыть смену вместо него?')) return;
+        } else {
+            // Обычное подтверждение для продавца
+            if (!confirm('Вы уверены, что хотите закрыть смену?')) return;
         }
-        // Mark shift as closed in history and remove from storeShifts
+        
+        // Стираем смену из локальной памяти
         delete activeShifts[shiftStore];
         isShiftOpen = false;
         renderShiftBtn();
-        // Record shift history for the user who opened the shift
+        
+        // Записываем закрытие в историю смен
         if (!activeShifts._shiftHistory) activeShifts._shiftHistory = {};
-        var histKey = 'user_' + currentUser.id + '_store_' + shiftStore;
+        var histKey = 'user_' + (storeShift && storeShift.userId ? storeShift.userId : currentUser.id) + '_store_' + shiftStore;
         activeShifts._shiftHistory[histKey] = { date: getTodayStr(), opened: true, closed: true };
+        
         addAudit('shift', 'Смена закрыта (' + (STORES[shiftStore] || '') + ')');
-        saveAllToLocal(); broadcastData();
-
-        // Notify user to count cash
+        localStorage.setItem('easyAppSync_storeShifts', JSON.stringify(activeShifts));
+        saveAllToLocal(); 
+        broadcastData();
+        
+        // ЖЕСТКОЕ УДАЛЕНИЕ ИЗ ОБЛАКА FIREBASE
+        if (typeof db !== 'undefined' && db.ref) {
+            try { 
+                db.ref('users_data/' + currentUser.id).set(currentUser); 
+            } catch(e){}
+            
+            // Стираем активную смену в реальном времени, чтобы таблица "Управление магазинами" сразу обновилась
+            db.ref('store_shifts_data/' + shiftStore).remove();
+            db.ref('store_shifts_data/' + shiftStore).set(null);
+            
+            // Фиксируем закрытый статус в истории Firebase
+            db.ref('store_shifts_history/' + shiftStore + '_' + getTodayStr()).set(activeShifts._shiftHistory[histKey]);
+        }
+        renderAll();
         alert('⚠️ Не забудьте пересчитать кассу наличных и сверить её с приложением!');
+    }
+
     } else {
         // Shift is closed - open it
         if (!confirm('Вы уверены, что хотите открыть смену?')) return;
