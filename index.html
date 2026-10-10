@@ -2001,12 +2001,11 @@ function updateSplitTotal() {
 
 function saveSale() {
     if (!checkSessionBeforeAction()) return;
-var adminDateInput = document.getElementById('adminSaleDate') || document.getElementById('adminDate') || document.getElementById('saleDate');
-var useAdminDate = false;
+    var adminDateInput = document.getElementById('adminSaleDate') || document.getElementById('adminDate') || document.getElementById('saleDate');
+    var useAdminDate = false;
     var todayStr = new Date().toISOString().slice(0, 10);
-    var isSelectedPastDate = typeof selectedDate !== 'undefined' && selectedDate && selectedDate !== todayStr;
     
-    if (currentUser && currentUser.role === 'admin' && ((adminDateInput && adminDateInput.value) || isSelectedPastDate)) {
+    if ((typeof selectedDate !== 'undefined' && selectedDate && selectedDate !== todayStr) || (adminDateInput && adminDateInput.value)) {
         useAdminDate = true;
     }
 
