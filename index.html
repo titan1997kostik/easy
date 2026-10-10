@@ -2002,16 +2002,52 @@ function updateSplitTotal() {
 function saveSale() {
     if (!checkSessionBeforeAction()) return;
     var adminDateInput = document.getElementById('adminSaleDate');
-    var useAdminDate = currentUser && currentUser.role === 'admin' && adminDateInput && adminDateInput.value;
-    if (!useAdminDate && !isStoreShiftOpen(getShiftStoreId())) { alert('Сначала откройте смену!'); return; }
+    var useAdminDate = false;
+    if (currentUser && currentUser.role === 'admin' && adminDateInput && adminDateInput.value) {
+        useAdminDate = true;
+    }
+    
+    if (!useAdminDate && !isStoreShiftOpen(getShiftStoreId())) { 
+        alert('Сначала откройте смену!'); 
+        return; 
+    }
+    
     var name = document.getElementById('prodName').value.trim();
     var price = parseFloat(document.getElementById('prodPrice').value);
-    if (!name || isNaN(price) || !activePaymentMethod) { alert('Заполните наименование, цену и выберите способ оплаты!'); return; }
+    if (!name || isNaN(price) || !activePaymentMethod) { 
+        alert('Заполните наименование, цену и выберите способ оплаты!'); 
+        return; 
+    }
+    
     var storeId = currentUser.role === 'admin' ? document.getElementById('storeFilter').value : currentUser.store;
-    if (storeId === 'all') { alert('Выберите конкретный магазин!'); return; }
-        var dateMinuteStr = useAdminDate ? new Date(adminDateInput.value).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16);
+    if (storeId === 'all') { 
+        alert('Выберите конкретный магазин!'); 
+        return; 
+    }
+
+    // Универсальное получение локальной даты и времени без ломающего UTC сдвига
+    var dateMinuteStr = "";
+    if (useAdminDate) {
+        // Поддерживает и type="date" (YYYY-MM-DD), и type="datetime-local" (YYYY-MM-DDTHH:mm)
+        var rawVal = adminDateInput.value.replace(' ', 'T'); 
+        if (rawVal.length === 10) {
+            // Если админ ввёл только дату, добавляем текущее время смартфона
+            var curTime = new Date().toTimeString().split(' ')[0].slice(0, 5); // "HH:MM"
+            dateMinuteStr = rawVal + 'T' + curTime;
+        } else {
+            dateMinuteStr = rawVal.slice(0, 16);
+        }
+    } else {
+        // Для обычных продавцов — строго текущее локальное время устройства
+        var now = new Date();
+        var offset = now.getTimezoneOffset() * 60000;
+        var localISOTime = new Date(now.getTime() - offset).toISOString();
+        dateMinuteStr = localISOTime.slice(0, 16);
+    }
+
+
     var rawIdString = (name || '') + '_' + (price || 0) + '_' + (storeId || '') + '_' + dateMinuteStr;
-    var cleanId = rawIdString.replace(/[^a-zA-Z0-9_]/g, '');
+    var cleanId = rawIdString.replace(/[^a-zA-Z0-9_-]/g, '_');
     var saleId = 'sale_' + cleanId;
 
     var saleData = {
@@ -2938,7 +2974,13 @@ function renderSalesTable() {
         return;
     }
     var total = 0;
+    var displayLimit = 50; // Показывать только 50 записей за раз
+var renderedCount = 0;
+
     filtered.forEach(function(sale) {
+if (renderedCount >= displayLimit) return;
+renderedCount++;
+
         if (!sale.returned) total += sale.price;
         var tr = document.createElement('tr');
         if (sale.returned) tr.className = 'returned-row';
@@ -2991,8 +3033,14 @@ function renderExpensesTable() {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-light);">Расходов за выбранный день нет</td></tr>';
         return;
     }
+    var displayLimit = 50; // Показывать только 50 расходов за раз
+var renderedCount = 0;
+
 
     filtered.forEach(function(e) {
+        if (renderedCount >= displayLimit) return;
+renderedCount++;
+
         var tr = document.createElement('tr');
         var d = e.timestamp ? new Date(e.timestamp) : new Date();
         var timeText = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
