@@ -2005,9 +2005,15 @@ function saveSale() {
     var useAdminDate = false;
     var todayStr = new Date().toISOString().slice(0, 10);
     
-    if ((typeof selectedDate !== 'undefined' && selectedDate && selectedDate !== todayStr) || (adminDateInput && adminDateInput.value)) {
+    // Пытаемся найти элемент календаря на экране («Касса и календарь»)
+    var calendarEl = document.getElementById('calendarDate') || document.getElementById('mainCalendar') || document.getElementById('dateFilter') || document.getElementById('reportDate');
+    var currentDisplayDate = (calendarEl && calendarEl.value) ? calendarEl.value : (typeof selectedDate !== 'undefined' ? selectedDate : todayStr);
+    
+    // Если на экране открыт НЕ сегодняшний день ИЛИ заполнен инпут в форме:
+    if ((currentDisplayDate && currentDisplayDate !== todayStr) || (adminDateInput && adminDateInput.value)) {
         useAdminDate = true;
     }
+
 
     
     if (!useAdminDate && !isStoreShiftOpen(getShiftStoreId())) { 
@@ -2031,14 +2037,17 @@ function saveSale() {
     // Универсальное получение локальной даты и времени без ломающего UTC сдвига
     var dateMinuteStr = "";
     if (useAdminDate) {
-        // Поддерживает и type="date" (YYYY-MM-DD), и type="datetime-local" (YYYY-MM-DDTHH:mm)
-        var rawVal = (adminDateInput && adminDateInput.value) ? adminDateInput.value.replace(' ', 'T') : selectedDate;
+        // Безопасно берём дату из инпута формы, а если он пуст — из календаря на экране
+        var rawVal = (adminDateInput && adminDateInput.value) ? adminDateInput.value.replace(' ', 'T') : currentDisplayDate;
+        
         if (rawVal && rawVal.length === 10) {
-            var curTime = new Date().toTimeString().split(' ')[0].slice(0, 5); // "HH:MM"
+            var curTime = new Date().toTimeString().split(' ').slice(0, 5); // Исправлено "toTimeString"
             dateMinuteStr = rawVal + 'T' + curTime;
-
+        } else if (rawVal) {
             dateMinuteStr = rawVal.slice(0, 16);
         }
+    }
+
     } else {
         // Для обычных продавцов — строго текущее локальное время устройства
         var now = new Date();
