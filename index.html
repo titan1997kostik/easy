@@ -825,35 +825,93 @@ function addStore() {
 
 function deleteStore(storeKey) {
     if (!isSuperAdmin(currentUser)) { alert('Только главный админ может удалять магазины!'); return; }
-    var storeName = STORES[storeKey];
-    if (!storeName) return;
-    var storeOrg = getStoreOrg(storeKey);
-    // Check if any users from the SAME org are assigned to this store
+    var storeName = STORES[storeKey] || ('Магазин №' + storeKey);
+    
+    // Проверка привязанных сотрудников, чтобы случайно не удалить работающую точку
+    var storeOrg = typeof getStoreOrg === 'function' ? getStoreOrg(storeKey) : 'mine';
     var assignedUsers = users.filter(function(u) { return u.store === storeKey && (u.org || 'mine') === storeOrg; });
     if (assignedUsers.length > 0) {
-        alert('Нельзя удалить магазин «' + storeName + '», так как к нему привязаны сотрудники: ' + assignedUsers.map(function(u){ return u.name; }).join(', '));
+        alert('Нельзя удалить магазин "' + storeName + '", так как к нему привязаны сотрудники: ' + assignedUsers.map(function(u){ return u.name; }).join(', '));
         return;
     }
-    // Check if there are sales for this store
-    var storeSales = sales.filter(function(s) { return s.storeId === storeKey; });
-    if (storeSales.length > 0) {
-        if (!confirm('У магазина «' + storeName + '» есть ' + storeSales.length + ' продаж. Всё равно удалить магазин?')) return;
-    } else {
-        if (!confirm('Удалить магазин «' + storeName + '»?')) return;
+
+    var msg = 'ВНИМАНИЕ!!! Вы полностью удаляете магазин «' + storeName + '»\n\n';
+    msg += 'Это действие ПРИНУДИТЕЛЬНО И НАВСЕГДА удалит:\n';
+    msg += '1. Сам магазин из списка\n';
+    msg += '2. Все его продажи и расходы из облака Firebase\n';
+    msg += '3. Все смены, перерывы и данные кассы\n\n';
+    msg += 'Данные исчезнут на всех устройствах! Удалить магазин и все его данные?';
+    
+    if (!confirm(msg)) return;
+
+    // 1. ПРЯМАЯ КОРНЕВАЯ ОЧИСТКА FIREBASE ОТ ВСЕХ ДАННЫХ МАГАЗИНА
+    if (typeof db !== 'undefined' && db.ref) {
+        // Удаляем продажи из облака
+        db.ref('sales_data').once('value').then(function(snapshot) {
+            var data = snapshot.val();
+            if (data) {
+                Object.keys(data).forEach(function(id) {
+                    if (data[id] && String(data[id].storeId) === String(storeKey)) {
+                        db.ref('sales_data/' + id).set(null);
+                    }
+                });
+            }
+        });
+
+        // Удаляем расходы из облака
+        db.ref('expenses_data').once('value').then(function(snapshot) {
+            var data = snapshot.val();
+            if (data) {
+                Object.keys(data).forEach(function(id) {
+                    if (data[id] && String(data[id].storeId) === String(storeKey)) {
+                        db.ref('expenses_data/' + id).set(null);
+                    }
+                });
+            }
+        });
+
+        // Удаляем перерывы из облака
+        db.ref('breaks_data').once('value').then(function(snapshot) {
+            var data = snapshot.val();
+            if (data) {
+                Object.keys(data).forEach(function(id) {
+                    if (data[id] && String(data[id].storeId) === String(storeKey)) {
+                        db.ref('breaks_data/' + id).set(null);
+                    }
+                });
+            }
+        });
+
+        // Удаляем конфигурацию самого магазина на сервере Firebase
+        db.ref('stores_data/' + storeKey).set(null);
+        db.ref('store_orgs_data/' + storeKey).set(null);
+        db.ref('cash_adjustments_data/' + storeKey).set(null);
+        db.ref('store_shifts_data/' + storeKey).set(null);
     }
-    delete STORES[storeKey];
-    delete STORE_ORGS[storeKey];
-    // Remove from storeShifts
+
+    // 2. Вычищаем из локальной памяти текущего устройства
+    sales = sales.filter(function(s) { return s.storeId !== storeKey; });
+    expenses = expenses.filter(function(e) { return e.storeId !== storeKey; });
+    breaksData = breaksData.filter(function(b) { return b.storeId !== storeKey; });
+    
+    if (STORES[storeKey]) delete STORES[storeKey];
+    if (STORE_ORGS[storeKey]) delete STORE_ORGS[storeKey];
+    if (cashAdjustments[storeKey]) delete cashAdjustments[storeKey];
     if (storeShifts[storeKey]) delete storeShifts[storeKey];
-    saveAllToLocal(); broadcastData();
-    if (typeof db !== 'undefined' && db.ref) { try { db.ref('stores_data/' + storeKey).remove(); db.ref('store_orgs_data/' + storeKey).remove(); } catch(e) {} }
+
+    addAudit('store_delete', 'Полное автоматическое удаление магазина и данных: ' + storeName);
+    saveAllToLocal();
+    broadcastData();
+
     refreshStoreDropdowns();
     renderStoresManagement();
     renderOrgsManagement();
     renderAll();
-    addAudit('store_delete', 'Удалён магазин: ' + storeName);
-    alert('Магазин «' + storeName + '» удалён!');
+    if (typeof drawChart === 'function') drawChart();
+    
+    alert('Магазин «' + storeName + '» и вся его история успешно выжжены из базы данных Firebase.');
 }
+
 
 function resetStore(storeKey) {
     if (!isSuperAdmin(currentUser)) { alert('Только главный админ может сбрасывать магазины!'); return; }
