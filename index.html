@@ -31,7 +31,9 @@
     tryLoad();
 })();
 </script>
-    <style>
+    <script src="https://jsdelivr.net"></script>
+    
+   <style>
         :root {
             --primary: #e87fb0;
             --primary-hover: #d66a9e;
@@ -129,7 +131,8 @@
         .return-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #fce4ee; color: #d44a6a; margin-left: 6px; }
         .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: flex-end; }
         .filter-bar .form-group { margin-bottom: 0; min-width: 140px; }
-        .chart-container { position: relative; height: 200px; margin-top: 10px; }
+       .chart-container { position: relative; height: 250px; width: 100%; margin-top: 10px; }
+
         .shift-report { background: #fce4ee; border: 1px solid #f5c6d8; border-radius: 10px; padding: 20px; margin-top: 15px; }
         .shift-report-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #fce4ee; font-size: 14px; }
         .shift-report-row:last-child { border-bottom: none; font-weight: bold; font-size: 16px; color: var(--success); }
@@ -3359,15 +3362,16 @@ function setChartPeriod(period) {
     drawChart();
 }
 
+var myChartInstance = null; // Глобальная переменная для хранения экземпляра графика
+
 function drawChart() {
     var canvas = document.getElementById('revenueChart');
     if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
     var selectMetric = document.getElementById('chartMetricSelect');
     var analyticsBlock = document.getElementById('chartAnalyticsBlock');
     
+    // Ограничение видимости для продавцов
     if (currentUser && currentUser.role === 'seller') {
         if (selectMetric) {
             selectMetric.value = 'checks';
@@ -3445,44 +3449,33 @@ function drawChart() {
         return 0;
     }
 
+    // Собираем данные периодов (Неделя / Месяц / Год)
     if (chartPeriod === 'week') {
         for (var i = 6; i >= 0; i--) {
             var dCurr = new Date(); dCurr.setDate(now.getDate() - i);
             var dPast = new Date(); dPast.setDate(now.getDate() - i - 7);
-            
             var strCurr = dCurr.toISOString().slice(0, 10);
             var strPast = dPast.toISOString().slice(0, 10);
             
             labels.push(dCurr.getDate() + '.' + (dCurr.getMonth() + 1));
-            
             var valCurr = getMetricValueForDay(strCurr, true);
             var valPast = getMetricValueForDay(strPast, false);
-            
             currentValues.push(valCurr);
-            currentSum += valCurr;
-            pastSum += valPast;
+            currentSum += valCurr; pastSum += valPast;
         }
     } 
     else if (chartPeriod === 'month') {
         for (var i = 29; i >= 0; i--) {
             var dCurr = new Date(); dCurr.setDate(now.getDate() - i);
             var dPast = new Date(); dPast.setDate(now.getDate() - i - 30);
-            
             var strCurr = dCurr.toISOString().slice(0, 10);
             var strPast = dPast.toISOString().slice(0, 10);
             
-            if (i % 5 === 0 || i === 0) {
-                labels.push(dCurr.getDate() + '.' + (dCurr.getMonth() + 1));
-            } else {
-                labels.push('');
-            }
-            
+            labels.push(dCurr.getDate() + '.' + (dCurr.getMonth() + 1));
             var valCurr = getMetricValueForDay(strCurr, true);
             var valPast = getMetricValueForDay(strPast, false);
-            
             currentValues.push(valCurr);
-            currentSum += valCurr;
-            pastSum += valPast;
+            currentSum += valCurr; pastSum += valPast;
         }
     } 
     else if (chartPeriod === 'year') {
@@ -3490,7 +3483,6 @@ function drawChart() {
         for (var i = 11; i >= 0; i--) {
             var dCurr = new Date(now.getFullYear(), now.getMonth() - i, 1);
             var dPast = new Date(now.getFullYear() - 1, now.getMonth() - i, 1);
-            
             labels.push(monthNames[dCurr.getMonth()]);
             
             var mCurrSum = 0, mPastSum = 0;
@@ -3501,10 +3493,93 @@ function drawChart() {
                 if (pDay.getMonth() === dPast.getMonth()) mPastSum += getMetricValueForDay(pDay.toISOString().slice(0, 10), false);
             }
             currentValues.push(mCurrSum);
-            currentSum += mCurrSum;
-            pastSum += mPastSum;
+            currentSum += mCurrSum; pastSum += mPastSum;
         }
     }
+
+    // Инициализация или обновление интерактивного графика Chart.js
+    if (myChartInstance) {
+        myChartInstance.destroy(); // Уничтожаем старый график, чтобы избежать наложений
+    }
+
+    var metricTitles = { revenue: 'Выручка (руб)', cash: 'Чистые наличные (руб)', checks: 'Чеки (шт)', expenses: 'Расходы (руб)' };
+    
+    myChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: metricTitles[metric] || 'Показатель',
+                data: currentValues,
+                backgroundColor: '#e87fb0',
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f0d4dd' },
+                    ticks: { color: '#b89ea0', font: { size: 11 } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { 
+                        color: '#b89ea0', 
+                        font: { size: 10 },
+                        maxRotation: 45,
+                        autoSkip: true, // Автоматически скрывает лишние подписи на телефонах
+                        maxTicksLimit: chartPeriod === 'month' ? 8 : 12
+                    }
+                }
+            }
+        }
+    });
+
+    // Ваша аналитика под графиком (Полностью сохранена)
+    if (analyticsBlock && currentUser && currentUser.role !== 'seller') {
+        var periodName = chartPeriod === 'week' ? 'прошлой неделей' : (chartPeriod === 'month' ? 'прошлым месяцем' : 'прошлым годом');
+        
+        function calcPct(curr, past) {
+            if (past === 0) return curr > 0 ? '+100%' : '0%';
+            var diff = ((curr - past) / past) * 100;
+            return (diff >= 0 ? '+' : '') + diff.toFixed(1) + '%';
+        }
+
+        var pctRev = calcPct(currentSum, pastSum);
+        var pctSales = calcPct(currentSalesCount, pastSalesCount);
+        var pctExp = calcPct(currentExpSum, pastExpSum);
+        
+        var currentAvg = currentSalesCount > 0 ? Math.round(currentSum / currentSalesCount) : 0;
+        var pastAvg = pastSalesCount > 0 ? Math.round(pastSum / pastSalesCount) : 0;
+        var pctAvg = calcPct(currentAvg, pastAvg);
+
+        var upIcon = ' <b style="color:#4BB57A;">▲</b>';
+        var downIcon = ' <b style="color:#e85a7a;">▼</b>';
+
+        var trendRev = pctRev.indexOf('-') === -1 ? upIcon : downIcon;
+        var trendSales = pctSales.indexOf('-') === -1 ? upIcon : downIcon;
+        var trendAvg = pctAvg.indexOf('-') === -1 ? upIcon : downIcon;
+        var trendExp = pctExp.indexOf('-') === -1 ? upIcon : downIcon;
+
+        var currentTitle = metricTitles[metric] || 'Показатель';
+
+        analyticsBlock.innerHTML = '<h4 style="margin-top:0; margin-bottom:8px; color:var(--text); font-size:14px;">📊 Сравнительный анализ (по сравнению с ' + periodName + '):</h4>' +
+            '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-top:5px;">' +
+                '<div>• Суммарная ' + currentTitle + ': <b>' + currentSum.toLocaleString('ru-RU') + ' руб</b> (' + pctRev + trendRev + ')</div>' +
+                '<div>• Количество продаж: <b>' + currentSalesCount + ' шт</b> (' + pctSales + trendSales + ')</div>' +
+                '<div>• Средний чек: <b>' + currentAvg + ' руб</b> (' + pctAvg + trendAvg + ')</div>' +
+                '<div>• Общие расходы: <b>' + currentExpSum + ' руб</b> (' + pctExp + trendExp + ')</div>' +
+            '</div>';
+    }
+}
+
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     var maxVal = 0;
