@@ -3135,11 +3135,12 @@ renderedCount++;
         if (sale.returned) tr.className = 'returned-row';
         var date = new Date(sale.timestamp).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
         var returnBtn = sale.returned
-            ? '<button class="btn btn-secondary" style="padding:4px 8px;font-size:11px;margin-right:4px;" onclick="returnSale(' + sale.id + ')">Отменить возврат</button>'
-            : '<button class="btn btn-warning" style="padding:4px 8px;font-size:11px;margin-right:4px;" onclick="returnSale(' + sale.id + ')">Возврат</button>';
+            ? '<button class="btn btn-secondary" style="padding:4px 8px;font-size:11px;margin-right:4px;" onclick="returnSale(\'' + sale.id + '\')">Отменить возврат</button>'
+            : '<button class="btn btn-warning" style="padding:4px 8px;font-size:11px;margin-right:4px;" onclick="returnSale(\'' + sale.id + '\')">Возврат</button>';
         var delBtn = (currentUser.role === 'admin')
-            ? '<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteSale(' + sale.id + ')">Удалить</button>'
+            ? '<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteSale(\'' + sale.id + '\')">Удалить</button>'
             : '<span style="color:var(--text-light); font-size:12px;">\u2014</span>';
+
         var retBadge = sale.returned ? '<span class="return-badge">Возврат</span>' : '';
         var payDisplay = sale.splitPayment ? (sale.payment1 + ' (' + sale.amount1 + ' руб.) + ' + sale.payment2 + ' (' + sale.amount2 + ' руб.)') : sale.payment;
         tr.innerHTML = '<td style="white-space:nowrap;">' + date + '</td><td>' + sale.name + retBadge + '</td><td>' + (sale.storeName||'') + '</td><td>' + sale.price + ' руб.</td><td>' + payDisplay + '</td><td>' + (sale.seller||'') + '</td><td style="white-space:nowrap;">' + returnBtn + delBtn + '</td>';
