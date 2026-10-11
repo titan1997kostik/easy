@@ -3165,16 +3165,11 @@ function renderExpensesTable() {
     var visibleKeys = typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys() : [];
 
     // Ограничиваем выгрузку расходов СТРОГО выбранным днем и магазином
-var filtered = expenses.filter(function(e) {
-    var matchStore = visibleKeys.indexOf(e.storeId) !== -1 && (targetStore === 'all' || e.storeId === targetStore);
-    
-    var eDate = "";
-    if (e.timestamp) {
-        eDate = e.timestamp.slice(0, 10);
-    }
-
-    return matchStore && (eDate === targetDate);
-});
+    var filtered = expenses.filter(function(e) {
+        var matchStore = visibleKeys.indexOf(e.storeId) !== -1 && (targetStore === 'all' || e.storeId === targetStore);
+        var eDate = e.timestamp ? e.timestamp.slice(0, 10) : '';
+        return matchStore && (eDate === targetDate);
+    });
 
     // Свежие расходы сверху
     filtered.sort(function(a, b) {
@@ -3182,20 +3177,21 @@ var filtered = expenses.filter(function(e) {
     });
 
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-light);">Расходов за выбранный день нет</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-light);">Расходов за выбранный день нет</td></tr>';
         return;
     }
+    
     var displayLimit = 50; // Показывать только 50 расходов за раз
-var renderedCount = 0;
-
+    var renderedCount = 0;
 
     filtered.forEach(function(e) {
         if (renderedCount >= displayLimit) return;
-renderedCount++;
+        renderedCount++;
 
         var tr = document.createElement('tr');
         var d = e.timestamp ? new Date(e.timestamp) : new Date();
         var timeText = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        var dateText = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
         
         var delBtn = (currentUser.role === 'admin' || currentUser.username === 'Костя' || currentUser.username === 'Оля' || currentUser.username === 'Вова')
             ? '<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteExpense(\'' + e.id + '\')">Удалить</button>'
@@ -3203,14 +3199,16 @@ renderedCount++;
 
         var storeName = typeof STORES !== 'undefined' ? (STORES[e.storeId] || e.storeId) : e.storeId;
 
-        tr.innerHTML = '<td>' + (e.category || '-') + '</td>' +
-                       '<td>' + (e.description || '-') + '</td>' +
+        tr.innerHTML = '<td>' + dateText + ' ' + timeText + '</td>' +
+                       '<td>' + storeName + '</td>' +
                        '<td style="color:var(--danger); font-weight:600;">-' + (e.amount || 0) + ' руб.</td>' +
-                       '<td>' + storeName + ' (' + timeText + ')</td>' +
+                       '<td>' + (e.reason || '-') + '</td>' +
+                       '<td>' + (e.seller || '') + '</td>' +
                        '<td>' + delBtn + '</td>';
         tbody.appendChild(tr);
     });
 }
+
 
 function renderCashMetrics() {
     if (!currentUser) return;
@@ -3780,7 +3778,6 @@ var html = '<h4 style="margin-bottom:10px;">' + formattedDisplayDate + '</h4>';
 
 
 
-function updateStoreContext() { renderAll(); drawChart(); renderCalendar(); }
 
 // ========== PERSISTENCE ON RELOAD ==========
 window.addEventListener('beforeunload', function() { saveAllToLocal(); savePresenceToLocal(); });
