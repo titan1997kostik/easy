@@ -3750,11 +3750,19 @@ var html = '<h4 style="margin-bottom:10px;">' + formattedDisplayDate + '</h4>';
         if (daySales && daySales.length > 0) {
             daySales.forEach(function(s) {
                 var retBadge = s.returned ? ' <span class="return-badge">Возврат</span>' : '';
-                html += '<tr' + (s.returned ? ' class="returned-row"' : '') + '><td>' + s.name + retBadge + '</td><td>' + (s.storeName || '') + '</td><td>' + s.price + ' руб</td><td>' + (s.paymentType === 'cash' ? 'Наличные' : 'Карта') + '</td><td>' + (s.userName || '') + '</td></tr>';
+                var payDisplay = s.splitPayment ? s.payment : (s.payment || 'Не указана');
+                html += '<tr' + (s.returned ? ' class="returned-row"' : '') + '>' +
+                    '<td>' + s.name + retBadge + '</td>' +
+                    '<td>' + (s.storeName || '') + '</td>' +
+                    '<td>' + s.price + ' руб</td>' +
+                    '<td>' + payDisplay + '</td>' +
+                    '<td>' + (s.seller || '') + '</td>' +
+                '</tr>';
                 if (!s.returned) total += s.price;
             });
         }
         html += '</tbody></table>';
+
         
         // 2. ИСТОРИЯ РАСХОДОВ (Выровнено строго по колонкам)
         if (dayExp && dayExp.length > 0) {
