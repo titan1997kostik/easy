@@ -3056,30 +3056,32 @@ function renderShiftBtn() {
     var btn = document.getElementById('shiftBtn');
     if (!btn) return;
     var storeId = getShiftStoreId();
-    var storeShift = storeId ? storeShifts[storeId] : null;
-    if (storeShift) {
-        // Shift is open for this store
+    var storeShift = (storeId && storeShifts) ? storeShifts[storeId] : null;
+
+    // ПРИНУДИТЕЛЬНЫЙ СЕЙФГАРД: Проверяем состояние и по объекту, и по живому флагу
+    var activeOpen = isShiftOpen || !!storeShift;
+
+    if (activeOpen && storeShift) {
+        // Смена открыта в этом магазине
         var canClose = (storeShift.userId === currentUser.id) || (currentUser.role === 'admin');
         if (canClose) {
-            btn.textContent = 'Закрыть смену (' + storeShift.userName + ')';
+            btn.textContent = 'Закрыть смену (' + (storeShift.userName || '') + ')';
             btn.className = 'btn btn-danger';
             btn.disabled = false;
-            btn.onclick = toggleShift;
         } else {
-            btn.textContent = 'Смена открыта: ' + storeShift.userName;
+            btn.textContent = 'Смена открыта: ' + (storeShift.userName || '');
             btn.className = 'btn btn-secondary';
-            btn.disabled = true;
+            btn.disabled = true; // Блокируем кнопку для чужих сотрудников
         }
     } else {
+        // Смена закрыта
         btn.textContent = 'Открыть смену';
         btn.className = 'btn btn-success';
         btn.disabled = false;
-        btn.onclick = toggleShift;
     }
-    // Показываем кнопку повторного открытия только админам
-    var reopenBtn = document.getElementById('reopenShiftBtn');
-    if (reopenBtn) reopenBtn.style.display = (currentUser && currentUser.role === 'admin') ? '' : 'none';
+    btn.onclick = toggleShift;
 }
+
 
 function renderSalesTable() {
     if (!currentUser) return;
