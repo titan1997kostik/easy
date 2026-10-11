@@ -827,14 +827,6 @@ function deleteStore(storeKey) {
     if (!isSuperAdmin(currentUser)) { alert('Только главный админ может удалять магазины!'); return; }
     var storeName = STORES[storeKey] || ('Магазин №' + storeKey);
     
-    // Проверка привязанных сотрудников, чтобы случайно не удалить работающую точку
-    var storeOrg = typeof getStoreOrg === 'function' ? getStoreOrg(storeKey) : 'mine';
-    var assignedUsers = users.filter(function(u) { return u.store === storeKey && (u.org || 'mine') === storeOrg; });
-    if (assignedUsers.length > 0) {
-        alert('Нельзя удалить магазин "' + storeName + '", так как к нему привязаны сотрудники: ' + assignedUsers.map(function(u){ return u.name; }).join(', '));
-        return;
-    }
-
     var msg = 'ВНИМАНИЕ!!! Вы полностью удаляете магазин «' + storeName + '»\n\n';
     msg += 'Это действие ПРИНУДИТЕЛЬНО И НАВСЕГДА удалит:\n';
     msg += '1. Сам магазин из списка\n';
@@ -890,9 +882,9 @@ function deleteStore(storeKey) {
     }
 
     // 2. Вычищаем из локальной памяти текущего устройства
-    sales = sales.filter(function(s) { return s.storeId !== storeKey; });
-    expenses = expenses.filter(function(e) { return e.storeId !== storeKey; });
-    breaksData = breaksData.filter(function(b) { return b.storeId !== storeKey; });
+    sales = sales.filter(function(s) { return String(s.storeId) !== String(storeKey); });
+    expenses = expenses.filter(function(e) { return String(e.storeId) !== String(storeKey); });
+    breaksData = breaksData.filter(function(b) { return String(b.storeId) !== String(storeKey); });
     
     if (STORES[storeKey]) delete STORES[storeKey];
     if (STORE_ORGS[storeKey]) delete STORE_ORGS[storeKey];
@@ -909,9 +901,8 @@ function deleteStore(storeKey) {
     renderAll();
     if (typeof drawChart === 'function') drawChart();
     
-    alert('Магазин «' + storeName + '» и вся его история успешно выжжены из базы данных Firebase.');
+    alert('Магазин «' + storeName + '» успешно выжжен из базы данных Firebase.');
 }
-
 
 function resetStore(storeKey) {
     if (!isSuperAdmin(currentUser)) { alert('Только главный админ может сбрасывать магазины!'); return; }
@@ -923,9 +914,9 @@ function resetStore(storeKey) {
     if (!confirm(msg)) return;
 
     // Очищаем локально на этом устройстве
-    sales = sales.filter(function(s) { return s.storeId !== storeKey; });
-    expenses = expenses.filter(function(e) { return e.storeId !== storeKey; });
-    breaksData = breaksData.filter(function(b) { return b.storeId !== storeKey; });
+    sales = sales.filter(function(s) { return String(s.storeId) !== String(storeKey); });
+    expenses = expenses.filter(function(e) { return String(e.storeId) !== String(storeKey); });
+    breaksData = breaksData.filter(function(b) { return String(b.storeId) !== String(storeKey); });
     if (cashAdjustments[storeKey]) delete cashAdjustments[storeKey];
     if (storeShifts[storeKey]) delete storeShifts[storeKey];
 
@@ -935,7 +926,6 @@ function resetStore(storeKey) {
 
     // ПРЯМАЯ КОРНЕВАЯ ОЧИСТКА FIREBASE
     if (typeof db !== 'undefined' && db.ref) {
-        // Вычищаем все продажи магазина из облака
         db.ref('sales_data').once('value').then(function(snapshot) {
             var data = snapshot.val();
             if (data) {
@@ -947,7 +937,6 @@ function resetStore(storeKey) {
             }
         });
 
-        // Вычищаем все расходы магазина из облака
         db.ref('expenses_data').once('value').then(function(snapshot) {
             var data = snapshot.val();
             if (data) {
@@ -959,7 +948,6 @@ function resetStore(storeKey) {
             }
         });
 
-        // Вычищаем все перерывы магазина из облака
         db.ref('breaks_data').once('value').then(function(snapshot) {
             var data = snapshot.val();
             if (data) {
@@ -971,7 +959,6 @@ function resetStore(storeKey) {
             }
         });
 
-        // Очищаем баланс кассы и смены
         db.ref('cash_adjustments_data/' + storeKey).set(null);
         db.ref('store_shifts_data/' + storeKey).set(null);
     }
@@ -980,6 +967,7 @@ function resetStore(storeKey) {
     if (typeof drawChart === 'function') drawChart();
     alert('Скрипт полной очистки запущен. Данные магазина обнуляются в облаке Firebase.');
 }
+
 
 
 
