@@ -1337,21 +1337,25 @@ db.ref('store_shifts_data').on('value', function(snapshot) {
     storeShifts = val;
     localStorage.setItem('easyAppSync_storeShifts', JSON.stringify(val));
 
-    // Умное обновление статуса кнопки: если для текущего магазина кассы в базе нет — гасим флаг
-    var currentStoreId = getShiftStoreId();
-    if (currentStoreId && currentStoreId !== 'all') {
-        isShiftOpen = !!storeShifts[currentStoreId];
-        shiftStartTime = isShiftOpen ? storeShifts[currentStoreId].startTime : null;
+    // Безопасное определение статуса смены для конкретной точки сотрудника
+    if (currentUser) {
+        var myStoreId = currentUser.role === 'admin' ? getShiftStoreId() : currentUser.store;
+        if (myStoreId && myStoreId !== 'all') {
+            isShiftOpen = !!(storeShifts && storeShifts[myStoreId]);
+            shiftStartTime = isShiftOpen ? storeShifts[myStoreId].startTime : null;
+        }
     } else {
         isShiftOpen = false;
         shiftStartTime = null;
     }
 
-    updateShiftButtonUI();
+    if (typeof updateShiftButtonUI === 'function') updateShiftButtonUI();
+    if (typeof renderShiftBtn === 'function') renderShiftBtn();
     if (typeof renderStoresManagement === 'function') renderStoresManagement();
     
     isRemoteChange = false;
 });
+
 
 
 db.ref('cash_adjustments_data').on('value', function(snapshot) {
