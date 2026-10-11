@@ -2331,7 +2331,7 @@ var isShiftMutating = false;
 function toggleShift() {
     if (!checkSessionBeforeAction()) return;
     var shiftStore = getShiftStoreId();
-    if (!shiftStore || shiftStore === 'all') { alert('Выберите конкретного магазин!'); return; }
+    if (!shiftStore || shiftStore === 'all') { alert('Выберите конкретный магазин!'); return; }
 
     var activeShifts = (typeof storeShifts !== 'undefined' && storeShifts) ? storeShifts : (JSON.parse(localStorage.getItem('easyAppSync_storeShifts')) || {});
     var storeShift = activeShifts[shiftStore];
@@ -2353,27 +2353,25 @@ function toggleShift() {
             }
         }
 
-        // Удаляем активную смену из базы данных Firebase
-        if (typeof db !== 'undefined' && db.ref) {
-            db.ref('store_shifts_data/' + shiftStore).set(null, function(error) {
-                isShiftMutating = false; // Отключаем иммунитет после ответа сервера
-                if (error) {
-                    console.error("Ошибка закрытия смены в Firebase:", error);
-                }
-            });
-        } else {
-            isShiftMutating = false;
-        }
-
-        // Локальное обновление состояния
+        // МГНОВЕННОЕ локальное обновление состояния и флагов (UI изменится сразу)
         isShiftOpen = false;
         shiftStartTime = null;
         if (storeShifts && storeShifts[shiftStore]) delete storeShifts[shiftStore];
         
-        // Чистим локальный кэш от "призраков" прошлых дней
+        // Чистим локальный кэш
         var localCache = JSON.parse(localStorage.getItem('easyAppSync_storeShifts')) || {};
         if (localCache[shiftStore]) delete localCache[shiftStore];
         localStorage.setItem('easyAppSync_storeShifts', JSON.stringify(localCache));
+
+        // Отправляем запрос в Firebase в фоновом режиме
+        if (typeof db !== 'undefined' && db.ref) {
+            db.ref('store_shifts_data/' + shiftStore).set(null, function(error) {
+                isShiftMutating = false; // Отключаем иммунитет после ответа сервера
+                if (error) console.error("Ошибка закрытия смены в Firebase:", error);
+            });
+        } else {
+            isShiftMutating = false;
+        }
 
         addAudit('shift_close', 'Закрыта смена в магазине: ' + STORES[shiftStore]);
         alert('Смена успешно закрыта!');
@@ -2387,37 +2385,43 @@ function toggleShift() {
             startTime: startTimeStamp
         };
 
-        // Записываем активную смену на сервер Firebase
-        if (typeof db !== 'undefined' && db.ref) {
-            db.ref('store_shifts_data/' + shiftStore).set(newShiftData, function(error) {
-                isShiftMutating = false; // Отключаем иммунитет после ответа сервера
-                if (error) {
-                    console.error("Ошибка открытия смены в Firebase:", error);
-                }
-            });
-        } else {
-            isShiftMutating = false;
-        }
-
-        // Локальное обновление состояния
+        // МГНОВЕННОЕ локальное обновление состояния и флагов (UI изменится сразу)
         isShiftOpen = true;
         shiftStartTime = startTimeStamp;
         if (!storeShifts) storeShifts = {};
         storeShifts[shiftStore] = newShiftData;
+
+        // Фиксируем зарплатный сброс для продавца
+        if (currentUser) {
+            currentUser.salaryActionDone = false;
+            localStorage.setItem('easyAppSync_session', JSON.stringify(currentUser));
+        }
 
         // Синхронизируем локальный кэш
         var localCache = JSON.parse(localStorage.getItem('easyAppSync_storeShifts')) || {};
         localCache[shiftStore] = newShiftData;
         localStorage.setItem('easyAppSync_storeShifts', JSON.stringify(localCache));
 
+        // Отправляем запрос в Firebase в фоновом режиме
+        if (typeof db !== 'undefined' && db.ref) {
+            db.ref('store_shifts_data/' + shiftStore).set(newShiftData, function(error) {
+                isShiftMutating = false; // Отключаем иммунитет после ответа сервера
+                if (error) console.error("Ошибка открытия смены в Firebase:", error);
+            });
+        } else {
+            isShiftMutating = false;
+        }
+
         addAudit('shift_open', 'Открыта смена в магазине: ' + STORES[shiftStore]);
         alert('Смена успешно открыта!');
     }
 
-    // Принудительно перерисовываем интерфейс кнопок и виджетов
-    updateShiftButtonUI();
+    // ЖЕСТКАЯ ПРИНУДИТЕЛЬНАЯ ПЕРЕРИСОВКА ИНТЕРФЕЙСА ВСЕХ СВЯЗАННЫХ КНОПОК
+    if (typeof renderShiftBtn === 'function') renderShiftBtn();
     if (typeof renderAll === 'function') renderAll();
+    if (typeof renderStoresManagement === 'function') renderStoresManagement();
 }
+
 
 
 function allowReopenShift() {
