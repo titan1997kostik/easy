@@ -2138,10 +2138,12 @@ function saveSale() {
         dateMinuteStr = localISOTime.slice(0, 16);
     }
 
-    // Генерируем уникальный ID
-    var rawIdString = (name || '') + '_' + (price || 0) + '_' + (storeId || '') + '_' + dateMinuteStr;
+    // Генерируем уникальный ID со случайным хвостиком, чтобы продажи в одну минуту не склеивались
+    var randomTail = Math.floor(1000 + Math.random() * 9000);
+    var rawIdString = (name || '') + '_' + (price || 0) + '_' + (storeId || '') + '_' + dateMinuteStr + '_' + randomTail;
     var cleanId = rawIdString.replace(/[^a-zA-Z0-9_-]/g, '_');
     var saleId = 'sale_' + cleanId;
+
 
     // Сборка объекта продажи с правильной локальной датой
     var saleData = {
