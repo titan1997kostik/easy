@@ -955,12 +955,8 @@ var deletedSuperAdmins = [];
 var breaksData = [];
 var periodicSyncInterval = null;
 
-var STORES = {
-    '1': '1. EASY Тверь',
-    '2': '2. EASY Клин',
-    '3': '3. EASY Солнечногорск',
-    '4': '4. Кроссы Клин',
-    '5': '5. Кроссы Дубна'
+var STORES = {};
+
 };
 // ========== ORGANIZATIONS ==========
 var ORGS = { 'mine': 'Организация 1' };
@@ -1266,12 +1262,14 @@ db.ref('stores_data').on('value', function(snapshot) {
     isRemoteChange = true;
     var val = snapshot.val();
     if (val && typeof val === 'object') {
-        if (val.null) { delete val.null; if (typeof db !== 'undefined' && db.ref) { try { db.ref('stores_data/null').remove(); } catch(e) {} } }
-        if (val['null']) { delete val['null']; }
+        if (val.null) delete val.null;
+        if (val['null']) delete val['null'];
         STORES = val;
-        refreshStoreDropdowns();
-        if (currentUser) renderAll();
+    } else {
+        STORES = {}; // Если на сервере пусто, очищаем список локально, чтобы старые данные не "воскресали"
     }
+    refreshStoreDropdowns();
+    if (currentUser) renderAll();
     isRemoteChange = false;
 });
 
