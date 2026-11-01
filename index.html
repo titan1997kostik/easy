@@ -1622,7 +1622,7 @@ function renderPurchaseCosts() {
             if (hasCost) { var clearBtn = document.createElement('button'); clearBtn.type='button'; clearBtn.className='btn btn-secondary'; clearBtn.textContent='Очистить'; clearBtn.style.cssText='padding:6px 9px;font-size:12px;margin-left:5px;'; clearBtn.addEventListener('click', function(){clearSalePurchaseCost(id);}); actionCell.appendChild(clearBtn); }
         }
         row.appendChild(actionCell);
-        row.appendChild(cell(String(sale.storeName || STORES[sale.storeId] || ''), 'Магазин'));
+        row.appendChild(cell(String(sale.storeName || (hasStore ? (STORES[sale.storeId] || 'Магазин не определён') : 'Магазин не определён')), 'Магазин'));
         row.appendChild(cell(String(sale.seller || sale.sellerName || ''), 'Продавец'));
         row.appendChild(cell(dateText, 'Дата продажи'));
         frag.appendChild(row);
@@ -6646,7 +6646,7 @@ function renderSalesTable() {
         if (hasStore && (isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale))) return false;
         if (hasStore && visibleKeys.indexOf(String(sale.storeId)) === -1) return false;
         if (!hasStore && currentUser.role !== 'admin') return false;
-        if (targetStore !== 'all' && (!hasStore || String(sale.storeId) !== targetStore)) return false;
+        if (targetStore !== 'all' && hasStore && String(sale.storeId) !== targetStore) return false;
         if (currentUser.role === 'seller' && String(sale.storeId) !== String(currentUser.store)) return false;
         var saleDateKey = getRecordDateString(sale.timestamp || sale.createdAt);
         if (startDate && saleDateKey && saleDateKey < startDate) return false;
@@ -6674,7 +6674,7 @@ function renderSalesTable() {
             tr.hidden = true;
         }
         if (sale.returned) tr.className = 'returned-row';
-        var parsedDate = new Date(sale.timestamp || Date.now());
+        var parsedDate = new Date(sale.timestamp || sale.createdAt || Date.now());
         var date = isFinite(parsedDate.getTime()) ? parsedDate.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
         var canReturn = currentUser.role === 'admin' || (currentUser.role === 'seller' && String(sale.storeId) === String(currentUser.store));
         var payDisplay = sale.splitPayment
