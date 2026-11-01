@@ -1566,7 +1566,7 @@ function renderPurchaseCosts() {
         if (status === 'missing' && hasCost) return false;
         if (status === 'filled' && !hasCost) return false;
         var name = (typeof getSaleHistoryDisplayName === 'function' ? getSaleHistoryDisplayName(sale) : sale.name || '').toLocaleLowerCase('ru-RU');
-        return !search || name.indexOf(search) !== -1 || String(sale.seller || sale.sellerName || '').toLocaleLowerCase('ru-RU').indexOf(search) !== -1 || String(sale.storeName || STORES[sale.storeId] || '').toLocaleLowerCase('ru-RU').indexOf(search) !== -1;
+        return !search || name.indexOf(search) !== -1 || String(sale.seller || sale.sellerName || '').toLocaleLowerCase('ru-RU').indexOf(search) !== -1 || String(sale.storeName || (sale.storeId != null ? (STORES[sale.storeId] || ('Магазин ' + sale.storeId)) : 'Магазин не определён')).toLocaleLowerCase('ru-RU').indexOf(search) !== -1;
     });
     relevant.sort(function(a,b) {
         var aCost = purchaseCostIsSet(salePurchaseCosts[String(a.id)]), bCost = purchaseCostIsSet(salePurchaseCosts[String(b.id)]);
@@ -6639,18 +6639,23 @@ function renderSalesTable() {
     var searchEl = document.getElementById('salesHistoryNameSearch');
     var searchQuery = searchEl ? String(searchEl.value || '').trim().toLocaleLowerCase('ru-RU') : '';
     var filtered = (sales || []).filter(function(sale) {
-        if (!sale || isStoreDeleted(sale.storeId) || isSaleRecordDeleted(sale.id) || isRecordBeforeStoreReset(sale)) return false;
-        if (visibleKeys.indexOf(String(sale.storeId)) === -1) return false;
-        if (targetStore !== 'all' && String(sale.storeId) !== targetStore) return false;
+        if (!sale || isSaleRecordDeleted(sale.id)) return false;
+        var hasStore = sale.storeId !== undefined && sale.storeId !== null && String(sale.storeId) !== '';
+        // Legacy sales may have only createdAt and shiftId (no storeId/timestamp).
+        // Keep such records visible to admins in the all-stores history instead of silently hiding them.
+        if (hasStore && (isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale))) return false;
+        if (hasStore && visibleKeys.indexOf(String(sale.storeId)) === -1) return false;
+        if (!hasStore && currentUser.role !== 'admin') return false;
+        if (targetStore !== 'all' && (!hasStore || String(sale.storeId) !== targetStore)) return false;
         if (currentUser.role === 'seller' && String(sale.storeId) !== String(currentUser.store)) return false;
-        var saleDateKey = getRecordDateString(sale.timestamp);
-        if (startDate && saleDateKey < startDate) return false;
-        if (endDate && saleDateKey > endDate) return false;
+        var saleDateKey = getRecordDateString(sale.timestamp || sale.createdAt);
+        if (startDate && saleDateKey && saleDateKey < startDate) return false;
+        if (endDate && saleDateKey && saleDateKey > endDate) return false;
         if (searchQuery && getSaleHistoryDisplayName(sale).toLocaleLowerCase('ru-RU').indexOf(searchQuery) === -1) return false;
         return true;
     });
     // Сортировка пользователя убрана: история всегда идёт в привычном порядке, новые продажи сверху.
-    filtered.sort(function(a, b) { return parseTimestampMs(b.timestamp) - parseTimestampMs(a.timestamp); });
+    filtered.sort(function(a, b) { return parseTimestampMs(b.timestamp || b.createdAt) - parseTimestampMs(a.timestamp || a.createdAt); });
     tbody.innerHTML = '';
     var total = filtered.reduce(function(sum, sale) { return sum + (!sale.returned ? (Number(sale.price) || 0) : 0); }, 0);
     updateSalesHistoryDisclosure(filtered.length, false);
