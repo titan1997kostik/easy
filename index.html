@@ -6873,7 +6873,7 @@ function isCashRecordAtOrBefore(value, cutoffMs) {
 
 // Older imported sales are analytical records only: they must never alter physical cash.
 function isHistoricalAnalyticsOnlySale(sale) {
-    return !!(sale && sale.historicalImport === true && getRecordDateString(sale.timestamp || sale.createdAt) < getTodayStr());
+    return !!(sale && sale.cashIncludedInDrawer === false) || !!(sale && sale.historicalImport === true && getRecordDateString(sale.timestamp || sale.createdAt) < getTodayStr() && sale.cashIncludedInDrawer !== true);
 }
 
 // Physical drawer balance is cumulative through the selected instant, not just
