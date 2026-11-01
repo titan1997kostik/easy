@@ -1859,12 +1859,20 @@ function renderStoresManagement() {
     var container = document.getElementById('storesManagement');
     if (!container) return;
     if (!isSuperAdmin(currentUser)) { container.innerHTML = ''; return; }
+    var visibleKeys = getVisibleStoreKeys();
+    var diag = '<div style="font-size:12px;color:var(--text-light);margin:0 0 10px;padding:8px;border:1px solid var(--border);border-radius:6px;">Диагностика Firebase: соединение — ' +
+        (syncConnected ? 'есть' : 'нет') + '; журналы удалений — ' + (deletionLedgersLoaded ? 'загружены' : 'не загружены') +
+        '; актуальность журналов — ' + (deletionLedgersFresh ? 'подтверждена' : 'не подтверждена') +
+        '; магазинов получено — ' + Object.keys(STORES || {}).length +
+        '; скрыто журналом удалений — ' + Object.keys(deletedStoreIds || {}).length +
+        '; привязок к организациям — ' + Object.keys(STORE_ORGS || {}).length +
+        '; текущая организация — ' + escapeProductText(String(currentOrgFilter || 'не выбрана')) +
+        '; магазинов в этой организации — ' + visibleKeys.length + '.</div>';
     if (!canUseStoreData()) {
-        container.innerHTML = '<p style="font-size:13px;color:var(--text-light);">Проверка актуального списка магазинов...</p>';
+        container.innerHTML = diag + '<p style="font-size:13px;color:var(--text-light);">Ожидаю подтверждения данных из Firebase. Если сообщение не исчезает, проверьте доступ к журналам удалений.</p>';
         return;
     }
-    var visibleKeys = getVisibleStoreKeys();
-    var html = '<div style="margin-bottom:12px;"><button class="btn btn-success" style="padding:6px 14px;" onclick="addStore()">+ Добавить магазин</button></div>';
+    var html = diag + '<div style="margin-bottom:12px;"><button class="btn btn-success" style="padding:6px 14px;" onclick="addStore()">+ Добавить магазин</button></div>';
     html += '<div class="stores-management-table-wrap" style="width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="stores-management-table" style="width:100%;min-width:600px;border-collapse:collapse;"><thead><tr style="background:var(--bg-card);"><th style="padding:8px; text-align:left;">Магазин</th><th style="padding:8px; text-align:center;">Смена</th><th style="padding:8px; text-align:right;">Действие</th></tr></thead><tbody>';
     visibleKeys.forEach(function(key) {
         var shiftInfo = '&mdash;';
@@ -3025,10 +3033,16 @@ db.ref('breaks_data').on('value', function(snapshot) {
 });
 
 db.ref('stores_data').on('value', function(snapshot) {
+    window.__easyStoresSnapshotCount = snapshot.val() && typeof snapshot.val() === 'object' ? Object.keys(snapshot.val()).filter(function(k) { return snapshot.val()[k] !== null; }).length : 0;
     if (!deletionLedgersLoaded) { queuedStoresSnapshot = snapshot; return; }
     isRemoteChange = true;
     applyStoresSnapshot(snapshot);
     isRemoteChange = false;
+}, function(error) {
+    console.error('Ошибка чтения stores_data:', error);
+    window.__easyStoresReadError = error && error.code ? error.code : String(error);
+    var el = document.getElementById('storesManagement');
+    if (el) { renderStoresManagement(); el.insertAdjacentHTML('afterbegin', '<p style="color:#c33;font-size:13px;">Ошибка чтения магазинов из Firebase: ' + escapeProductText(window.__easyStoresReadError) + '</p>'); }
 });
 
 db.ref('orgs_data').on('value', function(snapshot) {
