@@ -5259,7 +5259,7 @@ function showShiftReport(fromDateOverride, toDateOverride) {
     }
     var visibleKeys = getVisibleStoreKeys();
     var baseSales = (sales || []).filter(function(s) {
-        if (!s || visibleKeys.indexOf(String(s.storeId)) === -1 || (targetStore !== 'all' && String(s.storeId) !== targetStore)) return false;
+        if (!s || isHistoricalAnalyticsOnlySale(s) || visibleKeys.indexOf(String(s.storeId)) === -1 || (targetStore !== 'all' && String(s.storeId) !== targetStore)) return false;
         if (isStoreDeleted(s.storeId) || isSaleRecordDeleted(s.id) || isRecordBeforeStoreReset(s)) return false;
         var date = getRecordDateString(s.timestamp);
         return fromDate && toDate ? date >= fromDate && date <= toDate : date === getTodayStr();
@@ -5296,7 +5296,7 @@ function showShiftReport(fromDateOverride, toDateOverride) {
     });
     // Compatibility for old returns that predate the append-only event journal.
     (sales || []).forEach(function(sale) {
-        if (!sale || !sale.returned || returnEventSaleIds[String(sale.id)] || isSaleRecordDeleted(sale.id) || isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale)) return;
+        if (!sale || isHistoricalAnalyticsOnlySale(sale) || !sale.returned || returnEventSaleIds[String(sale.id)] || isSaleRecordDeleted(sale.id) || isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale)) return;
         if (visibleKeys.indexOf(String(sale.storeId)) === -1 || (targetStore !== 'all' && String(sale.storeId) !== String(targetStore))) return;
         var legacyDate = getRecordDateString(sale.lastModified || sale.timestamp || sale.createdAt);
         if (legacyDate < reportFromDate || legacyDate > reportToDate) return;
