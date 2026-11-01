@@ -2482,25 +2482,13 @@ function updateDeletionLedgerReady(name) {
 }
 
 function mergeDeletionLedgerSnapshots(snapshots) {
-    var remoteStores = snapshots[0].val() || {};
-    var remoteResets = snapshots[1].val() || {};
-    var remoteSales = snapshots[2].val() || {};
-    var remoteExpenses = snapshots[3].val() || {};
-    Object.keys(remoteStores).forEach(function(key) { deletedStoreIds[key] = remoteStores[key]; });
-    Object.keys(remoteResets).forEach(function(key) {
-        var incoming = remoteResets[key] && typeof remoteResets[key] === 'object' ? Number(remoteResets[key].resetAt || remoteResets[key].timestamp || 0) : Number(remoteResets[key] || 0);
-        var currentMarker = storeResetAt[key];
-        var existing = currentMarker && typeof currentMarker === 'object' ? Number(currentMarker.resetAt || currentMarker.timestamp || 0) : Number(currentMarker || 0);
-        if (incoming > existing) storeResetAt[key] = incoming;
-    });
-    Object.keys(remoteSales).forEach(function(key) {
-        deletedSalesById[key] = remoteSales[key];
-        if (deletedSaleIds.map(String).indexOf(String(key)) === -1) deletedSaleIds.push(String(key));
-    });
-    Object.keys(remoteExpenses).forEach(function(key) {
-        deletedExpensesById[key] = remoteExpenses[key];
-        if (deletedExpenseIds.map(String).indexOf(String(key)) === -1) deletedExpenseIds.push(String(key));
-    });
+    // Firebase is authoritative: discard stale deletion markers left in this device's cache.
+    deletedStoreIds = snapshots[0].val() || {};
+    storeResetAt = snapshots[1].val() || {};
+    deletedSalesById = snapshots[2].val() || {};
+    deletedExpensesById = snapshots[3].val() || {};
+    deletedSaleIds = Object.keys(deletedSalesById).map(String);
+    deletedExpenseIds = Object.keys(deletedExpensesById).map(String);
     deletionLedgersLoaded = true;
     deletionLedgersFresh = true;
     deletionLedgersVerifiedOnce = true;
@@ -2722,8 +2710,7 @@ if (typeof firebase !== 'undefined' && firebase.database) {
 // ========== FIREBASE REALTIME LISTENERS ==========
 // Deletion/reset ledgers are loaded before pending records may be uploaded.
 db.ref('deleted_stores_data').on('value', function(snapshot) {
-    var remote = snapshot.val() || {};
-    Object.keys(remote).forEach(function(key) { deletedStoreIds[key] = remote[key]; });
+    deletedStoreIds = snapshot.val() || {};
     updateDeletionLedgerReady('stores');
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
@@ -2732,13 +2719,7 @@ db.ref('deleted_stores_data').on('value', function(snapshot) {
 });
 
 db.ref('store_reset_data').on('value', function(snapshot) {
-    var remote = snapshot.val() || {};
-    Object.keys(remote).forEach(function(key) {
-        var incoming = remote[key] && typeof remote[key] === 'object' ? Number(remote[key].resetAt || remote[key].timestamp || 0) : Number(remote[key] || 0);
-        var currentMarker = storeResetAt[key];
-        var existing = currentMarker && typeof currentMarker === 'object' ? Number(currentMarker.resetAt || currentMarker.timestamp || 0) : Number(currentMarker || 0);
-        if (incoming > existing) storeResetAt[key] = incoming;
-    });
+    storeResetAt = snapshot.val() || {};
     updateDeletionLedgerReady('resets');
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
@@ -2746,11 +2727,8 @@ db.ref('store_reset_data').on('value', function(snapshot) {
 });
 
 db.ref('deleted_sales_data').on('value', function(snapshot) {
-    var remote = snapshot.val() || {};
-    Object.keys(remote).forEach(function(key) {
-        deletedSalesById[key] = remote[key];
-        if (deletedSaleIds.map(String).indexOf(String(key)) === -1) deletedSaleIds.push(String(key));
-    });
+    deletedSalesById = snapshot.val() || {};
+    deletedSaleIds = Object.keys(deletedSalesById).map(String);
     updateDeletionLedgerReady('sales');
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
@@ -2758,11 +2736,8 @@ db.ref('deleted_sales_data').on('value', function(snapshot) {
 });
 
 db.ref('deleted_expenses_data').on('value', function(snapshot) {
-    var remote = snapshot.val() || {};
-    Object.keys(remote).forEach(function(key) {
-        deletedExpensesById[key] = remote[key];
-        if (deletedExpenseIds.map(String).indexOf(String(key)) === -1) deletedExpenseIds.push(String(key));
-    });
+    deletedExpensesById = snapshot.val() || {};
+    deletedExpenseIds = Object.keys(deletedExpensesById).map(String);
     updateDeletionLedgerReady('expenses');
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
