@@ -1863,7 +1863,9 @@ function renderStoresManagement() {
     var diag = '<div style="font-size:12px;color:var(--text-light);margin:0 0 10px;padding:8px;border:1px solid var(--border);border-radius:6px;">Диагностика Firebase: соединение — ' +
         (syncConnected ? 'есть' : 'нет') + '; журналы удалений — ' + (deletionLedgersLoaded ? 'загружены' : 'не загружены') +
         '; актуальность журналов — ' + (deletionLedgersFresh ? 'подтверждена' : 'не подтверждена') +
-        '; магазинов получено — ' + Object.keys(STORES || {}).length +
+        '; магазинов в снимке Firebase — ' + (typeof window.__easyStoresSnapshotCount === 'number' ? window.__easyStoresSnapshotCount : 'ещё нет ответа') +
+        '; ошибка чтения — ' + escapeProductText(String(window.__easyStoresReadError || 'нет')) +
+        '; магазинов после фильтрации — ' + Object.keys(STORES || {}).length +
         '; скрыто журналом удалений — ' + Object.keys(deletedStoreIds || {}).length +
         '; привязок к организациям — ' + Object.keys(STORE_ORGS || {}).length +
         '; текущая организация — ' + escapeProductText(String(currentOrgFilter || 'не выбрана')) +
