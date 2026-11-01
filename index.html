@@ -6871,6 +6871,11 @@ function isCashRecordAtOrBefore(value, cutoffMs) {
     return !!localDate && localDate <= cutoffDate;
 }
 
+// Older imported sales are analytical records only: they must never alter physical cash.
+function isHistoricalAnalyticsOnlySale(sale) {
+    return !!(sale && sale.historicalImport === true && getRecordDateString(sale.timestamp || sale.createdAt) < getTodayStr());
+}
+
 // Physical drawer balance is cumulative through the selected instant, not just
 // the current shift's sales. This lets a seller reconcile cash left from earlier shifts.
 // If a store already had cash before tracking started, record that starting amount
@@ -6887,7 +6892,7 @@ function getCashDrawerBalanceAsOf(storeId, cutoffMs) {
     var cashSalesTotal = 0;
     var saleById = {};
     (sales || []).forEach(function(sale) {
-        if (!belongs(sale) || isSaleRecordDeleted(sale.id) || !isCashRecordAtOrBefore(sale.timestamp || sale.createdAt, cutoffMs)) return;
+        if (!belongs(sale) || isHistoricalAnalyticsOnlySale(sale) || isSaleRecordDeleted(sale.id) || !isCashRecordAtOrBefore(sale.timestamp || sale.createdAt, cutoffMs)) return;
         saleById[String(sale.id)] = sale;
         cashSalesTotal += getSalePaymentBreakdown(sale).cash;
     });
@@ -6911,7 +6916,7 @@ function getCashDrawerBalanceAsOf(storeId, cutoffMs) {
     });
     // Legacy returned flag has no journal event: subtract it at its last-modified date only.
     (sales || []).forEach(function(sale) {
-        if (!belongs(sale) || !sale.returned || isSaleRecordDeleted(sale.id)) return;
+        if (!belongs(sale) || isHistoricalAnalyticsOnlySale(sale) || !sale.returned || isSaleRecordDeleted(sale.id)) return;
         if (saleIdsWithReturnEvents[String(sale.id)]) return;
         var returnDate = sale.lastModified || sale.returnedAt || sale.timestamp || sale.createdAt;
         if (!isCashRecordAtOrBefore(returnDate, cutoffMs)) return;
@@ -6940,7 +6945,7 @@ function getCashDrawerBalanceAsOf(storeId, cutoffMs) {
 
 function getCashStoreMetrics(storeId, period) {
     var storeSales = (sales || []).filter(function(s) {
-        return s && String(s.storeId) === String(storeId) && !isSaleRecordDeleted(s.id) && !isStoreDeleted(s.storeId) && !isRecordBeforeStoreReset(s) && isCashRecordInPeriod(s.timestamp || s.createdAt, period);
+        return s && !isHistoricalAnalyticsOnlySale(s) && String(s.storeId) === String(storeId) && !isSaleRecordDeleted(s.id) && !isStoreDeleted(s.storeId) && !isRecordBeforeStoreReset(s) && isCashRecordInPeriod(s.timestamp || s.createdAt, period);
     });
     var storeReturns = [];
     var returnEventsForPeriod = (returnEvents || []).filter(function(event) {
@@ -6950,7 +6955,7 @@ function getCashStoreMetrics(storeId, period) {
     (returnEvents || []).forEach(function(event){ if(event && event.saleId != null) salesWithJournalEvents[String(event.saleId)] = true; });
     // Legacy fallback applies only to returns with no append-only event history.
     storeReturns = (sales || []).filter(function(s) {
-        return s && String(s.storeId) === String(storeId) && !!s.returned && !salesWithJournalEvents[String(s.id)] && !isSaleRecordDeleted(s.id) && !isStoreDeleted(s.storeId) && !isRecordBeforeStoreReset(s) && isCashRecordInPeriod(s.lastModified || s.timestamp || s.createdAt, period);
+        return s && !isHistoricalAnalyticsOnlySale(s) && String(s.storeId) === String(storeId) && !!s.returned && !salesWithJournalEvents[String(s.id)] && !isSaleRecordDeleted(s.id) && !isStoreDeleted(s.storeId) && !isRecordBeforeStoreReset(s) && isCashRecordInPeriod(s.lastModified || s.timestamp || s.createdAt, period);
     });
     var storeExpenses = (expenses || []).filter(function(e) {
         return e && String(e.storeId) === String(storeId) && !isExpenseRecordDeleted(e.id) && !isStoreDeleted(e.storeId) && !isRecordBeforeStoreReset(e) && isCashRecordInPeriod(e.timestamp || e.createdAt, period);
