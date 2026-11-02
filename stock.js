@@ -127,7 +127,7 @@
       pending.forEach(function(p){var matches=possibleDuplicates(p,p.id); if(matches.length) dupes.push({p:p,m:matches});});
       html+='<div class="card"><h3>Возможные дубли</h3><p style="font-size:12px;color:var(--text-light);">Система только предлагает совпадения. Объединение выполняется вручную администратором.</p>';
       if(!dupes.length) html+='<div style="font-size:13px;color:var(--text-light);">Подозрительных совпадений не найдено.</div>';
-      dupes.forEach(function(d){html+='<div style="padding:9px 0;border-top:1px solid var(--border);"><b>'+esc(d.p.name)+'</b>'+d.m.map(function(m){return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-light);margin-top:5px;">Похоже на: '+esc(m.name)+' ('+esc(m.article||'без артикула')+') <button class="btn btn-warning" type="button" onclick="stockMerge(\\''+esc(d.p.id)+'\\',\\''+esc(m.id)+'\\')">Объединить</button></div>';}).join('')+'</div>';});
+      dupes.forEach(function(d){html+='<div style="padding:9px 0;border-top:1px solid var(--border);"><b>'+esc(d.p.name)+'</b>'+d.m.map(function(m){return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-light);margin-top:5px;">Похоже на: '+esc(m.name)+' ('+esc(m.article||'без артикула')+') <button class="btn btn-warning" type="button" onclick="stockMerge(\''+esc(d.p.id)+'\',\''+esc(m.id)+'\')">Объединить</button></div>';}).join('')+'</div>';});
       html+='</div>';
       html+='<div class="card"><h3>Остатки по магазинам</h3><div style="overflow-x:auto;"><table style="width:100%;min-width:480px;"><thead><tr><th>Товар</th><th>Магазин</th><th>Остаток</th><th></th></tr></thead><tbody>';
       allProducts().filter(function(p){return p.status==='active';}).forEach(function(p){visibleStoreIds().forEach(function(s){html+='<tr><td>'+esc(p.name)+'</td><td>'+esc(window.STORES[s]||s)+'</td><td>'+qty(p.id,s)+'</td><td><button class="btn btn-secondary" type="button" onclick="stockAdjust(\''+esc(p.id)+'\',\''+esc(s)+'\')">Изменить</button></td></tr>';});});
@@ -198,12 +198,16 @@
     var p=products[id]; if(!p)return;
     var store=sid||prompt('Введите ID магазина для корректировки остатка:\n'+visibleStoreIds().map(function(k){return k+': '+(STORES[k]||k);}).join('\n'),visibleStoreIds()[0]||'');
     if(!store || visibleStoreIds().indexOf(String(store))<0)return;
-    var before=qty(id,store), raw=prompt('Текущий остаток: '+before+'\nВведите новое количество (целое число 0 или больше):',String(before));
-    if(raw===null)return;
-    var after=Number(raw); if(!Number.isInteger(after)||after<0){alert('Количество должно быть целым числом от 0.');return;}
+    var before=qty(id,store), kind=prompt('Тип операции: поступление, списание или корректировка.','поступление');
+    if(kind===null)return;
+    kind=norm(kind); var type=/^пост/.test(kind)?'receipt':/^спис/.test(kind)?'writeoff':/^кор/.test(kind)?'adjustment':'';
+    if(!type){alert('Введите: поступление, списание или корректировка.');return;}
+    var raw=prompt('Текущий остаток: '+before+'. Введите '+(type==='adjustment'?'новое количество':'количество операции')+':',type==='adjustment'?String(before):'1');
+    if(raw===null)return; var amount=Number(raw); if(!Number.isInteger(amount)||amount<0 || (type!=='adjustment'&&amount<1)){alert('Введите целое количество. Для поступления и списания минимум 1.');return;}
+    var after=type==='receipt'?before+amount:type==='writeoff'?before-amount:amount; if(after<0){alert('Нельзя списать больше, чем есть на остатке.');return;}
     var delta=after-before, mid=uid('sm'), now=Date.now(), patch={};
     patch[BALANCES_PATH+'/'+store+'/'+id]={quantity:after,updatedAt:now};
-    patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:id,storeId:String(store),type:'adjustment',quantityDelta:delta,before:before,after:after,note:'Корректировка остатка',createdAt:now,createdById:String(user().id),createdByName:user().name||''};
+    patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:id,storeId:String(store),type:type,quantityDelta:delta,before:before,after:after,note:type==='receipt'?'Поступление':type==='writeoff'?'Списание':'Корректировка остатка',createdAt:now,createdById:String(user().id),createdByName:user().name||''};
     db.ref().update(patch).then(function(){addAuditSafe('stock_adjustment','Остаток «'+p.name+'» в магазине «'+(STORES[store]||store)+'»: '+before+' → '+after);}).catch(function(e){alert('Не удалось изменить остаток: '+e.message);});
   }
   function archive(id){
