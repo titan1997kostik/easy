@@ -378,17 +378,47 @@
     db.ref().update(patch).then(function(){addAuditSafe('stock_sizes_adjustment','Размеры и остаток «'+p.name+'» в магазине «'+(STORES[store]||store)+'»: '+before+' → '+after);render();}).catch(function(e){alert('Не удалось сохранить размеры и остаток: '+e.message);});
   }
   function addSizes(id){
-    if(!isSeller()||!canUse())return;var p=products[id];if(!p||!sellerCanSee(p)||p.status!=='active')return;
-    var sid=String(storeId()),current=balances[sid]&&balances[sid][String(id)]||{},existing=Array.isArray(current.sizes)?current.sizes.map(function(x){return String(x).toUpperCase();}):[];
-    var raw=prompt('Введите новые размеры через запятую. Уже имеющиеся размеры сохранятся. Повторяющийся размер означает дополнительную пару. Например: 42, 43', '');
-    if(raw===null||!raw.trim())return;
-    var added=raw.split(',').map(function(x){return x.trim().toUpperCase();}).filter(Boolean);
-    if(!added.length)return;
-    if(added.some(function(x){return !/^(2[6-9]|[3-4][0-9]|5[0-4]|XXS|XS|S|M|L|XL|2XL|3XL|4XL|5XL)$/.test(x);})){alert('Допустимы цифры 26–54 и буквенные размеры от XXS до 5XL.');return;}
-    var combined=existing.concat(added),before=qty(id,sid),after=combined.length,now=Date.now(),mid=uid('sm'),patch={};
-    patch[BALANCES_PATH+'/'+sid+'/'+id]={quantity:after,sizes:combined,updatedAt:now};
-    if(after!==before)patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:id,productName:p.name,storeId:sid,type:'receipt',quantityDelta:after-before,before:before,after:after,note:'Добавлены размеры в магазине',createdAt:now,createdById:String(user().id),createdByName:user().name||''};
-    db.ref().update(patch).then(function(){addAuditSafe('stock_store_sizes_added','Добавлены размеры товара «'+p.name+'» в магазине «'+(STORES[sid]||sid)+'»: '+added.join(', '));render();}).catch(function(e){alert('Не удалось добавить размеры: '+e.message);});
+    if(!isSeller()||!canUse())return;
+    var p=products[id];if(!p||!sellerCanSee(p)||p.status!=='active')return;
+    var sid=String(storeId()),current=balances[sid]&&balances[sid][String(id)]||{};
+    var existing=Array.isArray(current.sizes)?current.sizes.map(function(x){return String(x).toUpperCase();}):[];
+    var added=[],modal=document.getElementById('stockAddSizesModal');if(modal)modal.remove();
+    var letters=['XXS','XS','S','M','L','XL','2XL','3XL','4XL','5XL'],sizeMode='numeric';
+    var html='<div id="stockAddSizesModal" style="position:fixed;inset:0;background:rgba(20,10,16,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px;"><div class="card" style="width:min(560px,100%);max-height:90vh;overflow:auto;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;"><div><h3 style="margin:0 0 4px;">Добавить размеры</h3><div style="font-size:13px;color:var(--text-light);">'+esc(p.name)+'</div></div><button class="btn btn-secondary" type="button" id="stockAddSizesClose">✕</button></div>';
+    html+='<div style="margin-top:14px;padding:10px;border-radius:9px;background:var(--bg-secondary,#f7f7f7);"><b style="font-size:13px;">Уже есть в магазине</b><div style="font-size:13px;margin-top:5px;">'+(existing.length?esc(sizeLabel(existing)):'Размеры ещё не добавлены')+'</div><div style="font-size:12px;color:var(--text-light);margin-top:4px;">Существующие размеры сохранятся. Удалять их нельзя.</div></div>';
+    html+='<div class="form-group" style="margin-top:14px;"><label>Выберите новые размеры</label><div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px;"><button class="btn btn-secondary" type="button" data-add-size-mode="numeric">Цифры 26–54</button><button class="btn btn-secondary" type="button" data-add-size-mode="letters">Буквы</button></div><div id="stockAddSizeGrid" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;"></div><div style="font-size:12px;color:var(--text-light);margin-top:8px;">Каждое нажатие добавляет одну пару. Повторные нажатия увеличивают количество выбранного размера.</div><div id="stockAddSizeSelected" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"></div><div id="stockAddSizeCount" style="font-weight:700;margin-top:10px;">Новых пар: 0</div></div>';
+    html+='<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;"><button class="btn btn-secondary" type="button" id="stockAddSizesCancel">Отмена</button><button class="btn btn-primary" type="button" id="stockAddSizesSave" disabled>Добавить размеры</button></div></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+    var grid=document.getElementById('stockAddSizeGrid'),selected=document.getElementById('stockAddSizeSelected'),count=document.getElementById('stockAddSizeCount'),saveButton=document.getElementById('stockAddSizesSave');
+    function draw(){
+      var counts={};added.forEach(function(v){counts[v]=(counts[v]||0)+1;});
+      grid.innerHTML='';
+      var values=sizeMode==='numeric'?Array.from({length:29},function(_,i){return String(i+26);}):letters;
+      values.forEach(function(v){
+        var button=document.createElement('button');button.type='button';button.textContent=v+(counts[v]?' × '+counts[v]:'');
+        button.style.cssText='min-height:42px;border:1px solid '+(counts[v]?'var(--accent,#7c3aed)':'var(--border)')+';border-radius:9px;background:'+(counts[v]?'rgba(124,58,237,.10)':'var(--card-bg,#fff)')+';font-weight:600;cursor:pointer;';
+        button.addEventListener('click',function(){added.push(v);draw();});grid.appendChild(button);
+      });
+      document.querySelectorAll('[data-add-size-mode]').forEach(function(b){var active=b.getAttribute('data-add-size-mode')===sizeMode;b.style.opacity=active?'1':'.65';b.setAttribute('aria-pressed',active?'true':'false');});
+      selected.innerHTML='';
+      Object.keys(counts).sort(function(a,b){var an=/^\\d+$/.test(a),bn=/^\\d+$/.test(b);if(an&&bn)return Number(a)-Number(b);if(an)return -1;if(bn)return 1;return letters.indexOf(a)-letters.indexOf(b);}).forEach(function(v){
+        var chip=document.createElement('span');chip.style.cssText='padding:5px 8px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg,#fff);font-weight:600;';chip.textContent=v+' × '+counts[v];selected.appendChild(chip);
+      });
+      count.textContent='Новых пар: '+added.length;saveButton.disabled=!added.length;
+    }
+    function close(){var el=document.getElementById('stockAddSizesModal');if(el)el.remove();}
+    document.getElementById('stockAddSizesClose').addEventListener('click',close);
+    document.getElementById('stockAddSizesCancel').addEventListener('click',close);
+    document.querySelectorAll('[data-add-size-mode]').forEach(function(b){b.addEventListener('click',function(){sizeMode=b.getAttribute('data-add-size-mode');draw();});});
+    saveButton.addEventListener('click',function(){
+      if(!added.length)return;
+      saveButton.disabled=true;saveButton.textContent='Сохраняем…';
+      var combined=existing.concat(added),before=qty(id,sid),after=combined.length,now=Date.now(),mid=uid('sm'),patch={};
+      patch[BALANCES_PATH+'/'+sid+'/'+id]={quantity:after,sizes:combined,updatedAt:now};
+      if(after!==before)patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:id,productName:p.name,storeId:sid,type:'receipt',quantityDelta:after-before,before:before,after:after,note:'Добавлены размеры в магазине',createdAt:now,createdById:String(user().id),createdByName:user().name||''};
+      db.ref().update(patch).then(function(){addAuditSafe('stock_store_sizes_added','Добавлены размеры товара «'+p.name+'» в магазине «'+(STORES[sid]||sid)+'»: '+added.join(', '));close();render();}).catch(function(e){saveButton.disabled=false;saveButton.textContent='Добавить размеры';alert('Не удалось добавить размеры: '+e.message);});
+    });
+    draw();
   }
   function deleteProduct(id){
     if(!isAdmin()||!canUse())return;var p=products[id];if(!p)return;
