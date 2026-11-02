@@ -252,8 +252,26 @@
         var safeOrg=String(record.org||'org').replace(/[^a-zA-Z0-9_-]/g,'_');
         var safeName=String(file.name||'photo.jpg').replace(/[^a-zA-Z0-9._-]/g,'_');
         var path='stock-products/'+safeOrg+'/'+id+'/'+Date.now()+'_'+safeName;
-        upload=firebase.storage().ref().child(path).put(file,{contentType:file.type||'image/jpeg'}).then(function(snapshot){
-          return snapshot.ref.getDownloadURL().then(function(url){record.photoUrl=url;record.photoPath=path;});
+        var task=firebase.storage().ref().child(path).put(file,{contentType:file.type||'image/jpeg'});
+        upload=new Promise(function(resolve,reject){
+          var finished=false;
+          var timer=setTimeout(function(){
+            if(finished)return;
+            finished=true;
+            try{task.cancel();}catch(e){}
+            reject(new Error('Загрузка фото не завершилась за 45 секунд. Проверьте интернет и доступ Firebase Storage.'));
+          },45000);
+          task.on('state_changed',function(snapshot){
+            var percent=snapshot.totalBytes?Math.round(snapshot.bytesTransferred/snapshot.totalBytes*100):0;
+            if(saveButton)saveButton.textContent='Загружаем фото… '+percent+'%';
+          },function(error){
+            if(finished)return;finished=true;clearTimeout(timer);reject(error);
+          },function(){
+            if(finished)return;finished=true;clearTimeout(timer);
+            task.snapshot.ref.getDownloadURL().then(function(url){
+              record.photoUrl=url;record.photoPath=path;resolve();
+            }).catch(reject);
+          });
         });
       }catch(e){showError('Не удалось начать загрузку фото: '+(e&&e.message?e.message:String(e)),true);return;}
     }
