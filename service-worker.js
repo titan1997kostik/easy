@@ -3,8 +3,8 @@
  * Firebase API/database responses are deliberately NOT cached; only the app shell and static assets are.
  */
 'use strict';
-var APP_CACHE = 'easy-app-sync-shell-v17';
-var RUNTIME_CACHE = 'easy-app-sync-static-v17';
+var APP_CACHE = 'easy-app-sync-shell-v18';
+var RUNTIME_CACHE = 'easy-app-sync-static-v18';
 
 self.addEventListener('install', function(event) {
   event.waitUntil(
