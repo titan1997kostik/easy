@@ -1390,10 +1390,10 @@ function getPurchaseCostMarkupBaseline(storeScope, visibleStoreKeys) {
     var selected = String(storeScope == null || storeScope === '' ? 'all' : storeScope);
     function collect(scope) {
         var revenue = 0, costTotal = 0, count = 0;
-        (sales || []).forEach(function(sale) {
-            if (!sale || !sale.id || sale.returned || isSaleRecordDeleted(sale.id) || isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale)) return;
-            if (visible.indexOf(String(sale.storeId)) === -1) return;
-            if (scope !== 'all' && String(sale.storeId) !== scope) return;
+        // Reuse the store/visibility-filtered analytics slice instead of scanning all sales.
+        var scopedSales = getAnalyticsScopedData(scope, visible).sales;
+        scopedSales.forEach(function(sale) {
+            if (!sale || !sale.id || sale.returned) return;
             var cost = getPurchaseCostForSale(sale.id);
             var price = Number(sale.price) || 0;
             if (cost === null || cost <= 0 || price <= 0) return;
@@ -8200,6 +8200,9 @@ function renderSellerAnalytics(startDate, endDate, targetStore) {
         rows = cachedSellerRows.rows;
     } else {
         // Include currentUser in case their profile has not arrived in the users snapshot yet.
+        // One prepared sales slice is shared by every employee calculation in this render.
+        var sellerVisibleKeys = typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys().map(String) : [];
+        var sellerScopedSales = getAnalyticsScopedData(storeKey, sellerVisibleKeys).sales;
         var staffSource = (users || []).slice();
         if (sellerMode && !staffSource.some(function(user) { return user && String(user.id) === String(currentUser.id); })) staffSource.push(currentUser);
         var staff = staffSource.filter(function(user) {
@@ -8210,13 +8213,13 @@ function renderSellerAnalytics(startDate, endDate, targetStore) {
                 // even if their current assigned store changed during the month.
                 var assignedHere = user.store != null && String(user.store) === storeKey;
                 if (assignedHere) return isStoreVisibleForUser(storeKey);
-                return getEmployeeShiftSales(user, startDate, endDate, sales).some(function(sale) { return String(sale.storeId) === storeKey; });
+                return getEmployeeShiftSales(user, startDate, endDate, sellerScopedSales).some(function(sale) { return String(sale.storeId) === storeKey; });
             }
             return user.store == null || String(user.store) === 'all' || isStoreVisibleForUser(user.store);
         }).slice().sort(function(a,b) { return String(a.name || a.username || '').localeCompare(String(b.name || b.username || ''), 'ru'); });
     
         var rows = staff.map(function(employee) {
-            var employeeSales = getEmployeeShiftSales(employee, startDate, endDate, sales).filter(function(sale) {
+            var employeeSales = getEmployeeShiftSales(employee, startDate, endDate, sellerScopedSales).filter(function(sale) {
                 return storeKey === 'all' || String(sale.storeId) === storeKey;
             });
             var revenue = roundMoney(employeeSales.reduce(function(sum, sale) { return sum + (Number(sale.price) || 0); }, 0));
@@ -8351,17 +8354,14 @@ function renderBestSellingProducts(startDate, endDate, targetStore, isSeller) {
         var sourceSales;
         if (isSeller) {
             sourceSales = typeof getEmployeeShiftSales === 'function'
-                ? getEmployeeShiftSales(currentUser, startDate, endDate, sales)
+                ? getEmployeeShiftSales(currentUser, startDate, endDate, getAnalyticsScopedData(selectedStore, visibleKeys).sales)
                 : [];
         } else {
-            sourceSales = (sales || []).filter(function(sale) {
-                if (!sale || isSaleRecordDeleted(sale.id) || isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale) || sale.returned) return false;
-                var store = String(sale.storeId || '');
-                if (visibleKeys.indexOf(store) === -1) return false;
-                if (selectedStore !== 'all' && store !== selectedStore) return false;
+            // The shared scoped slice already applies visibility, store, deletion and reset rules.
+            sourceSales = getAnalyticsScopedData(selectedStore, visibleKeys).sales.filter(function(sale) {
+                if (!sale || sale.returned) return false;
                 var date = getRecordDateString(sale.timestamp || sale.createdAt);
-                if (!date || date < String(startDate) || date > String(endDate)) return false;
-                return true;
+                return !!date && date >= String(startDate) && date <= String(endDate);
             });
         }
         var unmatched = 0;
