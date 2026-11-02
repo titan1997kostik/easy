@@ -125,7 +125,8 @@
     list.forEach(function(p){
       var q=isAdmin()?visibleStoreIds().reduce(function(sum,s){return sum+qty(p.id,s);},0):qty(p.id,storeId());
       var state=p.status==='pending'?'Ожидает проверки':p.status==='active'?'Опубликован':'Архив';
-      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+(p.photoUrl?'<img src="'+esc(p.photoUrl)+'" alt="" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color,sizeLabel(p.sizes&&p.sizes.length?p.sizes:(p.size?[p.size]:[]))].filter(Boolean).join(' · '))+'</div><div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div><div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. по всем магазинам':' шт.')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+      var costHtml=isAdmin()&&p.purchaseCost!=null?'<div style="font-size:13px;margin-top:5px;">Закупка: <b>'+esc(p.purchaseCost)+'</b></div>':'';
+      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+(p.photoUrl?'<img src="'+esc(p.photoUrl)+'" alt="" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color,sizeLabel(p.sizes&&p.sizes.length?p.sizes:(p.size?[p.size]:[]))].filter(Boolean).join(' · '))+'</div><div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div>'+costHtml+'<div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. по всем магазинам':' шт.')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;">';
       if(canEditCard(p)) html+='<button class="btn btn-secondary" type="button" onclick="stockOpenForm(\''+esc(p.id)+'\')">Изменить</button>';
       if(isAdmin() && p.status==='pending') html+='<button class="btn btn-success" type="button" onclick="stockReview(\''+esc(p.id)+'\')">Проверить</button>';
       if(isAdmin() && p.status==='active') html+='<button class="btn btn-secondary" type="button" onclick="stockAdjust(\''+esc(p.id)+'\')">Остатки</button><button class="btn btn-warning" type="button" onclick="stockArchive(\''+esc(p.id)+'\')">В архив</button>';
@@ -164,8 +165,8 @@
     editingId=id||'';
     formSizes=p&&Array.isArray(p.sizes)?p.sizes.map(String):(p&&p.size?[String(p.size)]:[]);
     var combinedName=p?[p.name,p.model].filter(Boolean).join(' '):'';
-    var html='<div id="stockModal" style="position:fixed;inset:0;background:rgba(20,10,16,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px;"><div class="card" style="width:min(620px,100%);max-height:90vh;overflow:auto;"><div style="display:flex;justify-content:space-between;gap:10px;"><h3>'+(p?'Редактирование карточки':'Новая карточка товара')+'</h3><button class="btn btn-secondary" onclick="stockCloseForm()">✕</button></div><div class="form-group"><label>Название товара / бренд / модель *</label><input id="stockName" value="'+esc(combinedName)+'" maxlength="180" placeholder="Например: Nike Air Max 90"></div><div class="form-group"><label>Категория</label><input id="stockCategory" value="'+esc(p&&p.category)+'" placeholder="Например: кроссовки, футболка"></div><div class="form-group"><label>Артикул</label><input id="stockArticle" value="'+esc(p&&p.article)+'" placeholder="Будет создан автоматически" '+(isSeller()?'readonly':'')+'></div><div class="form-group"><label>Цвет</label><input id="stockColor" value="'+esc(p&&p.color)+'"></div><div class="form-group"><label>Размеры</label><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"><button class="btn btn-secondary" type="button" data-size-mode="numeric" aria-pressed="true">Цифры 26–54</button><button class="btn btn-secondary" type="button" data-size-mode="letters" aria-pressed="false">Буквы</button></div><div id="stockSizeGrid" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;"></div><div style="font-size:12px;color:var(--text-light);margin-top:8px;">Нажмите на размер — каждое нажатие добавляет ещё одну штуку. Повторные размеры учитываются отдельно.</div><div id="stockSelectedSizes" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"></div></div><div class="form-group"><label>Описание</label><textarea id="stockDescription" rows="3">'+esc(p&&p.description)+'</textarea></div><div class="form-group"><label>Фото (необязательно)</label><input id="stockPhoto" type="file" accept="image/*"><div style="font-size:12px;color:var(--text-light);">'+(p&&p.photoUrl?'Фото уже прикреплено. Выберите файл, чтобы заменить.':'Можно добавить позже.')+'</div>'+(p&&p.photoUrl?'<label style="display:block;margin-top:6px;"><input id="stockRemovePhoto" type="checkbox"> Удалить текущее фото</label>':'')+'</div>';
-    if(isAdmin()) html+='<div class="form-group"><label>Направление</label><select id="stockDirection"><option value="">Выбрать…</option><option value="krossy" '+(p&&p.direction==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(p&&p.direction==='easy'?'selected':'')+'>Изи</option></select></div>';
+    var html='<div id="stockModal" style="position:fixed;inset:0;background:rgba(20,10,16,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px;"><div class="card" style="width:min(620px,100%);max-height:90vh;overflow:auto;"><div style="display:flex;justify-content:space-between;gap:10px;"><h3>'+(p?'Редактирование карточки':'Новая карточка товара')+'</h3><button class="btn btn-secondary" onclick="stockCloseForm()">✕</button></div><div class="form-group"><label>Название товара / бренд / модель *</label><input id="stockName" value="'+esc(combinedName)+'" maxlength="180" placeholder="Например: Nike Air Max 90"></div><div class="form-group"><label>Категория</label><input id="stockCategory" value="'+esc(p&&p.category)+'" placeholder="Например: кроссовки, футболка"></div><div class="form-group"><label>Артикул</label><input id="stockArticle" value="'+esc(p&&p.article)+'" placeholder="Будет создан автоматически" '+(isSeller()?'readonly':'')+'></div><div class="form-group"><label>Цвет</label><input id="stockColor" value="'+esc(p&&p.color)+'"></div><div class="form-group"><label>Размеры</label><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"><button class="btn btn-secondary" type="button" data-size-mode="numeric" aria-pressed="true">Цифры 26–54</button><button class="btn btn-secondary" type="button" data-size-mode="letters" aria-pressed="false">Буквы</button></div><div id="stockSizeGrid" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;"></div><div style="font-size:12px;color:var(--text-light);margin-top:8px;">Нажмите на размер — каждое нажатие добавляет ещё одну штуку. Повторные размеры учитываются отдельно.</div><div id="stockSelectedSizes" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"></div></div><div class="form-group"><label>Фотография товара (необязательно)</label><div style="display:flex;gap:8px;flex-wrap:wrap;"><label class="btn btn-secondary" for="stockPhotoCamera">📷 Сделать фото</label><label class="btn btn-secondary" for="stockPhotoGallery">Выбрать из галереи</label></div><input id="stockPhotoCamera" type="file" accept="image/*" capture="environment" style="display:none;"><input id="stockPhotoGallery" type="file" accept="image/*" style="display:none;"><div id="stockPhotoName" style="font-size:12px;color:var(--text-light);margin-top:7px;">'+(p&&p.photoUrl?'Фото уже прикреплено. Можно сделать новое или выбрать другое.':'Фото можно добавить с камеры или из галереи.')+'</div>'+(p&&p.photoUrl?'<label style="display:block;margin-top:6px;"><input id="stockRemovePhoto" type="checkbox"> Удалить текущее фото</label>':'')+'</div>';
+    if(isAdmin()) html+='<div class="form-group"><label>Закупочная стоимость</label><input id="stockPurchaseCost" type="number" min="0" step="0.01" value="'+esc(p&&p.purchaseCost!=null?p.purchaseCost:'')+'" placeholder="Например, 2500"></div><div class="form-group"><label>Направление</label><select id="stockDirection"><option value="">Выбрать…</option><option value="krossy" '+(p&&p.direction==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(p&&p.direction==='easy'?'selected':'')+'>Изи</option></select></div>';
     html+='<div id="stockSaveError" style="color:#b42318;font-size:13px;margin:8px 0;"></div><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;"><button class="btn btn-secondary" onclick="stockCloseForm()">Отмена</button><button class="btn btn-primary" onclick="stockSave()">Сохранить</button></div></div></div>';
     document.body.insertAdjacentHTML('beforeend',html);
     var grid=document.getElementById('stockSizeGrid'), selected=document.getElementById('stockSelectedSizes');
@@ -212,44 +213,59 @@
     galleryInput.addEventListener('change',function(){showChosenPhoto(galleryInput,cameraInput);});
   }
   function closeForm(){var el=document.getElementById('stockModal');if(el)el.remove();}
-  function save(){
+  function save(skipPhoto){
     if(!canUse()) {alert('Нет подтверждённого подключения к Firebase.');return;}
     var name=(document.getElementById('stockName').value||'').trim(); if(!name){alert('Введите название товара, бренд или модель.');return;}
-    var old=editingId?products[editingId]:null;
-    var id=editingId||uid('sp');
-    var record=Object.assign({},old||{},{
-      id:id,org:old?old.org:org(),name:name,
+    var old=editingId?products[editingId]:null, id=editingId||uid('sp');
+    var record=Object.assign({},old||{},{id:id,org:old?old.org:org(),name:name,
       category:(document.getElementById('stockCategory').value||'').trim(),
       article:(document.getElementById('stockArticle').value||'').trim() || (old&&old.article) || ('ST-'+Date.now().toString(36).toUpperCase()),
-      model:'',
-      color:(document.getElementById('stockColor').value||'').trim(),
+      model:'',color:(document.getElementById('stockColor').value||'').trim(),
       size:formSizes.length?formSizes[0]:'',sizes:formSizes.slice(),
-      description:(document.getElementById('stockDescription').value||'').trim(),
-      status:old?old.status:'pending',
-      createdAt:old?old.createdAt:Date.now(),
+      status:old?old.status:'pending',createdAt:old?old.createdAt:Date.now(),
       createdById:old?old.createdById:String(user().id),
       createdByName:old?old.createdByName:(user().name||user().username||''),
-      updatedAt:Date.now(),updatedById:String(user().id)
-    });
+      updatedAt:Date.now(),updatedById:String(user().id)});
+    delete record.description;
     if(isAdmin()){
-      var d=document.getElementById('stockDirection');
-      if(d && d.value) record.direction=d.value;
+      var costInput=document.getElementById('stockPurchaseCost'),costRaw=costInput?String(costInput.value||'').trim():'';
+      if(costRaw!==''&&(!Number.isFinite(Number(costRaw))||Number(costRaw)<0)){alert('Введите корректную закупочную стоимость — ноль или больше.');return;}
+      record.purchaseCost=costRaw===''?null:Number(costRaw);
+      var d=document.getElementById('stockDirection');if(d&&d.value)record.direction=d.value;
     }
-    if(isAdmin() && old && old.status==='pending' && record.direction) record.status='active';
-    var removePhoto=document.getElementById('stockRemovePhoto'); if(removePhoto && removePhoto.checked){delete record.photoUrl;delete record.photoPath;}
-    var file=document.getElementById('stockPhoto').files[0];
-    var saveRecord=function(){
-      var saveButton=document.querySelector('#stockModal button.btn-primary'); if(saveButton){saveButton.disabled=true;saveButton.textContent='Сохраняем…';}
-      db.ref(PRODUCTS_PATH+'/'+id).set(record).then(function(){
-        products[id]=record; if(old && old.photoPath && old.photoPath!==record.photoPath && firebase.storage){firebase.storage().ref(old.photoPath).delete().catch(function(){});} closeForm(); addAuditSafe(old?'stock_product_edit':'stock_product_create',(old?'Изменена':'Создана')+' карточка склада: '+record.name); render();
-      }).catch(function(e){console.error('Stock card save failed:',e);if(saveButton){saveButton.disabled=false;saveButton.textContent='Сохранить';}var msg='Не удалось сохранить карточку: '+(e&&e.message?e.message:String(e));var status=document.getElementById('stockSaveError');if(status)status.textContent=msg;else alert(msg);});
-    };
+    if(isAdmin()&&old&&old.status==='pending'&&record.direction)record.status='active';
+    var removePhoto=document.getElementById('stockRemovePhoto');if(removePhoto&&removePhoto.checked){delete record.photoUrl;delete record.photoPath;}
+    var camera=document.getElementById('stockPhotoCamera'),gallery=document.getElementById('stockPhotoGallery');
+    var file=!skipPhoto&&((camera&&camera.files&&camera.files[0])||(gallery&&gallery.files&&gallery.files[0]));
+    var saveButton=document.querySelector('#stockModal button.btn-primary'),errorBox=document.getElementById('stockSaveError');
+    function showError(message,offerNoPhoto){
+      if(saveButton){saveButton.disabled=false;saveButton.textContent='Сохранить';}
+      if(errorBox){errorBox.textContent=message;if(offerNoPhoto){var fallback=document.createElement('button');fallback.type='button';fallback.className='btn btn-secondary';fallback.style.marginTop='7px';fallback.textContent='Сохранить карточку без фото';fallback.onclick=function(){fallback.remove();save(true);};errorBox.appendChild(document.createElement('br'));errorBox.appendChild(fallback);}}
+      else alert(message);
+    }
+    if(file&&file.size>8*1024*1024){showError('Фото должно быть не больше 8 МБ.',false);return;}
+    if(saveButton){saveButton.disabled=true;saveButton.textContent=file?'Загружаем фото…':'Сохраняем…';}
+    var upload=Promise.resolve();
     if(file){
-      if(!window.firebase || !firebase.storage){alert('Хранилище фотографий ещё не подключено. Карточку можно сохранить без фото и добавить фото позже.');return;}
-      if(file.size>8*1024*1024){alert('Фото должно быть не больше 8 МБ.');return;}
-      var path='stock-products/'+record.org+'/'+id+'/'+Date.now()+'_'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      firebase.storage().ref(path).put(file).then(function(s){return s.ref.getDownloadURL();}).then(function(url){record.photoUrl=url;record.photoPath=path;saveRecord();}).catch(function(e){console.error(e);alert('Фото не загрузилось. Попробуйте ещё раз или сохраните карточку без фото.');});
-    } else { try { saveRecord(); } catch(e) { console.error('Stock save exception:',e); alert('Ошибка сохранения: '+(e.message||e)); } }
+      if(!window.firebase||typeof firebase.storage!=='function'){showError('Firebase Storage не подключён. Можно сохранить карточку без фотографии.',true);return;}
+      try{
+        var safeOrg=String(record.org||'org').replace(/[^a-zA-Z0-9_-]/g,'_');
+        var safeName=String(file.name||'photo.jpg').replace(/[^a-zA-Z0-9._-]/g,'_');
+        var path='stock-products/'+safeOrg+'/'+id+'/'+Date.now()+'_'+safeName;
+        upload=firebase.storage().ref().child(path).put(file,{contentType:file.type||'image/jpeg'}).then(function(snapshot){
+          return snapshot.ref.getDownloadURL().then(function(url){record.photoUrl=url;record.photoPath=path;});
+        });
+      }catch(e){showError('Не удалось начать загрузку фото: '+(e&&e.message?e.message:String(e)),true);return;}
+    }
+    upload.then(function(){return db.ref(PRODUCTS_PATH+'/'+id).set(record);}).then(function(){
+      products[id]=record;
+      if(old&&old.photoPath&&old.photoPath!==record.photoPath&&firebase.storage){firebase.storage().ref(old.photoPath).delete().catch(function(){});}
+      closeForm();addAuditSafe(old?'stock_product_edit':'stock_product_create',(old?'Изменена':'Создана')+' карточка склада: '+record.name);render();
+    }).catch(function(e){
+      console.error('Stock card/photo save failed:',e);
+      var code=e&&e.code?' ('+e.code+')':'',detail=e&&e.message?e.message:String(e);
+      showError((file?'Не удалось загрузить фотографию или сохранить карточку: ':'Не удалось сохранить карточку: ')+detail+code,file&&!skipPhoto);
+    });
   }
   function review(id){
     if(!isAdmin() || !canUse())return;
