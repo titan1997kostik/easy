@@ -14,6 +14,7 @@
   var searchText = '';
   var editingId = '';
   var selectedPhoto = null;
+  var duplicatesExpanded = false;
   var refs = {};
 
   function user(){ return window.currentUser || null; }
@@ -121,12 +122,14 @@
       html+='</div></div>';
     });
     if(isAdmin()){
-      var candidates=allProducts().filter(function(p){return p.status==='pending'||p.status==='active';});
-      var dupes=[], seenPairs={};
-      candidates.forEach(function(p){possibleDuplicates(p,p.id).forEach(function(m){var pair=[String(p.id),String(m.id)].sort().join('|');if(!seenPairs[pair]){seenPairs[pair]=true;dupes.push({p:p,m:m});}});});
-      html+='<div class="card"><h3>Возможные дубли</h3><p style="font-size:12px;color:var(--text-light);">Система сравнивает название, артикул, модель, цвет и размер. Совпадения не объединяются автоматически.</p>';
-      if(!dupes.length) html+='<div style="font-size:13px;color:var(--text-light);">Подозрительных совпадений не найдено.</div>';
-      dupes.forEach(function(d){html+='<div style="padding:9px 0;border-top:1px solid var(--border);"><b>'+esc(d.p.name)+'</b><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-light);margin-top:5px;">Похоже на: '+esc(d.m.name)+' ('+esc(d.m.article||'без артикула')+') <button class="btn btn-warning" type="button" data-stock-merge-source="'+esc(d.p.id)+'" data-stock-merge-target="'+esc(d.m.id)+'">Объединить</button></div></div>';});
+      html+='<div class="card"><div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;"><h3 style="margin:0;">Возможные дубли</h3><button class="btn btn-secondary" type="button" id="stockDuplicatesToggle">'+(duplicatesExpanded?'Скрыть проверку':'Проверить дубли')+'</button></div><p style="font-size:12px;color:var(--text-light);">Проверка запускается только по запросу, чтобы не замедлять открытие склада.</p>';
+      if(duplicatesExpanded){
+        var candidates=allProducts().filter(function(p){return p.status==='pending'||p.status==='active';});
+        var dupes=[], seenPairs={};
+        candidates.forEach(function(p){possibleDuplicates(p,p.id).forEach(function(m){var pair=[String(p.id),String(m.id)].sort().join('|');if(!seenPairs[pair]){seenPairs[pair]=true;dupes.push({p:p,m:m});}});});
+        if(!dupes.length) html+='<div style="font-size:13px;color:var(--text-light);">Подозрительных совпадений не найдено.</div>';
+        dupes.slice(0,100).forEach(function(d){html+='<div style="padding:9px 0;border-top:1px solid var(--border);"><b>'+esc(d.p.name)+'</b><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-light);margin-top:5px;">Похоже на: '+esc(d.m.name)+' ('+esc(d.m.article||'без артикула')+') <button class="btn btn-warning" type="button" data-stock-merge-source="'+esc(d.p.id)+'" data-stock-merge-target="'+esc(d.m.id)+'">Объединить</button></div></div>';});
+      }
       html+='</div>';
       html+='<div class="card"><h3>Остатки по магазинам</h3><div style="overflow-x:auto;"><table style="width:100%;min-width:480px;"><thead><tr><th>Товар</th><th>Магазин</th><th>Остаток</th><th></th></tr></thead><tbody>';
       allProducts().filter(function(p){return p.status==='active';}).forEach(function(p){visibleStoreIds().forEach(function(s){html+='<tr><td>'+esc(p.name)+'</td><td>'+esc(window.STORES[s]||s)+'</td><td>'+qty(p.id,s)+'</td><td><button class="btn btn-secondary" type="button" onclick="stockAdjust(\''+esc(p.id)+'\',\''+esc(s)+'\')">Изменить</button></td></tr>';});});
@@ -138,6 +141,8 @@
       html+='</tbody></table></div></div>';
     }
     root.innerHTML=html;
+    var dupToggle=root.querySelector('#stockDuplicatesToggle');
+    if(dupToggle) dupToggle.addEventListener('click',function(){duplicatesExpanded=!duplicatesExpanded;render();});
     root.querySelectorAll('[data-stock-restore]').forEach(function(b){b.addEventListener('click',function(){restore(b.getAttribute('data-stock-restore'));});});
     root.querySelectorAll('[data-stock-merge-source]').forEach(function(b){b.addEventListener('click',function(){merge(b.getAttribute('data-stock-merge-source'),b.getAttribute('data-stock-merge-target'));});});
   }
