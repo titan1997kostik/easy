@@ -89,11 +89,9 @@
     var n=norm(candidate.name), a=norm(candidate.article), c=norm(candidate.color), z=norm(candidate.size), m=norm(candidate.model);
     return allProducts().filter(function(p){
       if(String(p.id)===String(excludeId) || p.status==='archived' || p.status==='merged') return false;
-      var pn=norm(p.name), pa=norm(p.article);
-      var exactArticle=a && pa && a===pa;
-      var exactVariant=n && pn===n && c===norm(p.color) && z===norm(p.size);
-      var sameName=n && pn===n && (!c || !p.color || c===norm(p.color));
-      return exactArticle || exactVariant || sameName;
+      var pn=norm(p.name), pa=norm(p.article), pm=norm(p.model);
+      var compatible=(!c || !p.color || c===norm(p.color)) && (!z || !p.size || z===norm(p.size));
+      return compatible && ((a && pa && a===pa && n===pn) || (n && pn===n) || (m && pm===m));
     }).slice(0,8);
   }
   function render(){
@@ -123,12 +121,12 @@
       html+='</div></div>';
     });
     if(isAdmin()){
-      var pending=allProducts().filter(function(p){return p.status==='pending';});
-      var dupes=[];
-      pending.forEach(function(p){var matches=possibleDuplicates(p,p.id); if(matches.length) dupes.push({p:p,m:matches});});
-      html+='<div class="card"><h3>Возможные дубли</h3><p style="font-size:12px;color:var(--text-light);">Система только предлагает совпадения. Объединение выполняется вручную администратором.</p>';
+      var candidates=allProducts().filter(function(p){return p.status==='pending'||p.status==='active';});
+      var dupes=[], seenPairs={};
+      candidates.forEach(function(p){possibleDuplicates(p,p.id).forEach(function(m){var pair=[String(p.id),String(m.id)].sort().join('|');if(!seenPairs[pair]){seenPairs[pair]=true;dupes.push({p:p,m:m});}});});
+      html+='<div class="card"><h3>Возможные дубли</h3><p style="font-size:12px;color:var(--text-light);">Система сравнивает название, артикул, модель, цвет и размер. Совпадения не объединяются автоматически.</p>';
       if(!dupes.length) html+='<div style="font-size:13px;color:var(--text-light);">Подозрительных совпадений не найдено.</div>';
-      dupes.forEach(function(d){html+='<div style="padding:9px 0;border-top:1px solid var(--border);"><b>'+esc(d.p.name)+'</b>'+d.m.map(function(m){return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-light);margin-top:5px;">Похоже на: '+esc(m.name)+' ('+esc(m.article||'без артикула')+') <button class="btn btn-warning" type="button" onclick="stockMerge(\''+esc(d.p.id)+'\',\''+esc(m.id)+'\')">Объединить</button></div>';}).join('')+'</div>';});
+      dupes.forEach(function(d){html+='<div style="padding:9px 0;border-top:1px solid var(--border);"><b>'+esc(d.p.name)+'</b><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-light);margin-top:5px;">Похоже на: '+esc(d.m.name)+' ('+esc(d.m.article||'без артикула')+') <button class="btn btn-warning" type="button" data-stock-merge-source="'+esc(d.p.id)+'" data-stock-merge-target="'+esc(d.m.id)+'">Объединить</button></div></div>';});
       html+='</div>';
       html+='<div class="card"><h3>Остатки по магазинам</h3><div style="overflow-x:auto;"><table style="width:100%;min-width:480px;"><thead><tr><th>Товар</th><th>Магазин</th><th>Остаток</th><th></th></tr></thead><tbody>';
       allProducts().filter(function(p){return p.status==='active';}).forEach(function(p){visibleStoreIds().forEach(function(s){html+='<tr><td>'+esc(p.name)+'</td><td>'+esc(window.STORES[s]||s)+'</td><td>'+qty(p.id,s)+'</td><td><button class="btn btn-secondary" type="button" onclick="stockAdjust(\''+esc(p.id)+'\',\''+esc(s)+'\')">Изменить</button></td></tr>';});});
@@ -141,6 +139,7 @@
     }
     root.innerHTML=html;
     root.querySelectorAll('[data-stock-restore]').forEach(function(b){b.addEventListener('click',function(){restore(b.getAttribute('data-stock-restore'));});});
+    root.querySelectorAll('[data-stock-merge-source]').forEach(function(b){b.addEventListener('click',function(){merge(b.getAttribute('data-stock-merge-source'),b.getAttribute('data-stock-merge-target'));});});
   }
   function openForm(id){
     if(!canUse()){alert('Нет подтверждённого подключения к Firebase.');return;}
