@@ -98,6 +98,7 @@
         else storeDirections=v;
         loaded[name]=true;
         render();
+        if(window.refreshStockSaleProducts && document.getElementById('stockSaleEnabled') && document.getElementById('stockSaleEnabled').checked) window.refreshStockSaleProducts();
       },function(err){ console.error('Stock sync '+name,err); loaded[name]=true; render(); });
     });
   }
