@@ -401,7 +401,7 @@
       });
       document.querySelectorAll('[data-add-size-mode]').forEach(function(b){var active=b.getAttribute('data-add-size-mode')===sizeMode;b.style.opacity=active?'1':'.65';b.setAttribute('aria-pressed',active?'true':'false');});
       selected.innerHTML='';
-      Object.keys(counts).sort(function(a,b){var an=/^\\d+$/.test(a),bn=/^\\d+$/.test(b);if(an&&bn)return Number(a)-Number(b);if(an)return -1;if(bn)return 1;return letters.indexOf(a)-letters.indexOf(b);}).forEach(function(v){
+      Object.keys(counts).sort(function(a,b){var an=/^\d+$/.test(a),bn=/^\d+$/.test(b);if(an&&bn)return Number(a)-Number(b);if(an)return -1;if(bn)return 1;return letters.indexOf(a)-letters.indexOf(b);}).forEach(function(v){
         var chip=document.createElement('span');chip.style.cssText='padding:5px 8px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg,#fff);font-weight:600;';chip.textContent=v+' × '+counts[v];selected.appendChild(chip);
       });
       count.textContent='Новых пар: '+added.length;saveButton.disabled=!added.length;
