@@ -2516,6 +2516,7 @@ function removeDeletedStoreDataFromMemory() {
             });
         });
     }
+    invalidateAnalyticsCache();
 }
 
 function deletionLedgersAreReady() {
@@ -3069,6 +3070,7 @@ db.ref('users_data').on('value', function(snapshot) {
 
     users = arr;
     window.users = arr;
+    invalidateAnalyticsCache();
 
     // Выкидываем пользователя ТОЛЬКО если snapshot не пустой и юзера реально удалили на сервере
     if (currentUser && hasUsersInSnapshot && !currentUserIdExistsOnServer) {
@@ -3127,6 +3129,7 @@ db.ref('orgs_data').on('value', function(snapshot) {
     isRemoteChange = true;
     var val = snapshot.val() || {};
     ORGS = (val && typeof val === 'object') ? val : {};
+    invalidateAnalyticsCache();
     if (!ORGS.mine) ORGS.mine = 'Организация 1';
     if (currentOrgFilter && !ORGS[currentOrgFilter]) currentOrgFilter = 'mine';
     if (currentUser) { refreshOrgSwitcher(); renderOrgsManagement(); renderAll(); }
@@ -3137,6 +3140,7 @@ db.ref('store_orgs_data').on('value', function(snapshot) {
     isRemoteChange = true;
     var val = snapshot.val() || {};
     STORE_ORGS = {};
+    invalidateAnalyticsCache();
     if (val && typeof val === 'object') {
         Object.keys(val).forEach(function(key) {
             if (!isStoreDeleted(key)) STORE_ORGS[key] = val[key];
@@ -3161,6 +3165,7 @@ db.ref('audit_log_data').on('value', function(snapshot) {
     });
     if (arr.length > 500) arr = arr.slice(-500);
     auditLog = arr;
+    invalidateAnalyticsCache();
     if (currentUser && currentUser.role === 'admin') { renderAuditLog(); }
     isRemoteChange = false;
 });
