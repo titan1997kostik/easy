@@ -495,9 +495,67 @@
   function openMergeDialog(id,targetId){merge(id,targetId);}
   function setSearch(v){searchText=v||'';render();}
   function setFilter(v){activeFilter=v||'all';render();}
+  function getSaleOptions(sid){
+    sid=String(sid||'');if(!canUse()||!sid||visibleStoreIds().map(String).indexOf(sid)===-1||(isSeller()&&sid!==storeId()))return [];
+    var direction=storeDirection(sid);
+    return allProducts().filter(function(p){if(p.status!=='active'||p.org!==org())return false;if(isSeller()&&!sellerCanSee(p))return false;if(isAdmin()&&direction&&direction!=='mixed'&&p.direction!==direction)return false;var b=balances[sid]&&balances[sid][String(p.id)]||{},sizes=Array.isArray(b.sizes)?b.sizes.map(function(x){return String(x).toUpperCase();}):[];return sizes.length>0;}).map(function(p){var b=balances[sid][String(p.id)]||{},sizes=Array.isArray(b.sizes)?b.sizes.map(function(x){return String(x).toUpperCase();}):[],counts={};sizes.forEach(function(x){counts[x]=(counts[x]||0)+1;});return {id:String(p.id),name:String(p.name||''),sizes:counts,quantity:sizes.length};}).sort(function(a,b){return a.name.localeCompare(b.name,'ru');});
+  }
+  function completeSaleFromStock(sale){
+    if(!sale||!sale.id||!sale.stockProductId||!sale.stockSize)return Promise.reject(new Error('Не заполнены данные складской продажи.'));
+    if(!navigator.onLine||!canUse())return Promise.reject(new Error('Для продажи со склада требуется подключение к Firebase.'));
+    var sid=String(sale.stockStoreId||sale.storeId),pid=String(sale.stockProductId),size=String(sale.stockSize).toUpperCase(),saleId=String(sale.id),quantity=Number(sale.stockQuantity||1);
+    if(sid!==String(sale.storeId)||visibleStoreIds().map(String).indexOf(sid)===-1||(isSeller()&&sid!==storeId()))return Promise.reject(new Error('Нет доступа к остаткам выбранного магазина.'));
+    if(!Number.isInteger(quantity)||quantity<1)return Promise.reject(new Error('Количество должно быть целым числом больше нуля.'));
+    var lockRef=db.ref('stock_sale_locks/'+saleId),lock={saleId:saleId,actorId:String(user().id),startedAt:Date.now(),expiresAt:Date.now()+120000};
+    return db.ref('sales_data/'+saleId).once('value').then(function(existing){
+      if(existing.exists()){var old=existing.val()||{};if(String(old.stockProductId||'')===pid&&String(old.stockSize||'').toUpperCase()===size)return {alreadySaved:true,sale:old};throw new Error('Продажа с таким идентификатором уже существует.');}
+      return lockRef.transaction(function(current){if(current&&Number(current.expiresAt||0)>Date.now())return;return lock;},undefined,false).then(function(lockResult){
+        if(!lockResult.committed)throw new Error('Продажа уже обрабатывается на другом устройстве.');
+        return Promise.all([db.ref(PRODUCTS_PATH+'/'+pid).once('value'),db.ref(BALANCES_PATH+'/'+sid+'/'+pid).once('value'),db.ref(DIRECTIONS_PATH+'/'+sid).once('value')]);
+      }).then(function(snaps){
+        var product=snaps[0].val(),balance=snaps[1].val()||{},direction=snaps[2].val()||'';
+        if(!product||product.status!=='active'||product.org!==org())throw new Error('Карточка товара больше недоступна для продажи.');
+        if(direction&&direction!=='mixed'&&product.direction!==direction)throw new Error('Товар не относится к направлению выбранного магазина.');
+        var balanceRef=db.ref(BALANCES_PATH+'/'+sid+'/'+pid),before=Number(balance.quantity||0),nextBalance;
+        return balanceRef.transaction(function(current){
+          if(!current||!Array.isArray(current.sizes))return;
+          var sizes=current.sizes.map(function(x){return String(x).toUpperCase();}),removed=0,filtered=sizes.filter(function(x){if(x===size&&removed<quantity){removed++;return false;}return true;});
+          if(removed!==quantity)return;
+          nextBalance=Object.assign({},current,{sizes:filtered,quantity:filtered.length,updatedAt:Date.now()});return nextBalance;
+        },undefined,false).then(function(tx){
+          if(!tx.committed)throw new Error('Недостаточно товара выбранного размера. Остаток мог измениться на другом устройстве.');
+          nextBalance=tx.snapshot.val()||nextBalance;
+          var now=Date.now(),movementId='stock_sale_'+saleId,persisted=Object.assign({},sale,{stockProductName:String(product.name||sale.stockProductName||''),stockQuantity:quantity,stockStoreId:sid,stockMovementId:movementId,stockSize:size,_pendingSync:false});
+          var movement={id:movementId,org:product.org,productId:pid,productName:persisted.stockProductName,storeId:sid,type:'sale',size:size,quantityDelta:-quantity,before:before,after:Number(nextBalance.quantity||0),saleId:saleId,createdAt:now,createdById:String(user().id),createdByName:String(user().name||'')};
+          var patch={};patch['sales_data/'+saleId]=persisted;patch[MOVEMENTS_PATH+'/'+movementId]=movement;
+          return db.ref().update(patch).then(function(){return {sale:persisted,movement:movement};}).catch(function(writeError){
+            return db.ref('sales_data/'+saleId).once('value').then(function(check){if(check.exists())return {sale:check.val(),movement:movement,alreadySaved:true};return balanceRef.transaction(function(current){current=current||{};var restored=Array.isArray(current.sizes)?current.sizes.slice():[];for(var n=0;n<quantity;n++)restored.push(size);return Object.assign({},current,{sizes:restored,quantity:restored.length,updatedAt:Date.now()});},undefined,false).then(function(){throw writeError;});});
+          });
+        });
+      }).finally(function(){lockRef.transaction(function(current){if(current&&String(current.saleId)===saleId)return null;return current;},undefined,false);});
+    });
+  }
+  function prepareSaleReturn(sale,nextReturned,eventId){
+    if(!sale||!sale.stockProductId)return Promise.resolve(null);
+    if(!navigator.onLine||!canUse())return Promise.reject(new Error('Для возврата складской продажи требуется подключение к Firebase.'));
+    var sid=String(sale.stockStoreId||sale.storeId),pid=String(sale.stockProductId),size=String(sale.stockSize||'').toUpperCase(),quantity=Number(sale.stockQuantity||1);
+    if(!sid||!pid||!size||!Number.isInteger(quantity)||quantity<1)return Promise.reject(new Error('В складской продаже отсутствуют корректные данные товара и размера.'));
+    var ref=db.ref(BALANCES_PATH+'/'+sid+'/'+pid),before=0,after=0,delta=nextReturned?quantity:-quantity;
+    return ref.transaction(function(current){
+      current=current||{};var sizes=Array.isArray(current.sizes)?current.sizes.map(function(x){return String(x).toUpperCase();}):[];before=sizes.length;
+      if(nextReturned){for(var i=0;i<quantity;i++)sizes.push(size);}else{var removed=0;sizes=sizes.filter(function(x){if(x===size&&removed<quantity){removed++;return false;}return true;});if(removed!==quantity)return;}
+      after=sizes.length;return Object.assign({},current,{sizes:sizes,quantity:after,updatedAt:Date.now()});
+    },undefined,false).then(function(tx){
+      if(!tx.committed)throw new Error(nextReturned?'Не удалось восстановить товар на складе.':'Нельзя отменить возврат: нужного размера больше нет в остатках.');
+      var movementId='stock_'+(nextReturned?'return_':'return_cancel_')+String(eventId),movement={id:movementId,org:org(),productId:pid,productName:String(sale.stockProductName||sale.name||''),storeId:sid,type:nextReturned?'return':'sale_return_cancel',size:size,quantityDelta:delta,before:before,after:after,saleId:String(sale.id||''),returnEventId:String(eventId),createdAt:Date.now(),createdById:String(user().id),createdByName:String(user().name||'')};
+      function rollback(){return ref.transaction(function(current){current=current||{};var sizes=Array.isArray(current.sizes)?current.sizes.slice():[];if(nextReturned){var removed=0;sizes=sizes.filter(function(x){if(String(x).toUpperCase()===size&&removed<quantity){removed++;return false;}return true;});if(removed!==quantity)return;}else{for(var n=0;n<quantity;n++)sizes.push(size);}return Object.assign({},current,{sizes:sizes,quantity:sizes.length,updatedAt:Date.now()});},undefined,false).then(function(result){if(!result.committed)throw new Error('Не удалось автоматически откатить изменение складского остатка.');});}
+      return {movement:movement,rollback:rollback};
+    });
+  }
+
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;
+    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;
   }
   function start(){
     expose();load();initPage();
