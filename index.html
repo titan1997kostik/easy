@@ -105,6 +105,9 @@
         .calendar-day.selected.has-sales::after { background: white; }
         .calendar-detail { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px; }
         .hidden { display: none !important; }
+/* Keep the authenticated workspace completely out of view after logout. */
+body.logged-out #mainApp{display:none!important;}
+body.logged-out #loginScreen{display:block!important;}
 
         .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; }
         .header-right { display: flex; align-items: center; gap: 12px; }
@@ -3875,13 +3878,16 @@ function doLogout() {
     if (typeof stopAdminPersonalTasksListener === 'function') stopAdminPersonalTasksListener();
     currentUser = null;
     localStorage.removeItem('easyAppSync_session');
+    document.body.classList.add('logged-out');
     document.getElementById('mainApp').classList.add('hidden');
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('loginUsername').value = '';
     document.getElementById('loginPassword').value = '';
+    window.scrollTo(0, 0);
 }
 
 function enterApp() {
+    document.body.classList.remove('logged-out');
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
     document.getElementById('userName').textContent = currentUser.name;
@@ -9521,8 +9527,8 @@ restoreOfflineOutbox();
 saveAllToLocal();
 setTimeout(function() { ensureSuperAdmins(); }, 2000);
 refreshStoreDropdowns();
-if (currentUser) { enterApp(); restoreUIState(); }
-else { document.getElementById('loginScreen').classList.remove('hidden'); }
+if (currentUser) { document.body.classList.remove('logged-out'); enterApp(); restoreUIState(); }
+else { document.body.classList.add('logged-out'); document.getElementById('mainApp').classList.add('hidden'); document.getElementById('loginScreen').classList.remove('hidden'); window.scrollTo(0, 0); }
 
 // BroadcastChannel for same-browser tab sync (instant)
 if (typeof BroadcastChannel !== 'undefined') {
