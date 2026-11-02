@@ -4829,9 +4829,14 @@ function deleteSale(id) {
     updates['sales_data/' + key] = null;
     updates['deleted_sales_data/' + key] = { deletedAt: deletedAt };
     pendingSaleDeletes[key] = true;
-    // Persist the deletion first. Do not create a local tombstone before Firebase confirms it,
-    // otherwise a denied write could make this device hide a sale that remains on other devices.
-    db.ref().update(updates).then(function() {
+    // Restore stock atomically with the sale tombstone; roll the stock back if Firebase rejects the delete.
+    var stockDeletePromise = typeof window.stockPrepareSaleDelete === 'function' ? window.stockPrepareSaleDelete(sale) : Promise.resolve(null);
+    stockDeletePromise.then(function(stockChange) {
+      if (stockChange) updates['stock_movements_data/' + stockChange.movement.id] = stockChange.movement;
+      return db.ref().update(updates).catch(function(writeError) {
+        return stockChange ? stockChange.rollback().then(function(){ throw writeError; }) : Promise.reject(writeError);
+      });
+    }).then(function() {
         delete pendingSaleDeletes[key];
         deletedSalesById[key] = { deletedAt: deletedAt };
         if (deletedSaleIds.map(String).indexOf(key) === -1) deletedSaleIds.push(key);
