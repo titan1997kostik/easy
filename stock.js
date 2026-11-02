@@ -550,18 +550,17 @@
         var product=snaps[0].val(),balance=snaps[1].val()||{},direction=snaps[2].val()||'';
         if(!product||product.status!=='active'||product.org!==org())throw new Error('Карточка товара больше недоступна для продажи.');
         if(direction&&direction!=='mixed'&&product.direction!==direction)throw new Error('Товар не относится к направлению выбранного магазина.');
-        var balanceRef=db.ref(BALANCES_PATH+'/'+sid+'/'+pid),before=Number(balance.quantity||0),nextBalance;
+        var balanceRef=db.ref(BALANCES_PATH+'/'+sid+'/'+pid),before=Number(balance.quantity||0),nextBalance,manualSize=false;
         return balanceRef.transaction(function(current){
-          if(!current||!Array.isArray(current.sizes))return;
-          var sizes=current.sizes.map(function(x){return String(x).toUpperCase();}),removed=0,filtered=sizes.filter(function(x){if(x===size&&removed<quantity){removed++;return false;}return true;});
-          if(removed!==quantity)return;
+          current=current||{};var sizes=Array.isArray(current.sizes)?current.sizes.map(function(x){return String(x).toUpperCase();}):[],removed=0,filtered=sizes.filter(function(x){if(x===size&&removed<quantity){removed++;return false;}return true;});
+          if(removed!==quantity){manualSize=true;nextBalance=current;return current;}
           nextBalance=Object.assign({},current,{sizes:filtered,quantity:filtered.length,updatedAt:Date.now()});return nextBalance;
         },undefined,false).then(function(tx){
-          if(!tx.committed)throw new Error('Недостаточно товара выбранного размера. Остаток мог измениться на другом устройстве.');
+          if(!tx.committed)throw new Error('Не удалось проверить остатки товара. Повторите попытку.');
           nextBalance=tx.snapshot.val()||nextBalance;
-          var now=Date.now(),movementId='stock_sale_'+saleId,unitPurchaseCost=product.purchaseCost==null||product.purchaseCost===''?null:Number(product.purchaseCost),persisted=Object.assign({},sale,{stockProductName:String(product.name||sale.stockProductName||''),stockPurchaseCost:isFinite(unitPurchaseCost)&&unitPurchaseCost>=0?unitPurchaseCost:null,stockOrg:String(product.org||''),stockQuantity:quantity,stockStoreId:sid,stockMovementId:movementId,stockSize:size,_pendingSync:false});
+          var now=Date.now(),movementId='stock_sale_'+saleId,unitPurchaseCost=product.purchaseCost==null||product.purchaseCost===''?null:Number(product.purchaseCost),persisted=Object.assign({},sale,{stockProductName:String(product.name||sale.stockProductName||''),stockPurchaseCost:isFinite(unitPurchaseCost)&&unitPurchaseCost>=0?unitPurchaseCost:null,stockOrg:String(product.org||''),stockQuantity:quantity,stockStoreId:sid,stockMovementId:manualSize?'':movementId,stockSize:size,stockManualSize:manualSize,_pendingSync:false});
           var movement={id:movementId,org:product.org,productId:pid,productName:persisted.stockProductName,storeId:sid,type:'sale',size:size,quantityDelta:-quantity,before:before,after:Number(nextBalance.quantity||0),saleId:saleId,createdAt:now,createdById:String(user().id),createdByName:String(user().name||'')};
-          var patch={};patch['sales_data/'+saleId]=persisted;patch[MOVEMENTS_PATH+'/'+movementId]=movement;
+          var patch={};patch['sales_data/'+saleId]=persisted;if(!manualSize)patch[MOVEMENTS_PATH+'/'+movementId]=movement;
           return db.ref().update(patch).then(function(){return {sale:persisted,movement:movement};}).catch(function(writeError){
             return db.ref('sales_data/'+saleId).once('value').then(function(check){if(check.exists())return {sale:check.val(),movement:movement,alreadySaved:true};return balanceRef.transaction(function(current){current=current||{};var restored=Array.isArray(current.sizes)?current.sizes.slice():[];for(var n=0;n<quantity;n++)restored.push(size);return Object.assign({},current,{sizes:restored,quantity:restored.length,updatedAt:Date.now()});},undefined,false).then(function(){throw writeError;});});
           });
@@ -570,7 +569,7 @@
     });
   }
   function prepareSaleReturn(sale,nextReturned,eventId){
-    if(!sale||!sale.stockProductId)return Promise.resolve(null);
+    if(!sale||!sale.stockProductId||sale.stockManualSize)return Promise.resolve(null);
     if(!navigator.onLine||!canUse())return Promise.reject(new Error('Для возврата складской продажи требуется подключение к Firebase.'));
     var sid=String(sale.stockStoreId||sale.storeId),pid=String(sale.stockProductId),size=String(sale.stockSize||'').toUpperCase(),quantity=Number(sale.stockQuantity||1);
     if(!sid||!pid||!size||!Number.isInteger(quantity)||quantity<1)return Promise.reject(new Error('В складской продаже отсутствуют корректные данные товара и размера.'));
