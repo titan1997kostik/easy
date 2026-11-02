@@ -224,17 +224,19 @@
   }
   function merge(id,targetId){
     if(!isAdmin()||!canUse())return;
-    var a=products[id], b=products[targetId]; if(!a||!b||id===targetId)return;
-    if(a.org!==b.org || (a.direction && a.direction!==b.direction)){alert('Объединять можно только карточки одной организации и совместимого направления.');return;}
+    var sourceId=id, keepId=targetId, a=products[sourceId], b=products[keepId];
+    if(!a||!b||sourceId===keepId)return;
+    if(a.status==='active' && b.status==='pending'){var swap=a;a=b;b=swap;var swapId=sourceId;sourceId=keepId;keepId=swapId;}
+    if(a.org!==b.org || (a.direction && b.direction && a.direction!==b.direction)){alert('Объединять можно только карточки одной организации и совместимого направления.');return;}
     if(!confirm('Объединить «'+a.name+'» с карточкой «'+b.name+'»? Остатки будут перенесены в основную карточку, исходная останется в истории как объединённая.'))return;
     var patch={}, now=Date.now();
-    visibleStoreIds().forEach(function(s){var qa=qty(id,s),qb=qty(targetId,s);if(qa){patch[BALANCES_PATH+'/'+s+'/'+targetId]={quantity:qa+qb,updatedAt:now};patch[BALANCES_PATH+'/'+s+'/'+id]=null;}});
+    visibleStoreIds().forEach(function(s){var qa=qty(sourceId,s),qb=qty(keepId,s);if(qa){patch[BALANCES_PATH+'/'+s+'/'+keepId]={quantity:qa+qb,updatedAt:now};patch[BALANCES_PATH+'/'+s+'/'+sourceId]=null;}});
     var mid=uid('sm');
-    patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:targetId,mergedProductId:id,type:'merge',createdAt:now,createdById:String(user().id),note:'Объединение карточки «'+a.name+'» с «'+b.name+'»'};
-    patch[PRODUCTS_PATH+'/'+id+'/status']='merged';
-    patch[PRODUCTS_PATH+'/'+id+'/direction']=b.direction;
-    patch[PRODUCTS_PATH+'/'+id+'/mergedInto']=targetId;
-    patch[PRODUCTS_PATH+'/'+id+'/mergedAt']=now;
+    patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:keepId,mergedProductId:sourceId,type:'merge',createdAt:now,createdById:String(user().id),note:'Объединение карточки «'+a.name+'» с «'+b.name+'»'};
+    patch[PRODUCTS_PATH+'/'+sourceId+'/status']='merged';
+    patch[PRODUCTS_PATH+'/'+sourceId+'/direction']=b.direction || a.direction || null;
+    patch[PRODUCTS_PATH+'/'+sourceId+'/mergedInto']=keepId;
+    patch[PRODUCTS_PATH+'/'+sourceId+'/mergedAt']=now;
     db.ref().update(patch).then(function(){addAuditSafe('stock_product_merge','Объединены карточки «'+a.name+'» → «'+b.name+'»');}).catch(function(e){alert('Не удалось объединить карточки: '+e.message);});
   }
   function openMergeDialog(id,targetId){merge(id,targetId);}
