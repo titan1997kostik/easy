@@ -15,6 +15,7 @@
   var editingId = '';
   var selectedPhoto = null;
   var duplicatesExpanded = false;
+  var formSizes = [];
   var refs = {};
 
   function user(){ return window.currentUser || null; }
@@ -38,6 +39,10 @@
     return !!d && (d === 'mixed' || d === p.direction);
   }
   function qty(pId,sId){ return Number(balances[String(sId)] && balances[String(sId)][String(pId)] && balances[String(sId)][String(pId)].quantity || 0); }
+  function sizeLabel(sizes){
+    var counts={}; (Array.isArray(sizes)?sizes:[]).forEach(function(s){var k=String(s);counts[k]=(counts[k]||0)+1;});
+    return Object.keys(counts).sort(function(a,b){return Number(a)-Number(b);}).map(function(k){return k+(counts[k]>1?' × '+counts[k]:'');}).join(', ');
+  }
   function canEditCard(p){ return isAdmin() || (isSeller() && p && (sellerCanSee(p) || (p.status === 'pending' && String(p.createdById) === String(user().id)))); }
   function addAuditSafe(action,details){ try { if(typeof addAudit === 'function') addAudit(action,details); } catch(e) { console.warn(e); } }
   function setStatus(msg,isError){ var el=document.getElementById('stockStatus'); if(el){el.textContent=msg || '';el.style.color=isError?'#b42318':'var(--text-light)';} }
@@ -114,7 +119,7 @@
     list.forEach(function(p){
       var q=isAdmin()?visibleStoreIds().reduce(function(sum,s){return sum+qty(p.id,s);},0):qty(p.id,storeId());
       var state=p.status==='pending'?'Ожидает проверки':p.status==='active'?'Опубликован':'Архив';
-      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+(p.photoUrl?'<img src="'+esc(p.photoUrl)+'" alt="" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color,p.size].filter(Boolean).join(' · '))+'</div><div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div><div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. по всем магазинам':' шт.')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+(p.photoUrl?'<img src="'+esc(p.photoUrl)+'" alt="" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color,sizeLabel(p.sizes&&p.sizes.length?p.sizes:(p.size?[p.size]:[]))].filter(Boolean).join(' · '))+'</div><div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div><div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. по всем магазинам':' шт.')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;">';
       if(canEditCard(p)) html+='<button class="btn btn-secondary" type="button" onclick="stockOpenForm(\''+esc(p.id)+'\')">Изменить</button>';
       if(isAdmin() && p.status==='pending') html+='<button class="btn btn-success" type="button" onclick="stockReview(\''+esc(p.id)+'\')">Проверить</button>';
       if(isAdmin() && p.status==='active') html+='<button class="btn btn-secondary" type="button" onclick="stockAdjust(\''+esc(p.id)+'\')">Остатки</button><button class="btn btn-warning" type="button" onclick="stockArchive(\''+esc(p.id)+'\')">В архив</button>';
@@ -151,25 +156,50 @@
     var p=id?products[id]:null;
     if(p && !canEditCard(p)){alert('Эту карточку нельзя редактировать.');return;}
     editingId=id||'';
-    var html='<div id="stockModal" style="position:fixed;inset:0;background:rgba(20,10,16,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px;"><div class="card" style="width:min(620px,100%);max-height:90vh;overflow:auto;"><div style="display:flex;justify-content:space-between;gap:10px;"><h3>'+(p?'Редактирование карточки':'Новая карточка товара')+'</h3><button class="btn btn-secondary" onclick="stockCloseForm()">✕</button></div><div class="form-group"><label>Название товара *</label><input id="stockName" value="'+esc(p&&p.name)+'" maxlength="120"></div><div class="form-group"><label>Категория</label><input id="stockCategory" value="'+esc(p&&p.category)+'"></div><div class="form-group"><label>Артикул</label><input id="stockArticle" value="'+esc(p&&p.article)+'" placeholder="Будет создан автоматически" '+(isSeller()?'readonly':'')+'></div><div class="form-group"><label>Бренд / модель</label><input id="stockModel" value="'+esc(p&&p.model)+'"></div><div class="form-group"><label>Цвет</label><input id="stockColor" value="'+esc(p&&p.color)+'"></div><div class="form-group"><label>Размер</label><input id="stockSize" value="'+esc(p&&p.size)+'"></div><div class="form-group"><label>Описание</label><textarea id="stockDescription" rows="3">'+esc(p&&p.description)+'</textarea></div><div class="form-group"><label>Фото (необязательно)</label><input id="stockPhoto" type="file" accept="image/*"><div style="font-size:12px;color:var(--text-light);">'+(p&&p.photoUrl?'Фото уже прикреплено. Выберите файл, чтобы заменить.':'Можно добавить позже.')+'</div>'+(p&&p.photoUrl?'<label style="display:block;margin-top:6px;"><input id="stockRemovePhoto" type="checkbox"> Удалить текущее фото</label>':'')+'</div>';
+    formSizes=p&&Array.isArray(p.sizes)?p.sizes.slice():(p&&p.size?[String(p.size)]:[]);
+    var combinedName=p?[p.name,p.model].filter(Boolean).join(' '):'';
+    var sizeType=p&&p.sizeType?p.sizeType:'shoes';
+    var html='<div id="stockModal" style="position:fixed;inset:0;background:rgba(20,10,16,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px;"><div class="card" style="width:min(620px,100%);max-height:90vh;overflow:auto;"><div style="display:flex;justify-content:space-between;gap:10px;"><h3>'+(p?'Редактирование карточки':'Новая карточка товара')+'</h3><button class="btn btn-secondary" onclick="stockCloseForm()">✕</button></div><div class="form-group"><label>Название товара / бренд / модель *</label><input id="stockName" value="'+esc(combinedName)+'" maxlength="180" placeholder="Например: Nike Air Max 90"></div><div class="form-group"><label>Категория</label><input id="stockCategory" value="'+esc(p&&p.category)+'" placeholder="Например: кроссовки, футболка"></div><div class="form-group"><label>Артикул</label><input id="stockArticle" value="'+esc(p&&p.article)+'" placeholder="Будет создан автоматически" '+(isSeller()?'readonly':'')+'></div><div class="form-group"><label>Цвет</label><input id="stockColor" value="'+esc(p&&p.color)+'"></div><div class="form-group"><label>Тип размеров</label><select id="stockSizeType"><option value="shoes" '+(sizeType==='shoes'?'selected':'')+'>Обувь (28–50)</option><option value="clothes" '+(sizeType==='clothes'?'selected':'')+'>Одежда (40–58)</option></select></div><div class="form-group"><label>Добавить размер</label><div style="display:flex;gap:8px;align-items:center;"><select id="stockSizeChoice" style="flex:1;"></select><button class="btn btn-secondary" type="button" id="stockAddSize">＋ Добавить</button></div><div id="stockSelectedSizes" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"></div><div style="font-size:12px;color:var(--text-light);margin-top:5px;">Один размер можно добавить несколько раз — количество повторов будет видно в карточке.</div></div><div class="form-group"><label>Описание</label><textarea id="stockDescription" rows="3">'+esc(p&&p.description)+'</textarea></div><div class="form-group"><label>Фото (необязательно)</label><input id="stockPhoto" type="file" accept="image/*"><div style="font-size:12px;color:var(--text-light);">'+(p&&p.photoUrl?'Фото уже прикреплено. Выберите файл, чтобы заменить.':'Можно добавить позже.')+'</div>'+(p&&p.photoUrl?'<label style="display:block;margin-top:6px;"><input id="stockRemovePhoto" type="checkbox"> Удалить текущее фото</label>':'')+'</div>';
     if(isAdmin()) html+='<div class="form-group"><label>Направление</label><select id="stockDirection"><option value="">Выбрать…</option><option value="krossy" '+(p&&p.direction==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(p&&p.direction==='easy'?'selected':'')+'>Изи</option></select></div>';
-    html+='<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;"><button class="btn btn-secondary" onclick="stockCloseForm()">Отмена</button><button class="btn btn-primary" onclick="stockSave()">Сохранить</button></div></div></div>';
+    html+='<div id="stockSaveError" style="color:#b42318;font-size:13px;margin:8px 0;"></div><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;"><button class="btn btn-secondary" onclick="stockCloseForm()">Отмена</button><button class="btn btn-primary" onclick="stockSave()">Сохранить</button></div></div></div>';
     document.body.insertAdjacentHTML('beforeend',html);
+    var typeEl=document.getElementById('stockSizeType'), choice=document.getElementById('stockSizeChoice'), selected=document.getElementById('stockSelectedSizes');
+    function refreshSizeOptions(){
+      var type=typeEl.value, min=type==='shoes'?28:40, max=type==='shoes'?50:58, previous=choice.value;
+      choice.innerHTML=''; for(var n=min;n<=max;n++){var o=document.createElement('option');o.value=String(n);o.textContent=String(n);choice.appendChild(o);}
+      if(previous && Number(previous)>=min && Number(previous)<=max)choice.value=previous;
+      drawSizes();
+    }
+    function drawSizes(){
+      selected.innerHTML='';
+      var counts={};formSizes.forEach(function(v){counts[v]=(counts[v]||0)+1;});
+      Object.keys(counts).sort(function(a,b){return Number(a)-Number(b);}).forEach(function(v){
+        var chip=document.createElement('span');chip.style.cssText='display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;background:#fff;';
+        chip.textContent=v+(counts[v]>1?' × '+counts[v]:'');
+        var remove=document.createElement('button');remove.type='button';remove.textContent='−';remove.title='Убрать один размер';remove.style.cssText='border:0;background:transparent;font-size:18px;cursor:pointer;padding:0 2px;';
+        remove.addEventListener('click',function(){var i=formSizes.indexOf(v);if(i>=0)formSizes.splice(i,1);drawSizes();});
+        chip.appendChild(remove);selected.appendChild(chip);
+      });
+      if(!formSizes.length)selected.textContent='Размеры пока не добавлены';
+    }
+    typeEl.addEventListener('change',function(){formSizes=[];refreshSizeOptions();});
+    document.getElementById('stockAddSize').addEventListener('click',function(){formSizes.push(choice.value);drawSizes();});
+    refreshSizeOptions();
   }
   function closeForm(){var el=document.getElementById('stockModal');if(el)el.remove();}
   function save(){
     if(!canUse()) {alert('Нет подтверждённого подключения к Firebase.');return;}
-    var name=(document.getElementById('stockName').value||'').trim(); if(!name){alert('Введите название товара.');return;}
+    var name=(document.getElementById('stockName').value||'').trim(); if(!name){alert('Введите название товара, бренд или модель.');return;}
     var old=editingId?products[editingId]:null;
     var id=editingId||uid('sp');
     var record=Object.assign({},old||{},{
       id:id,org:old?old.org:org(),name:name,
-      category:document.getElementById('stockCategory').value.trim(),
+      category:(document.getElementById('stockCategory').value||'').trim(),
       article:(document.getElementById('stockArticle').value||'').trim() || (old&&old.article) || ('ST-'+Date.now().toString(36).toUpperCase()),
-      model:document.getElementById('stockModel').value.trim(),
-      color:document.getElementById('stockColor').value.trim(),
-      size:document.getElementById('stockSize').value.trim(),
-      description:document.getElementById('stockDescription').value.trim(),
+      model:'',
+      color:(document.getElementById('stockColor').value||'').trim(),
+      size:formSizes.length?formSizes[0]:'',sizes:formSizes.slice(),sizeType:document.getElementById('stockSizeType').value,
+      description:(document.getElementById('stockDescription').value||'').trim(),
       status:old?old.status:'pending',
       createdAt:old?old.createdAt:Date.now(),
       createdById:old?old.createdById:String(user().id),
@@ -184,16 +214,17 @@
     var removePhoto=document.getElementById('stockRemovePhoto'); if(removePhoto && removePhoto.checked){delete record.photoUrl;delete record.photoPath;}
     var file=document.getElementById('stockPhoto').files[0];
     var saveRecord=function(){
+      var saveButton=document.querySelector('#stockModal button.btn-primary'); if(saveButton){saveButton.disabled=true;saveButton.textContent='Сохраняем…';}
       db.ref(PRODUCTS_PATH+'/'+id).set(record).then(function(){
         products[id]=record; if(old && old.photoPath && old.photoPath!==record.photoPath && firebase.storage){firebase.storage().ref(old.photoPath).delete().catch(function(){});} closeForm(); addAuditSafe(old?'stock_product_edit':'stock_product_create',(old?'Изменена':'Создана')+' карточка склада: '+record.name); render();
-      }).catch(function(e){console.error(e);alert('Не удалось сохранить карточку: '+(e.message||e));});
+      }).catch(function(e){console.error('Stock card save failed:',e);if(saveButton){saveButton.disabled=false;saveButton.textContent='Сохранить';}var msg='Не удалось сохранить карточку: '+(e&&e.message?e.message:String(e));var status=document.getElementById('stockSaveError');if(status)status.textContent=msg;else alert(msg);});
     };
     if(file){
       if(!window.firebase || !firebase.storage){alert('Хранилище фотографий ещё не подключено. Карточку можно сохранить без фото и добавить фото позже.');return;}
       if(file.size>8*1024*1024){alert('Фото должно быть не больше 8 МБ.');return;}
       var path='stock-products/'+record.org+'/'+id+'/'+Date.now()+'_'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
       firebase.storage().ref(path).put(file).then(function(s){return s.ref.getDownloadURL();}).then(function(url){record.photoUrl=url;record.photoPath=path;saveRecord();}).catch(function(e){console.error(e);alert('Фото не загрузилось. Попробуйте ещё раз или сохраните карточку без фото.');});
-    } else saveRecord();
+    } else { try { saveRecord(); } catch(e) { console.error('Stock save exception:',e); alert('Ошибка сохранения: '+(e.message||e)); } }
   }
   function review(id){
     if(!isAdmin() || !canUse())return;
