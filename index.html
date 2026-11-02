@@ -769,7 +769,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
     <!-- SALE FORM (moved to top) -->
     <div class="card" style="margin-bottom: 20px;">
         <h3>Записать продажу</h3>
-        <div class="form-group">
+        <div class="form-group" id="saleGenderField">
             <label>Категория вещи</label>
             <div class="sale-gender-choices" role="group" aria-label="Категория вещи">
                 <button type="button" id="saleGenderM" class="sale-gender-choice" aria-pressed="false" onclick="selectSaleGender('M')">Мужская (М)</button>
@@ -1391,6 +1391,8 @@ function purchaseCostIsSet(record) {
 }
 function getPurchaseCostForSale(saleId) {
     if (!isPurchaseCostOwner()) return null;
+    var sale = (sales || []).find(function(item) { return item && String(item.id) === String(saleId); });
+    if (sale && sale.stockProductId && sale.stockPurchaseCost !== undefined && sale.stockPurchaseCost !== null && sale.stockPurchaseCost !== '' && isFinite(Number(sale.stockPurchaseCost)) && Number(sale.stockPurchaseCost) >= 0) return roundMoney(Number(sale.stockPurchaseCost) * Math.max(1, Number(sale.stockQuantity) || 1));
     var record = salePurchaseCosts[String(saleId)];
     return purchaseCostIsSet(record) ? roundMoney(Number(record.purchaseCost)) : null;
 }
@@ -1645,7 +1647,7 @@ function renderPurchaseCosts() {
         var date = getRecordDateString(sale.timestamp || sale.createdAt);
         if (start && date < start) return false;
         if (end && date > end) return false;
-        var hasCost = purchaseCostIsSet(salePurchaseCosts[String(sale.id)]);
+        var hasCost = !!(sale.stockProductId && sale.stockPurchaseCost !== undefined && sale.stockPurchaseCost !== null && sale.stockPurchaseCost !== '' && isFinite(Number(sale.stockPurchaseCost)) && Number(sale.stockPurchaseCost) >= 0) || purchaseCostIsSet(salePurchaseCosts[String(sale.id)]);
         if (status === 'missing' && hasCost) return false;
         if (status === 'filled' && !hasCost) return false;
         var name = (typeof getSaleHistoryDisplayName === 'function' ? getSaleHistoryDisplayName(sale) : sale.name || '').toLocaleLowerCase('ru-RU');
@@ -1656,7 +1658,7 @@ function renderPurchaseCosts() {
         if (status === 'missing' && aCost !== bCost) return aCost ? 1 : -1;
         return parseTimestampMs(b.timestamp || b.createdAt) - parseTimestampMs(a.timestamp || a.createdAt);
     });
-    var missingTotal = (sales || []).filter(function(sale) { return sale && !isSaleRecordDeleted(sale.id) && !isStoreDeleted(sale.storeId) && !isRecordBeforeStoreReset(sale) && visibleKeys.indexOf(String(sale.storeId)) !== -1 && !purchaseCostIsSet(salePurchaseCosts[String(sale.id)]); }).length;
+    var missingTotal = (sales || []).filter(function(sale) { return sale && !isSaleRecordDeleted(sale.id) && !isStoreDeleted(sale.storeId) && !isRecordBeforeStoreReset(sale) && visibleKeys.indexOf(String(sale.storeId)) !== -1 && !(!!(sale.stockProductId && sale.stockPurchaseCost !== undefined && sale.stockPurchaseCost !== null && sale.stockPurchaseCost !== '' && isFinite(Number(sale.stockPurchaseCost)) && Number(sale.stockPurchaseCost) >= 0) || purchaseCostIsSet(salePurchaseCosts[String(sale.id)])); }).length;
     var scopeTotal = (sales || []).filter(function(sale) { return sale && !isSaleRecordDeleted(sale.id) && !isStoreDeleted(sale.storeId) && !isRecordBeforeStoreReset(sale) && visibleKeys.indexOf(String(sale.storeId)) !== -1; }).length;
     var missingSummary = document.getElementById('saleCostMissingSummary');
     if (missingSummary) missingSummary.textContent = 'Без себестоимости: ' + missingTotal + ' из ' + scopeTotal + ' продаж' + (estimateBaseline.markup !== null ? ' · средняя наценка для оценки: ' + estimateBaseline.markup.toLocaleString('ru-RU', {maximumFractionDigits:2}) + '%' + (estimateBaseline.fallback ? ' (по всем магазинам)' : '') : ' · добавьте закупочную цену хотя бы одной продажи для расчёта оценки');
@@ -1670,7 +1672,7 @@ function renderPurchaseCosts() {
     }
     var frag = document.createDocumentFragment();
     relevant.forEach(function(sale) {
-        var id = String(sale.id), costRecord = salePurchaseCosts[id], hasCost = purchaseCostIsSet(costRecord), cost = hasCost ? Number(costRecord.purchaseCost) : null;
+        var id = String(sale.id), costRecord = salePurchaseCosts[id], stockCostKnown = !!(sale.stockProductId && sale.stockPurchaseCost !== undefined && sale.stockPurchaseCost !== null && sale.stockPurchaseCost !== '' && isFinite(Number(sale.stockPurchaseCost)) && Number(sale.stockPurchaseCost) >= 0), hasCost = stockCostKnown || purchaseCostIsSet(costRecord), cost = stockCostKnown ? Number(sale.stockPurchaseCost) * Math.max(1, Number(sale.stockQuantity) || 1) : (hasCost ? Number(costRecord.purchaseCost) : null);
         var row = document.createElement('tr');
         var saleDate = new Date(sale.timestamp || sale.createdAt || Date.now());
         var dateText = isFinite(saleDate.getTime()) ? saleDate.toLocaleString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
@@ -4547,8 +4549,8 @@ function updatePendingSalesNotice() {
 
 function getStockSaleStoreId(){if(currentUser&&currentUser.role==='seller')return String(currentUser.store||'');var el=document.getElementById('storeFilter');return el&&el.value?String(el.value):'';}
 function bindStockSaleStoreFilter(){var el=document.getElementById('storeFilter');if(el&&!el.dataset.stockSaleBound){el.dataset.stockSaleBound='1';el.addEventListener('change',function(){var t=document.getElementById('stockSaleEnabled');if(t&&t.checked)refreshStockSaleProducts();});}}
-function toggleStockSaleFields(){bindStockSaleStoreFilter();var enabled=document.getElementById('stockSaleEnabled'),panel=document.getElementById('stockSaleFields');if(panel)panel.style.display=enabled&&enabled.checked?'block':'none';if(enabled&&enabled.checked)refreshStockSaleProducts();}
-function refreshStockSaleProducts(){var select=document.getElementById('stockSaleProduct'),status=document.getElementById('stockSaleStatus');if(!select)return;var sid=getStockSaleStoreId();if(!sid||sid==='all'||typeof window.stockGetSaleOptions!=='function'){select.innerHTML='<option value="">Склад пока недоступен</option>';if(status)status.textContent='Выберите конкретный магазин и дождитесь загрузки склада.';return;}var options=window.stockGetSaleOptions(sid)||[];select.innerHTML='<option value="">Выберите карточку товара</option>';options.forEach(function(item){var o=document.createElement('option');o.value=item.id;o.textContent=item.name+' · '+item.quantity+' шт.';o.dataset.sizes=JSON.stringify(item.sizes||{});select.appendChild(o);});select.dataset.storeId=sid;if(status)status.textContent=options.length?'Доступно карточек: '+options.length:'В выбранном магазине нет товаров с размерами.';refreshStockSaleSizes();}
+function toggleStockSaleFields(){bindStockSaleStoreFilter();var enabled=document.getElementById('stockSaleEnabled'),active=!!(enabled&&enabled.checked),panel=document.getElementById('stockSaleFields'),gender=document.getElementById('saleGenderField'),details=document.getElementById('prodDetailName');if(panel)panel.style.display=active?'block':'none';if(gender)gender.style.display=active?'none':'';if(details){var wrap=details.closest('.form-group');if(wrap)wrap.style.display=active?'none':'';}if(active)refreshStockSaleProducts();}
+function refreshStockSaleProducts(){var select=document.getElementById('stockSaleProduct'),status=document.getElementById('stockSaleStatus');if(!select)return;var sid=getStockSaleStoreId();if(!sid||sid==='all'||typeof window.stockGetSaleOptions!=='function'){select.innerHTML='<option value="">Склад пока недоступен</option>';if(status)status.textContent='Выберите конкретный магазин и дождитесь загрузки склада.';return;}var options=window.stockGetSaleOptions(sid)||[];select.innerHTML='<option value="">Выберите карточку товара</option>';options.forEach(function(item){var o=document.createElement('option');o.value=item.id;o.textContent=item.name+' · '+item.quantity+' шт.';o.dataset.name=item.name||'';o.dataset.purchaseCost=item.purchaseCost==null?'':String(item.purchaseCost);o.dataset.sizes=JSON.stringify(item.sizes||{});select.appendChild(o);});select.dataset.storeId=sid;if(status)status.textContent=options.length?'Доступно карточек: '+options.length:'В выбранном магазине нет товаров с размерами.';refreshStockSaleSizes();}
 function refreshStockSaleSizes(){var product=document.getElementById('stockSaleProduct'),size=document.getElementById('stockSaleSize');if(!product||!size)return;var option=product.options[product.selectedIndex],counts={};try{counts=JSON.parse(option&&option.dataset.sizes||'{}');}catch(e){}size.innerHTML='<option value="">Выберите размер</option>';Object.keys(counts).sort(function(a,b){var an=/^\\d+$/.test(a),bn=/^\\d+$/.test(b);if(an&&bn)return Number(a)-Number(b);if(an)return -1;if(bn)return 1;return a.localeCompare(b,'ru');}).forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v+' · '+counts[v]+' шт.';size.appendChild(o);});refreshStockSaleQuantityLimit();}
 function refreshStockSaleQuantityLimit(){var product=document.getElementById('stockSaleProduct'),size=document.getElementById('stockSaleSize'),quantity=document.getElementById('stockSaleQuantity');if(!product||!size||!quantity)return;var option=product.options[product.selectedIndex],counts={};try{counts=JSON.parse(option&&option.dataset.sizes||'{}');}catch(e){}var max=Number(counts[size.value]||0);quantity.max=max||1;if(max&&Number(quantity.value)>max)quantity.value=String(max);}
 
@@ -4589,15 +4591,19 @@ function saveSale() {
         }
     }
 
+    var stockSaleEnabled=!!(document.getElementById('stockSaleEnabled')&&document.getElementById('stockSaleEnabled').checked);
+    var stockProductSelect=document.getElementById('stockSaleProduct');
+    var selectedStockOption=stockProductSelect&&stockProductSelect.selectedIndex>=0?stockProductSelect.options[stockProductSelect.selectedIndex]:null;
+    var stockCardName=stockSaleEnabled&&selectedStockOption?String(selectedStockOption.dataset.name||'').trim():'';
     var productId = document.getElementById('prodName') ? String(document.getElementById('prodName').value || '').trim() : '';
     var chosenProduct = getVisibleProductCatalog(false).filter(function(item) { return item && item.active !== false; }).find(function(item) { return String(item.id) === productId; });
     var catalogProductName = chosenProduct ? String(chosenProduct.name || '').trim() : '';
     var detailInput = document.getElementById('prodDetailName');
-    var name = detailInput ? String(detailInput.value || '').trim().replace(/\s+/g, ' ') : '';
+    var name = stockSaleEnabled ? stockCardName : (detailInput ? String(detailInput.value || '').trim().replace(/\s+/g, ' ') : '');
     var price = document.getElementById('prodPrice') ? Number(document.getElementById('prodPrice').value) : NaN;
     if (!productId || !chosenProduct || !catalogProductName) { alert('Выберите позицию из каталога для плана закупки. Если её нет, обратитесь к администратору.'); return; }
-    if (selectedSaleGender !== 'M' && selectedSaleGender !== 'F') { alert('Выберите категорию вещи: мужская (М) или женская (Ж).'); return; }
-    if (!name) { alert('Укажите наименование товара: бренд, модель, размер или другую конкретику.'); if (detailInput) detailInput.focus(); return; }
+    if (!stockSaleEnabled && selectedSaleGender !== 'M' && selectedSaleGender !== 'F') { alert('Выберите категорию вещи: мужская (М) или женская (Ж).'); return; }
+    if (!name) { alert(stockSaleEnabled?'Выберите карточку товара на складе.':'Укажите наименование товара: бренд, модель, размер или другую конкретику.'); if (stockSaleEnabled&&stockProductSelect) stockProductSelect.focus(); else if (detailInput) detailInput.focus(); return; }
     if (!isFinite(price) || price <= 0) { alert('Цена должна быть положительным числом!'); return; }
     price = Math.round(price * 100) / 100;
 
@@ -4637,7 +4643,7 @@ function saveSale() {
         timestamp = getLocalDateTimeString(now);
     }
 
-    var historyDisplayName = catalogProductName + ' — ' + name;
+    var historyDisplayName = stockSaleEnabled ? stockCardName : (catalogProductName + ' — ' + name);
     var saleData = {
         // History shows both the canonical catalog item and the seller's specific description.
         name: historyDisplayName,
@@ -4646,8 +4652,8 @@ function saveSale() {
         productName: catalogProductName,
         catalogProductName: catalogProductName,
         productOrg: String(chosenProduct.org || getProductCatalogOrg()),
-        gender: selectedSaleGender,
-        genderLabel: selectedSaleGender === 'M' ? 'Мужская (М)' : 'Женская (Ж)',
+        gender: stockSaleEnabled ? '' : selectedSaleGender,
+        genderLabel: stockSaleEnabled ? '' : (selectedSaleGender === 'M' ? 'Мужская (М)' : 'Женская (Ж)'),
         price: price,
         payment: activePaymentMethod,
         storeId: storeId,
@@ -4689,7 +4695,6 @@ function saveSale() {
         }
     }
 
-    var stockSaleEnabled=!!(document.getElementById('stockSaleEnabled')&&document.getElementById('stockSaleEnabled').checked);
     if(stockSaleEnabled){var sp=document.getElementById('stockSaleProduct'),ss=document.getElementById('stockSaleSize'),sq=document.getElementById('stockSaleQuantity'),stockProductId=sp?String(sp.value||''):'',stockSize=ss?String(ss.value||'').toUpperCase():'',stockQuantity=sq?Number(sq.value):1;if(sp&&sp.dataset.storeId!==String(storeId)){refreshStockSaleProducts();alert('Магазин изменился. Выберите карточку склада и размер заново.');return;}if(!stockProductId||!stockSize||!Number.isInteger(stockQuantity)||stockQuantity<1){alert('Выберите карточку склада, размер и корректное количество.');return;}saleData.stockProductId=stockProductId;saleData.stockSize=stockSize;saleData.stockQuantity=stockQuantity;saleData.stockStoreId=String(storeId);saleData.stockSale=true;}
 
     saleSaveInProgress = true;
@@ -4722,7 +4727,7 @@ function saveSale() {
             var allDatesButton = document.getElementById('salesHistoryAllDatesButton');
             if (allDatesButton) allDatesButton.textContent = 'Все даты';
         }
-        addAudit('sale', 'Продажа: ' + historyDisplayName + ' · ' + saleData.genderLabel + ' (' + price + ' руб., ' + saleData.payment + ')');
+        addAudit('sale', 'Продажа: ' + historyDisplayName + (saleData.genderLabel ? ' · ' + saleData.genderLabel : '') + ' (' + price + ' руб., ' + saleData.payment + ')');
         document.getElementById('prodName').value = '';
         if (document.getElementById('prodDetailName')) document.getElementById('prodDetailName').value = '';
         clearSaleGender();
