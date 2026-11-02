@@ -146,7 +146,7 @@
       }
     }
     if(!isAdmin() || adminTab==='shops'){
-    html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;"><div><h3 style="margin:0 0 4px;">'+(isAdmin()?'Товары магазина «'+esc(STORES[selectedStoreId]||selectedStoreId)+'»':'Товары')+'</h3><div style="font-size:12px;color:var(--text-light);">'+(isAdmin()?'Общий каталог организации':'Каталог вашего магазина')+'</div></div>'+(isAdmin()?'<button class="btn btn-primary" type="button" onclick="stockOpenForm()">＋ Новая карточка</button>':'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><input id="stockSearch" type="search" placeholder="Поиск по названию, артикулу, цвету…" value="'+esc(searchText)+'" oninput="stockSetSearch(this.value)" style="flex:1;min-width:180px;">';
+    html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;"><div><h3 style="margin:0 0 4px;">'+(isAdmin()?'Товары магазина «'+esc(STORES[selectedStoreId]||selectedStoreId)+'»':'Товары')+'</h3><div style="font-size:12px;color:var(--text-light);">'+(isAdmin()?'Общий каталог организации':'Каталог вашего магазина')+'</div></div>'+'<button class="btn btn-primary" type="button" onclick="stockOpenForm()">＋ Новая карточка</button>'+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><input id="stockSearch" type="search" placeholder="Поиск по названию, артикулу, цвету…" value="'+esc(searchText)+'" oninput="stockSetSearch(this.value)" style="flex:1;min-width:180px;">';
     if(isAdmin()) html+='<select id="stockFilter" onchange="stockSetFilter(this.value)" style="min-width:150px;"><option value="all" '+(activeFilter==='all'?'selected':'')+'>Все карточки</option><option value="pending" '+(activeFilter==='pending'?'selected':'')+'>Ожидают проверки</option><option value="active" '+(activeFilter==='active'?'selected':'')+'>Опубликованные</option><option value="krossy" '+(activeFilter==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(activeFilter==='easy'?'selected':'')+'>Изи</option></select>';
     html+='</div><div id="stockStatus" style="font-size:12px;margin-top:8px;color:var(--text-light);"></div></div>';
     if(!list.length) html+='<div class="card" style="text-align:center;color:var(--text-light);">Карточек пока нет. Создайте первую карточку товара.</div>';
@@ -206,7 +206,8 @@
     root.querySelectorAll('[data-stock-merge-source]').forEach(function(b){b.addEventListener('click',function(){merge(b.getAttribute('data-stock-merge-source'),b.getAttribute('data-stock-merge-target'));});});
   }
   function openForm(id){
-    if(!isAdmin()){alert('Продавцам доступно только добавление размеров товара.');return;}
+    if(!isAdmin()&&!isSeller()){alert('Нет доступа к созданию карточек.');return;}
+    if(id&&!isAdmin()){alert('Продавцы не могут редактировать существующие карточки.');return;}
     if(!canUse()){alert('Нет подтверждённого подключения к Firebase.');return;}
     var p=id?products[id]:null;
     if(p && !canEditCard(p)){alert('Эту карточку нельзя редактировать.');return;}
@@ -244,8 +245,8 @@
       ordered.forEach(function(v){
         var chip=document.createElement('span');chip.style.cssText='display:inline-flex;align-items:center;gap:5px;padding:5px 7px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg,#fff);';
         var label=document.createElement('b');label.textContent=v+' × '+counts[v];chip.appendChild(label);
-        var minus=document.createElement('button');minus.type='button';minus.textContent='−';minus.title='Уменьшить количество';minus.style.cssText='border:0;background:transparent;font-size:18px;cursor:pointer;padding:0 3px;';
-        minus.addEventListener('click',function(){var i=formSizes.indexOf(v);if(i>=0)formSizes.splice(i,1);drawSizes();});
+        if(isAdmin()){var minus=document.createElement('button');minus.type='button';minus.textContent='−';minus.title='Уменьшить количество';minus.style.cssText='border:0;background:transparent;font-size:18px;cursor:pointer;padding:0 3px;';
+        minus.addEventListener('click',function(){var i=formSizes.indexOf(v);if(i>=0)formSizes.splice(i,1);drawSizes();});chip.appendChild(minus);}
         var plus=document.createElement('button');plus.type='button';plus.textContent='+';plus.title='Увеличить количество';plus.style.cssText='border:0;background:transparent;font-size:17px;cursor:pointer;padding:0 3px;';
         plus.addEventListener('click',function(){formSizes.push(v);drawSizes();});
         chip.appendChild(minus);chip.appendChild(plus);selected.appendChild(chip);
@@ -265,7 +266,8 @@
   }
   function closeForm(){var el=document.getElementById('stockModal');if(el)el.remove();}
   function save(skipPhoto){
-    if(!isAdmin()){alert('Продавцы не могут создавать или редактировать карточки товаров.');return;}
+    if(!isAdmin()&&!isSeller()){alert('Нет доступа к созданию карточек.');return;}
+    if(isSeller()&&editingId){alert('Продавцы не могут редактировать существующие карточки.');return;}
     if(!canUse()) {alert('Нет подтверждённого подключения к Firebase.');return;}
     var name=(document.getElementById('stockName').value||'').trim(); if(!name){alert('Введите название товара, бренд или модель.');return;}
     var old=editingId?products[editingId]:null, id=editingId||uid('sp');
@@ -334,7 +336,7 @@
       });
     }
     var initialStore='';if(!old&&isAdmin()&&formSizes.length){var initialStoreEl=document.getElementById('stockInitialStore');initialStore=initialStoreEl?String(initialStoreEl.value||''):'';if(!initialStore||visibleStoreIds().indexOf(initialStore)<0){showError('Выберите магазин для начального остатка.');return;}}
-    upload.then(function(){var patch={};patch[PRODUCTS_PATH+'/'+id]=record;if(isSeller()&&old){var sid=String(storeId()),before=qty(id,sid),after=formSizes.length,now=Date.now();patch[BALANCES_PATH+'/'+sid+'/'+id]={quantity:after,sizes:formSizes.slice(),updatedAt:now};if(after!==before){var mid=uid('sm');patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:id,productName:record.name,storeId:sid,type:after>before?'receipt':'adjustment',quantityDelta:after-before,before:before,after:after,note:'Изменение размеров при редактировании карточки',createdAt:now,createdById:String(user().id),createdByName:user().name||''};}}if(!old&&formSizes.length&&(isSeller()||isAdmin())){var initialQty=formSizes.length,initialNow=Date.now(),initialMid=uid('sm'),sid=isSeller()?String(storeId()):initialStore;patch[BALANCES_PATH+'/'+sid+'/'+id]={quantity:initialQty,sizes:formSizes.slice(),updatedAt:initialNow};patch[MOVEMENTS_PATH+'/'+initialMid]={id:initialMid,org:org(),productId:id,productName:record.name,storeId:sid,type:'receipt',quantityDelta:initialQty,before:0,after:initialQty,note:'Начальный остаток по выбранным размерам',createdAt:initialNow,createdById:String(user().id),createdByName:user().name||''};}return db.ref().update(patch);}).then(function(){
+    upload.then(function(){var patch={};patch[PRODUCTS_PATH+'/'+id]=record;if(isSeller()&&old){var sid=String(storeId()),before=qty(id,sid),after=formSizes.length,now=Date.now();patch[BALANCES_PATH+'/'+sid+'/'+id]={quantity:after,sizes:formSizes.slice(),updatedAt:now};if(after!==before){var mid=uid('sm');patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:id,productName:record.name,storeId:sid,type:after>before?'receipt':'adjustment',quantityDelta:after-before,before:before,after:after,note:'Изменение размеров при редактировании карточки',createdAt:now,createdById:String(user().id),createdByName:user().name||''};}}if(!old&&formSizes.length&&(isSeller()||isAdmin())){var initialQty=formSizes.length,initialNow=Date.now(),initialMid=uid('sm'),sid=isSeller()?String(storeId()):initialStore;patch[BALANCES_PATH+'/'+sid+'/'+id]={quantity:initialQty,sizes:formSizes.slice(),updatedAt:initialNow};patch[MOVEMENTS_PATH+'/'+initialMid]={id:initialMid,org:org(),productId:id,productName:record.name,storeId:sid,type:'receipt',quantityDelta:initialQty,before:0,after:initialQty,note:isSeller()?'Новая карточка и начальные размеры от продавца':'Начальный остаток по выбранным размерам',createdAt:initialNow,createdById:String(user().id),createdByName:user().name||''};}return db.ref().update(patch);}).then(function(){
       products[id]=record;
       
       closeForm();addAuditSafe(old?'stock_product_edit':'stock_product_create',(old?'Изменена':'Создана')+' карточка склада: '+record.name);render();
