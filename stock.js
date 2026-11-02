@@ -157,7 +157,7 @@
       var balanceStoreId=isAdmin()?String(selectedStoreId):String(storeId());
       var currentBalance=balances[balanceStoreId]&&balances[balanceStoreId][String(p.id)]||{};
       var q=isAdmin()?qty(p.id,selectedStoreId):qty(p.id,storeId());
-      var shownSizes=Array.isArray(currentBalance.sizes)&&currentBalance.sizes.length?currentBalance.sizes:(p.sizes&&p.sizes.length?p.sizes:(p.size?[p.size]:[]));
+      var shownSizes=Array.isArray(currentBalance.sizes)?currentBalance.sizes:[];
       var sizesHtml=shownSizes.length?'<div style="font-size:13px;margin-top:6px;"><span style="color:var(--text-light);">Размеры:</span> <b>'+esc(sizeLabel(shownSizes))+'</b></div>':'<div style="font-size:12px;color:var(--text-light);margin-top:6px;">Размеры пока не добавлены</div>';
       var state=p.status==='pending'?'Ожидает проверки':p.status==='active'?'Опубликован':'Архив';
       var costHtml=isAdmin()&&p.purchaseCost!=null?'<div style="font-size:13px;margin-top:5px;">Закупка: <b>'+esc(p.purchaseCost)+'</b></div>':'';
