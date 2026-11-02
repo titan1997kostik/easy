@@ -264,6 +264,11 @@
   }
   function start(){
     expose();load();initPage();watchStorePage();
+    if(typeof window.switchOrg==='function' && !window.switchOrg._stockWrapped){
+      var originalSwitchOrg=window.switchOrg;
+      var wrappedSwitchOrg=function(key){var result=originalSwitchOrg.apply(this,arguments);render();return result;};
+      wrappedSwitchOrg._stockWrapped=true;window.switchOrg=wrappedSwitchOrg;
+    }
     var originalShow=window.easyAppSyncShowPage;
     if(typeof originalShow==='function'&&!originalShow._stockWrapped){
       var wrapped=function(id){if(id==='stock'){show();return;}return originalShow.apply(this,arguments);};
