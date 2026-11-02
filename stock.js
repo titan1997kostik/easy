@@ -19,7 +19,7 @@
   function user(){ return window.currentUser || null; }
   function isAdmin(){ return !!(user() && user().role === 'admin'); }
   function isSeller(){ return !!(user() && user().role === 'seller'); }
-  function org(){ var u=user(); return String((u && (u.org || (u.store && window.getStoreOrg ? getStoreOrg(u.store) : ''))) || 'mine'); }
+  function org(){ var u=user(); if(u && typeof isSuperAdmin==='function' && isSuperAdmin(u)) return String(window.currentOrgFilter || 'mine'); if(u && u.role==='seller' && u.store && typeof getStoreOrg==='function') return String(getStoreOrg(u.store) || u.org || 'mine'); return String((u && u.org) || 'mine'); }
   function uid(prefix){ return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,9); }
   function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function norm(v){ return String(v || '').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,' ').trim().replace(/\\s+/g,' '); }
@@ -119,6 +119,7 @@
       if(canEditCard(p)) html+='<button class="btn btn-secondary" type="button" onclick="stockOpenForm(\''+esc(p.id)+'\')">Изменить</button>';
       if(isAdmin() && p.status==='pending') html+='<button class="btn btn-success" type="button" onclick="stockReview(\''+esc(p.id)+'\')">Проверить</button>';
       if(isAdmin() && p.status==='active') html+='<button class="btn btn-secondary" type="button" onclick="stockAdjust(\''+esc(p.id)+'\')">Остатки</button><button class="btn btn-warning" type="button" onclick="stockArchive(\''+esc(p.id)+'\')">В архив</button>';
+      if(isAdmin() && p.status==='archived') html+='<button class="btn btn-success" type="button" data-stock-restore="'+esc(p.id)+'">Восстановить</button>';
       html+='</div></div>';
     });
     if(isAdmin()){
@@ -134,6 +135,7 @@
       html+='</tbody></table></div></div>';
     }
     root.innerHTML=html;
+    root.querySelectorAll('[data-stock-restore]').forEach(function(b){b.addEventListener('click',function(){restore(b.getAttribute('data-stock-restore'));});});
   }
   function openForm(id){
     if(!canUse()){alert('Нет подтверждённого подключения к Firebase.');return;}
@@ -210,6 +212,7 @@
     patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:id,storeId:String(store),type:type,quantityDelta:delta,before:before,after:after,note:type==='receipt'?'Поступление':type==='writeoff'?'Списание':'Корректировка остатка',createdAt:now,createdById:String(user().id),createdByName:user().name||''};
     db.ref().update(patch).then(function(){addAuditSafe('stock_adjustment','Остаток «'+p.name+'» в магазине «'+(STORES[store]||store)+'»: '+before+' → '+after);}).catch(function(e){alert('Не удалось изменить остаток: '+e.message);});
   }
+  function restore(id){ if(!isAdmin()||!canUse())return; var p=products[id]; if(!p||p.status!=='archived')return; if(!p.direction){alert('У карточки не назначено направление. Отредактируйте её перед восстановлением.');return;} db.ref(PRODUCTS_PATH+'/'+id).update({status:'active',restoredAt:Date.now(),restoredById:String(user().id)}).then(function(){addAuditSafe('stock_product_restore','Восстановлена карточка: '+p.name);}); }
   function archive(id){
     if(!isAdmin()||!canUse())return; var p=products[id];if(!p||!confirm('Переместить карточку «'+p.name+'» в архив? Остатки и история сохранятся.'))return;
     db.ref(PRODUCTS_PATH+'/'+id).update({status:'archived',archivedAt:Date.now(),archivedById:String(user().id)}).then(function(){addAuditSafe('stock_product_archive','В архив: '+p.name);});
@@ -217,13 +220,14 @@
   function merge(id,targetId){
     if(!isAdmin()||!canUse())return;
     var a=products[id], b=products[targetId]; if(!a||!b||id===targetId)return;
-    if(a.org!==b.org || a.direction!==b.direction){alert('Объединять можно только карточки одного направления и организации.');return;}
+    if(a.org!==b.org || (a.direction && a.direction!==b.direction)){alert('Объединять можно только карточки одной организации и совместимого направления.');return;}
     if(!confirm('Объединить «'+a.name+'» с карточкой «'+b.name+'»? Остатки будут перенесены в основную карточку, исходная останется в истории как объединённая.'))return;
     var patch={}, now=Date.now();
     visibleStoreIds().forEach(function(s){var qa=qty(id,s),qb=qty(targetId,s);if(qa){patch[BALANCES_PATH+'/'+s+'/'+targetId]={quantity:qa+qb,updatedAt:now};patch[BALANCES_PATH+'/'+s+'/'+id]=null;}});
     var mid=uid('sm');
     patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:targetId,mergedProductId:id,type:'merge',createdAt:now,createdById:String(user().id),note:'Объединение карточки «'+a.name+'» с «'+b.name+'»'};
     patch[PRODUCTS_PATH+'/'+id+'/status']='merged';
+    patch[PRODUCTS_PATH+'/'+id+'/direction']=b.direction;
     patch[PRODUCTS_PATH+'/'+id+'/mergedInto']=targetId;
     patch[PRODUCTS_PATH+'/'+id+'/mergedAt']=now;
     db.ref().update(patch).then(function(){addAuditSafe('stock_product_merge','Объединены карточки «'+a.name+'» → «'+b.name+'»');}).catch(function(e){alert('Не удалось объединить карточки: '+e.message);});
@@ -233,7 +237,7 @@
   function setFilter(v){activeFilter=v||'all';render();}
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockArchive=archive;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;
+    window.stockAdjust=adjust;window.stockArchive=archive;window.stockRestore=restore;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;
   }
   function augmentStores(){
     if(!isAdmin() || !document.getElementById('storesManagement'))return;
