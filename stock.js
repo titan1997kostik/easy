@@ -586,9 +586,22 @@
     });
   }
 
+  function prepareSaleDelete(sale){
+    if(!sale||!sale.stockProductId||sale.returned||sale.stockManualSize)return Promise.resolve(null);
+    if(!navigator.onLine||!canUse())return Promise.reject(new Error('Для удаления складской продажи требуется подключение к Firebase.'));
+    var sid=String(sale.stockStoreId||sale.storeId),pid=String(sale.stockProductId),size=String(sale.stockSize||'').toUpperCase(),quantity=Number(sale.stockQuantity||1);
+    if(!sid||!pid||!size||!Number.isInteger(quantity)||quantity<1)return Promise.reject(new Error('В продаже отсутствуют корректные данные склада.'));
+    var ref=db.ref(BALANCES_PATH+'/'+sid+'/'+pid),before=0,after=0;
+    return ref.transaction(function(current){current=current||{};var sizes=Array.isArray(current.sizes)?current.sizes.slice():[];before=sizes.length;for(var i=0;i<quantity;i++)sizes.push(size);after=sizes.length;return Object.assign({},current,{sizes:sizes,quantity:after,updatedAt:Date.now()});},undefined,false).then(function(tx){
+      if(!tx.committed)throw new Error('Не удалось восстановить товар на складе.');
+      var movementId='stock_delete_restore_'+String(sale.id),movement={id:movementId,org:String(sale.stockOrg||org()),productId:pid,productName:String(sale.stockProductName||sale.name||''),storeId:sid,type:'delete_sale_restore',size:size,quantityDelta:quantity,before:before,after:after,saleId:String(sale.id),createdAt:Date.now(),createdById:String(user().id),createdByName:String(user().name||'')};
+      function rollback(){return ref.transaction(function(current){current=current||{};var sizes=Array.isArray(current.sizes)?current.sizes.slice():[],removed=0;sizes=sizes.filter(function(x){if(String(x).toUpperCase()===size&&removed<quantity){removed++;return false;}return true;});if(removed!==quantity)return;return Object.assign({},current,{sizes:sizes,quantity:sizes.length,updatedAt:Date.now()});},undefined,false).then(function(result){if(!result.committed)throw new Error('Не удалось отменить восстановление остатков после ошибки удаления.');});}
+      return {movement:movement,rollback:rollback};
+    });
+  }
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockRefresh=render;
+    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;
   }
   function start(){
     expose();load();initPage();
