@@ -569,7 +569,7 @@
     });
   }
   function prepareSaleReturn(sale,nextReturned,eventId){
-    if(!sale||!sale.stockProductId||sale.stockManualSize)return Promise.resolve(null);
+    if(!sale||!sale.stockProductId)return Promise.resolve(null);
     if(!navigator.onLine||!canUse())return Promise.reject(new Error('Для возврата складской продажи требуется подключение к Firebase.'));
     var sid=String(sale.stockStoreId||sale.storeId),pid=String(sale.stockProductId),size=String(sale.stockSize||'').toUpperCase(),quantity=Number(sale.stockQuantity||1);
     if(!sid||!pid||!size||!Number.isInteger(quantity)||quantity<1)return Promise.reject(new Error('В складской продаже отсутствуют корректные данные товара и размера.'));
@@ -587,7 +587,7 @@
   }
 
   function prepareSaleDelete(sale){
-    if(!sale||!sale.stockProductId||sale.returned||sale.stockManualSize)return Promise.resolve(null);
+    if(!sale||!sale.stockProductId||sale.returned)return Promise.resolve(null);
     if(!navigator.onLine||!canUse())return Promise.reject(new Error('Для удаления складской продажи требуется подключение к Firebase.'));
     var sid=String(sale.stockStoreId||sale.storeId),pid=String(sale.stockProductId),size=String(sale.stockSize||'').toUpperCase(),quantity=Number(sale.stockQuantity||1);
     if(!sid||!pid||!size||!Number.isInteger(quantity)||quantity<1)return Promise.reject(new Error('В продаже отсутствуют корректные данные склада.'));
