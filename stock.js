@@ -249,7 +249,7 @@
         minus.addEventListener('click',function(){var i=formSizes.indexOf(v);if(i>=0)formSizes.splice(i,1);drawSizes();});chip.appendChild(minus);}
         var plus=document.createElement('button');plus.type='button';plus.textContent='+';plus.title='Увеличить количество';plus.style.cssText='border:0;background:transparent;font-size:17px;cursor:pointer;padding:0 3px;';
         plus.addEventListener('click',function(){formSizes.push(v);drawSizes();});
-        chip.appendChild(minus);chip.appendChild(plus);selected.appendChild(chip);
+        chip.appendChild(plus);selected.appendChild(chip);
       });
       if(!formSizes.length)selected.textContent='Размеры пока не добавлены';
       var liveCount=document.getElementById('stockLiveCount');if(liveCount)liveCount.textContent='Остаток: '+formSizes.length+' шт.';
