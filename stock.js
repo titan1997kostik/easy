@@ -532,7 +532,7 @@
   function getSaleOptions(sid){
     sid=String(sid||'');if(!canUse()||!sid||visibleStoreIds().map(String).indexOf(sid)===-1||(isSeller()&&sid!==storeId()))return [];
     var direction=storeDirection(sid);
-    return allProducts().filter(function(p){if(p.status!=='active'||p.org!==org())return false;if(isSeller()&&!sellerCanSee(p))return false;if(isAdmin()&&direction&&direction!=='mixed'&&p.direction!==direction)return false;var b=balances[sid]&&balances[sid][String(p.id)]||{},sizes=Array.isArray(b.sizes)?b.sizes.map(function(x){return String(x).toUpperCase();}):[];return sizes.length>0;}).map(function(p){var b=balances[sid][String(p.id)]||{},sizes=Array.isArray(b.sizes)?b.sizes.map(function(x){return String(x).toUpperCase();}):[],counts={};sizes.forEach(function(x){counts[x]=(counts[x]||0)+1;});return {id:String(p.id),name:String(p.name||''),sizes:counts,quantity:sizes.length};}).sort(function(a,b){return a.name.localeCompare(b.name,'ru');});
+    return allProducts().filter(function(p){if(p.status!=='active'||p.org!==org())return false;if(isSeller()&&!sellerCanSee(p))return false;if(isAdmin()&&direction&&direction!=='mixed'&&p.direction!==direction)return false;var b=balances[sid]&&balances[sid][String(p.id)]||{},sizes=Array.isArray(b.sizes)?b.sizes.map(function(x){return String(x).toUpperCase();}):[];return sizes.length>0;}).map(function(p){var b=balances[sid][String(p.id)]||{},sizes=Array.isArray(b.sizes)?b.sizes.map(function(x){return String(x).toUpperCase();}):[],counts={};sizes.forEach(function(x){counts[x]=(counts[x]||0)+1;});return {id:String(p.id),name:String(p.name||''),purchaseCost:p.purchaseCost==null?null:Number(p.purchaseCost),sizes:counts,quantity:sizes.length};}).sort(function(a,b){return a.name.localeCompare(b.name,'ru');});
   }
   function completeSaleFromStock(sale){
     if(!sale||!sale.id||!sale.stockProductId||!sale.stockSize)return Promise.reject(new Error('Не заполнены данные складской продажи.'));
@@ -559,7 +559,7 @@
         },undefined,false).then(function(tx){
           if(!tx.committed)throw new Error('Недостаточно товара выбранного размера. Остаток мог измениться на другом устройстве.');
           nextBalance=tx.snapshot.val()||nextBalance;
-          var now=Date.now(),movementId='stock_sale_'+saleId,persisted=Object.assign({},sale,{stockProductName:String(product.name||sale.stockProductName||''),stockOrg:String(product.org||''),stockQuantity:quantity,stockStoreId:sid,stockMovementId:movementId,stockSize:size,_pendingSync:false});
+          var now=Date.now(),movementId='stock_sale_'+saleId,unitPurchaseCost=product.purchaseCost==null||product.purchaseCost===''?null:Number(product.purchaseCost),persisted=Object.assign({},sale,{stockProductName:String(product.name||sale.stockProductName||''),stockPurchaseCost:isFinite(unitPurchaseCost)&&unitPurchaseCost>=0?unitPurchaseCost:null,stockOrg:String(product.org||''),stockQuantity:quantity,stockStoreId:sid,stockMovementId:movementId,stockSize:size,_pendingSync:false});
           var movement={id:movementId,org:product.org,productId:pid,productName:persisted.stockProductName,storeId:sid,type:'sale',size:size,quantityDelta:-quantity,before:before,after:Number(nextBalance.quantity||0),saleId:saleId,createdAt:now,createdById:String(user().id),createdByName:String(user().name||'')};
           var patch={};patch['sales_data/'+saleId]=persisted;patch[MOVEMENTS_PATH+'/'+movementId]=movement;
           return db.ref().update(patch).then(function(){return {sale:persisted,movement:movement};}).catch(function(writeError){
