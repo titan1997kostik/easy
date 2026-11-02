@@ -115,11 +115,22 @@
     if(!canUse()){root.innerHTML='<div class="card">Склад станет доступен после проверки подключения к Firebase.</div>';return;}
     var loading=statusText(); if(loading){root.innerHTML='<div class="card">'+esc(loading)+'</div>';return;}
     if(isSeller() && (!storeId() || !storeDirection(storeId()))){
-      root.innerHTML='<div class="card"><b>Склад ещё не настроен.</b><p>Попросите администратора назначить направление вашему магазину в разделе «Магазины».</p></div>';return;
+      root.innerHTML='<div class="card"><b>Склад ещё не настроен.</b><p>Попросите администратора назначить направление вашего магазина в настройках склада ниже.</p></div>';return;
     }
     var list=allProducts().filter(function(p){return isAdmin() ? (activeFilter==='all' || (activeFilter==='pending' ? p.status==='pending' : activeFilter==='active' ? p.status==='active' : p.direction===activeFilter)) : sellerCanSee(p);});
     if(searchText) list=list.filter(function(p){return norm([p.name,p.article,p.category,p.color,p.size,p.brand,p.model].join(' ')).indexOf(norm(searchText))!==-1;});
     list.sort(function(a,b){return Number(b.updatedAt||b.createdAt||0)-Number(a.updatedAt||a.createdAt||0);});
+    var html='';
+    if(isAdmin()){
+      html+='<div class="card" style="margin-bottom:14px;"><h3>Направления магазинов</h3><p style="font-size:12px;color:var(--text-light);margin-bottom:10px;">Настройка складского направления каждого магазина. Продавцы это поле не видят.</p>';
+      var directionStores=visibleStoreIds();
+      if(!directionStores.length) html+='<div style="font-size:13px;color:var(--text-light);">Сначала добавьте магазины в разделе «Магазины».</div>';
+      directionStores.forEach(function(k){
+        var v=storeDirection(k);
+        html+='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border);"><b style="flex:1;min-width:130px;">'+esc(STORES[k]||k)+'</b><select data-stock-store="'+esc(k)+'"><option value="">Не настроено</option><option value="krossy" '+(v==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(v==='easy'?'selected':'')+'>Изи</option><option value="mixed" '+(v==='mixed'?'selected':'')+'>Смешанный</option></select><button class="btn btn-secondary" type="button" data-stock-save-store="'+esc(k)+'">Сохранить</button></div>';
+      });
+      html+='</div>';
+    }
     var html='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;"><div><h3 style="margin:0 0 4px;">Товары</h3><div style="font-size:12px;color:var(--text-light);">'+(isAdmin()?'Общий каталог организации':'Каталог вашего магазина')+'</div></div><button class="btn btn-primary" type="button" onclick="stockOpenForm()">＋ Новая карточка</button></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><input id="stockSearch" type="search" placeholder="Поиск по названию, артикулу, цвету…" value="'+esc(searchText)+'" oninput="stockSetSearch(this.value)" style="flex:1;min-width:180px;">';
     if(isAdmin()) html+='<select id="stockFilter" onchange="stockSetFilter(this.value)" style="min-width:150px;"><option value="all" '+(activeFilter==='all'?'selected':'')+'>Все карточки</option><option value="pending" '+(activeFilter==='pending'?'selected':'')+'>Ожидают проверки</option><option value="active" '+(activeFilter==='active'?'selected':'')+'>Опубликованные</option><option value="krossy" '+(activeFilter==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(activeFilter==='easy'?'selected':'')+'>Изи</option></select>';
     html+='</div><div id="stockStatus" style="font-size:12px;margin-top:8px;color:var(--text-light);"></div></div>';
@@ -157,6 +168,17 @@
       html+='</tbody></table></div></div>';
     }
     root.innerHTML=html;
+    root.querySelectorAll('[data-stock-save-store]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var k=b.getAttribute('data-stock-save-store'),sel=root.querySelector('[data-stock-store="'+k+'"]');
+        if(!sel || !sel.value){alert('Выберите направление магазина.');return;}
+        db.ref(DIRECTIONS_PATH+'/'+k).set(sel.value).then(function(){
+          storeDirections[k]=sel.value;
+          addAuditSafe('stock_store_direction','Изменено направление магазина «'+(STORES[k]||k)+'»: '+sel.value);
+          render();
+        }).catch(function(e){alert('Не удалось сохранить направление магазина: '+(e&&e.message||e));});
+      });
+    });
     var dupToggle=root.querySelector('#stockDuplicatesToggle');
     if(dupToggle) dupToggle.addEventListener('click',function(){duplicatesExpanded=!duplicatesExpanded;render();});
     root.querySelectorAll('[data-stock-merge-source]').forEach(function(b){b.addEventListener('click',function(){merge(b.getAttribute('data-stock-merge-source'),b.getAttribute('data-stock-merge-target'));});});
@@ -373,24 +395,8 @@
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
     window.stockAdjust=adjust;window.stockStoreSizes=storeSizes;window.stockDelete=deleteProduct;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;
   }
-  function augmentStores(){
-    if(!isAdmin() || !document.getElementById('storesManagement'))return;
-    var host=document.getElementById('storesManagement');
-    if(host.querySelector('#stockStoreDirections'))return;
-    var box=document.createElement('div');box.id='stockStoreDirections';box.className='card';
-    var html='<h3>Направление магазина</h3><p style="font-size:12px;color:var(--text-light);">Настройка доступна администратору. Продавцы это поле не видят.</p>';
-    visibleStoreIds().forEach(function(k){var v=storeDirection(k);html+='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border);"><b style="flex:1;min-width:130px;">'+esc(STORES[k]||k)+'</b><select data-stock-store="'+esc(k)+'"><option value="">Не настроено</option><option value="krossy" '+(v==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(v==='easy'?'selected':'')+'>Изи</option><option value="mixed" '+(v==='mixed'?'selected':'')+'>Смешанный</option></select><button class="btn btn-secondary" type="button" data-stock-save-store="'+esc(k)+'">Сохранить</button></div>';});
-    box.innerHTML=html;host.appendChild(box);
-    box.querySelectorAll('[data-stock-save-store]').forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute('data-stock-save-store'),sel=box.querySelector('[data-stock-store="'+k+'"]');if(!sel.value){alert('Выберите направление магазина.');return;}db.ref(DIRECTIONS_PATH+'/'+k).set(sel.value).then(function(){storeDirections[k]=sel.value;addAuditSafe('stock_store_direction','Изменено направление магазина «'+(STORES[k]||k)+'»: '+sel.value);render();});});});
-  }
-  function watchStorePage(){
-    if(typeof window.renderStoresManagement!=='function'||window.renderStoresManagement._stockWrapped)return;
-    var original=window.renderStoresManagement;
-    var wrapped=function(){original.apply(this,arguments);augmentStores();};
-    wrapped._stockWrapped=true;window.renderStoresManagement=wrapped;
-  }
   function start(){
-    expose();load();initPage();watchStorePage();
+    expose();load();initPage();
     if(typeof window.switchOrg==='function' && !window.switchOrg._stockWrapped){
       var originalSwitchOrg=window.switchOrg;
       var wrappedSwitchOrg=function(key){var result=originalSwitchOrg.apply(this,arguments);render();return result;};
