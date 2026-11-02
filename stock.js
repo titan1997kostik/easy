@@ -203,6 +203,13 @@
     }
     document.querySelectorAll('[data-size-mode]').forEach(function(button){button.addEventListener('click',function(){sizeMode=button.getAttribute('data-size-mode');drawSizes();});});
     drawSizes();
+    var cameraInput=document.getElementById('stockPhotoCamera'),galleryInput=document.getElementById('stockPhotoGallery'),photoName=document.getElementById('stockPhotoName');
+    function showChosenPhoto(input,other){
+      if(input.files&&input.files[0]){if(other)other.value='';photoName.textContent='Выбрано: '+input.files[0].name;}
+      else if(!(galleryInput.files&&galleryInput.files[0])&&!(cameraInput.files&&cameraInput.files[0]))photoName.textContent="Фото можно добавить с камеры или из галереи.";
+    }
+    cameraInput.addEventListener('change',function(){showChosenPhoto(cameraInput,galleryInput);});
+    galleryInput.addEventListener('change',function(){showChosenPhoto(galleryInput,cameraInput);});
   }
   function closeForm(){var el=document.getElementById('stockModal');if(el)el.remove();}
   function save(){
