@@ -106,8 +106,10 @@
         .calendar-detail { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px; }
         .hidden { display: none !important; }
 /* Keep the authenticated workspace completely out of view after logout. */
-body.logged-out #mainApp{display:none!important;}
-body.logged-out #loginScreen{display:block!important;}
+body.logged-out{overflow:hidden!important;min-height:100vh;}
+body.logged-out #mainApp{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+body.logged-out #loginScreen{position:fixed!important;inset:0!important;z-index:2147483000!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:18px!important;width:100%!important;max-width:none!important;height:100vh!important;height:100dvh!important;min-height:100vh!important;margin:0!important;padding:24px 16px!important;overflow-y:auto!important;box-sizing:border-box!important;background:var(--bg,#fff7fa)!important;}
+body.logged-out #loginScreen .login-card{width:min(100%,420px)!important;margin:0 auto!important;box-sizing:border-box!important;}
 
         .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; }
         .header-right { display: flex; align-items: center; gap: 12px; }
@@ -3879,8 +3881,10 @@ function doLogout() {
     currentUser = null;
     localStorage.removeItem('easyAppSync_session');
     document.body.classList.add('logged-out');
-    document.getElementById('mainApp').classList.add('hidden');
-    document.getElementById('loginScreen').classList.remove('hidden');
+    var appRoot = document.getElementById('mainApp');
+    var loginRoot = document.getElementById('loginScreen');
+    if (appRoot) { appRoot.hidden = true; appRoot.setAttribute('aria-hidden', 'true'); appRoot.classList.add('hidden'); }
+    if (loginRoot) { loginRoot.hidden = false; loginRoot.removeAttribute('aria-hidden'); loginRoot.classList.remove('hidden'); }
     document.getElementById('loginUsername').value = '';
     document.getElementById('loginPassword').value = '';
     window.scrollTo(0, 0);
@@ -3888,8 +3892,10 @@ function doLogout() {
 
 function enterApp() {
     document.body.classList.remove('logged-out');
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('mainApp').classList.remove('hidden');
+    var loginRoot = document.getElementById('loginScreen');
+    var appRoot = document.getElementById('mainApp');
+    if (loginRoot) { loginRoot.hidden = true; loginRoot.setAttribute('aria-hidden', 'true'); loginRoot.classList.add('hidden'); }
+    if (appRoot) { appRoot.hidden = false; appRoot.removeAttribute('aria-hidden'); appRoot.classList.remove('hidden'); }
     document.getElementById('userName').textContent = currentUser.name;
     document.getElementById('userAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
     document.getElementById('userStore').textContent = currentUser.role === 'admin' ? 'Все магазины' : (STORES[currentUser.store] || '');
@@ -9528,7 +9534,7 @@ saveAllToLocal();
 setTimeout(function() { ensureSuperAdmins(); }, 2000);
 refreshStoreDropdowns();
 if (currentUser) { document.body.classList.remove('logged-out'); enterApp(); restoreUIState(); }
-else { document.body.classList.add('logged-out'); document.getElementById('mainApp').classList.add('hidden'); document.getElementById('loginScreen').classList.remove('hidden'); window.scrollTo(0, 0); }
+else { document.body.classList.add('logged-out'); var initialAppRoot=document.getElementById('mainApp'); var initialLoginRoot=document.getElementById('loginScreen'); if(initialAppRoot){initialAppRoot.hidden=true;initialAppRoot.setAttribute('aria-hidden','true');initialAppRoot.classList.add('hidden');} if(initialLoginRoot){initialLoginRoot.hidden=false;initialLoginRoot.removeAttribute('aria-hidden');initialLoginRoot.classList.remove('hidden');} window.scrollTo(0, 0); }
 
 // BroadcastChannel for same-browser tab sync (instant)
 if (typeof BroadcastChannel !== 'undefined') {
