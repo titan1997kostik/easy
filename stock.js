@@ -37,7 +37,7 @@
     return !!d && (d === 'mixed' || d === p.direction);
   }
   function qty(pId,sId){ return Number(balances[String(sId)] && balances[String(sId)][String(pId)] && balances[String(sId)][String(pId)].quantity || 0); }
-  function canEditCard(p){ return isAdmin() || (isSeller() && p && p.status === 'pending' && String(p.createdById) === String(user().id)); }
+  function canEditCard(p){ return isAdmin() || (isSeller() && p && (sellerCanSee(p) || (p.status === 'pending' && String(p.createdById) === String(user().id)))); }
   function addAuditSafe(action,details){ try { if(typeof addAudit === 'function') addAudit(action,details); } catch(e) { console.warn(e); } }
   function setStatus(msg,isError){ var el=document.getElementById('stockStatus'); if(el){el.textContent=msg || '';el.style.color=isError?'#b42318':'var(--text-light)';} }
   function initPage(){
@@ -127,7 +127,7 @@
       pending.forEach(function(p){var matches=possibleDuplicates(p,p.id); if(matches.length) dupes.push({p:p,m:matches});});
       html+='<div class="card"><h3>Возможные дубли</h3><p style="font-size:12px;color:var(--text-light);">Система только предлагает совпадения. Объединение выполняется вручную администратором.</p>';
       if(!dupes.length) html+='<div style="font-size:13px;color:var(--text-light);">Подозрительных совпадений не найдено.</div>';
-      dupes.forEach(function(d){html+='<div style="padding:9px 0;border-top:1px solid var(--border);"><b>'+esc(d.p.name)+'</b><div style="font-size:12px;color:var(--text-light);">Похоже на: '+d.m.map(function(m){return esc(m.name)+' ('+esc(m.article||'без артикула')+')';}).join('; ')+'</div></div>';});
+      dupes.forEach(function(d){html+='<div style="padding:9px 0;border-top:1px solid var(--border);"><b>'+esc(d.p.name)+'</b>'+d.m.map(function(m){return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-light);margin-top:5px;">Похоже на: '+esc(m.name)+' ('+esc(m.article||'без артикула')+') <button class="btn btn-warning" type="button" onclick="stockMerge(\\''+esc(d.p.id)+'\\',\\''+esc(m.id)+'\\')">Объединить</button></div>';}).join('')+'</div>';});
       html+='</div>';
       html+='<div class="card"><h3>Остатки по магазинам</h3><div style="overflow-x:auto;"><table style="width:100%;min-width:480px;"><thead><tr><th>Товар</th><th>Магазин</th><th>Остаток</th><th></th></tr></thead><tbody>';
       allProducts().filter(function(p){return p.status==='active';}).forEach(function(p){visibleStoreIds().forEach(function(s){html+='<tr><td>'+esc(p.name)+'</td><td>'+esc(window.STORES[s]||s)+'</td><td>'+qty(p.id,s)+'</td><td><button class="btn btn-secondary" type="button" onclick="stockAdjust(\''+esc(p.id)+'\',\''+esc(s)+'\')">Изменить</button></td></tr>';});});
