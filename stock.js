@@ -274,10 +274,7 @@
       var wrapped=function(id){if(id==='stock'){show();return;}return originalShow.apply(this,arguments);};
       wrapped._stockWrapped=true;window.easyAppSyncShowPage=wrapped;
     }
-    if(typeof MutationObserver!=='undefined'){
-      var obs=new MutationObserver(function(){if(user()){watchStorePage();if(isWorkspacePageActive('stores'))augmentStores();if(isWorkspacePageActive('stock'))render();}});
-      var app=document.getElementById('mainApp');if(app)obs.observe(app,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
-    }
+    // Avoid observing stockRoot mutations: render() updates innerHTML and would retrigger itself.
     if(user())render();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
