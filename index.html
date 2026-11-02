@@ -9539,7 +9539,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(id==='purchase'&&(!window.currentUser||window.currentUser.role!=='admin'))id='dashboard';
       if(id==='costs'&&(!window.isPurchaseCostOwner||!window.isPurchaseCostOwner()))id='dashboard';
       if(window.currentUser&&window.currentUser.role==='seller'&&(id==='audit'||id==='orgs'))id='dashboard';
-      Object.keys(pages).forEach(function(k){pages[k].classList.toggle('active',k===id);});
+      document.querySelectorAll('#workspaceShell .workspace-page').forEach(function(page){page.classList.toggle('active',page.id==='workspacePage-'+id);});
       document.querySelectorAll('#workspaceShell .nav-link, .mobile-nav .nav-link').forEach(function(b){b.classList.toggle('active',b.dataset.page===id);});
       if(id==='dashboard'){if(window.currentUser&&window.currentUser.role==='admin'&&typeof startAdminPersonalTasksListener==='function')startAdminPersonalTasksListener();if(typeof renderCashWidget==='function')renderCashWidget();if(typeof renderSalaryBlock==='function')renderSalaryBlock();if(typeof renderCashMetrics==='function')renderCashMetrics();if(typeof renderShiftBtn==='function')renderShiftBtn();if(typeof renderCalendar==='function')renderCalendar();if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(false);if(typeof updatePurchaseCostDashboardNotice==='function')updatePurchaseCostDashboardNotice();if(typeof updateTaskAttentionIndicator==='function')updateTaskAttentionIndicator();}
       if(id==='sale'){if(typeof renderProductCatalogSelect==='function')renderProductCatalogSelect();if(window.currentUser&&window.currentUser.role==='admin'&&typeof renderProductCatalogManager==='function')renderProductCatalogManager();}
@@ -10770,6 +10770,6 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
 </style>
 
 <script src="backup-tools.js"></script>
-<script src="stock.js?v=24"></script>
+<script src="stock.js?v=25"></script>
 </body>
 </html>
