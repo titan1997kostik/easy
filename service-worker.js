@@ -3,8 +3,8 @@
  * Firebase API/database responses are deliberately NOT cached; only the app shell and static assets are.
  */
 'use strict';
-var APP_CACHE = 'easy-app-sync-shell-v6';
-var RUNTIME_CACHE = 'easy-app-sync-static-v6';
+var APP_CACHE = 'easy-app-sync-shell-v7';
+var RUNTIME_CACHE = 'easy-app-sync-static-v7';
 
 self.addEventListener('install', function(event) {
   event.waitUntil(
@@ -24,6 +24,7 @@ self.addEventListener('install', function(event) {
       var sdkUrls = [
         'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
         'https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js',
+        'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js',
         'https://cdn.jsdelivr.net/npm/mqtt@5.10.4/dist/mqtt.min.js'
       ];
       var sdkPromise = Promise.all(sdkUrls.map(function(url) {
