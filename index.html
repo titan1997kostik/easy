@@ -1534,6 +1534,7 @@ function stopSalePurchaseCostsSync() {
     salePurchaseCostWrites = Object.create(null);
     salePurchaseCosts = {};
     salePurchaseCostsLoaded = false;
+    invalidateAnalyticsCache();
 }
 function saveSalePurchaseCost(saleId, rawValue) {
     if (!isPurchaseCostOwner()) { alert('Закупочную стоимость могут редактировать только супер-администраторы.'); return; }
@@ -2918,6 +2919,7 @@ db.ref('products_catalog_data').on('value', function(snapshot) {
     }).filter(Boolean);
     productCatalog = remoteItems;
     productCatalogLoaded = true;
+    invalidateAnalyticsCache();
     try { localStorage.setItem('easyAppSync_productCatalog', JSON.stringify(productCatalog)); } catch (e) {}
     if (typeof renderProductCatalogSelect === 'function') renderProductCatalogSelect();
     if (typeof renderProductCatalogManager === 'function') renderProductCatalogManager();
@@ -8617,7 +8619,7 @@ function drawChart() {
             costOfGoods:0, estimatedCostOfGoods:0, costedSalesCount:0, estimatedCostSalesCount:0, costMissingCount:0, costMissingReturnsCount:0, estimatedCostReturnsCount:0, costDataComplete:true, costCalculationAvailable:true, netRevenue:0, grossProfit:null, netProfit:null, averageMarkup:null, grossMargin:null };
     }
     function sumRange(startDate, endDate) {
-        var summaryCacheKey = analyticsDataRevision + '|' + String(currentUser && currentUser.id || '') + '|' + String(targetStore) + '|' + visibleKeys.slice().sort().join(',') + '|' + String(startDate) + '|' + String(endDate) + '|' + (isPurchaseCostOwner() ? 'cost' : 'nocost');
+        var summaryCacheKey = analyticsDataRevision + '|' + String(currentUser && currentUser.id || '') + '|' + String(currentOrgFilter || '') + '|' + String(targetStore) + '|' + visibleKeys.slice().sort().join(',') + '|' + String(startDate) + '|' + String(endDate) + '|' + (isPurchaseCostOwner() ? 'cost' : 'nocost');
         if (analyticsSummaryCache[summaryCacheKey]) return Object.assign({}, analyticsSummaryCache[summaryCacheKey]);
         var result = blankSummary();
         // Sales are counted on their original sale date. Returns/cancellations are separate signed events
