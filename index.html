@@ -4608,7 +4608,7 @@ function saveSale() {
     var name = stockSaleEnabled ? stockCardName : (detailInput ? String(detailInput.value || '').trim().replace(/\s+/g, ' ') : '');
     var price = document.getElementById('prodPrice') ? Number(document.getElementById('prodPrice').value) : NaN;
     if (!stockSaleEnabled && (!productId || !chosenProduct || !catalogProductName)) { alert('Выберите позицию из каталога для плана закупки. Если её нет, обратитесь к администратору.'); return; }
-    if(stockSaleEnabled){var autoCategory=selectedStockOption?String(selectedStockOption.dataset.category||'').trim():'';var matchedCatalog=getVisibleProductCatalog(false).filter(function(item){return item&&item.active!==false;}).find(function(item){return String(item.name||'').trim().toLowerCase()===autoCategory.toLowerCase();});if(!matchedCatalog){alert('В карточке склада не выбрана позиция каталога для плана закупки. Администратор должен указать её в карточке склада.');return;}chosenProduct=matchedCatalog;productId=String(matchedCatalog.id);catalogProductName=String(matchedCatalog.name||'').trim();var hiddenCatalog=document.getElementById('prodName');if(hiddenCatalog)hiddenCatalog.value=productId;var catalogButtonLabel=document.getElementById('chooseProductButtonLabel');if(catalogButtonLabel)catalogButtonLabel.textContent=catalogProductName;}
+    if(stockSaleEnabled){var autoCategory=selectedStockOption?String(selectedStockOption.dataset.category||selectedStockOption.dataset.name||'').trim():'';var matchedCatalog=getVisibleProductCatalog(false).filter(function(item){return item&&item.active!==false;}).find(function(item){return String(item.name||'').trim().toLowerCase()===autoCategory.toLowerCase();});if(!matchedCatalog){alert('В карточке склада не выбрана позиция каталога для плана закупки. Администратор должен указать её в карточке склада.');return;}chosenProduct=matchedCatalog;productId=String(matchedCatalog.id);catalogProductName=String(matchedCatalog.name||'').trim();var hiddenCatalog=document.getElementById('prodName');if(hiddenCatalog)hiddenCatalog.value=productId;var catalogButtonLabel=document.getElementById('chooseProductButtonLabel');if(catalogButtonLabel)catalogButtonLabel.textContent=catalogProductName;}
     if (!stockSaleEnabled && selectedSaleGender !== 'M' && selectedSaleGender !== 'F') { alert('Выберите категорию вещи: мужская (М) или женская (Ж).'); return; }
     if (!name) { alert(stockSaleEnabled?'Выберите карточку товара на складе.':'Укажите наименование товара: бренд, модель, размер или другую конкретику.'); if (stockSaleEnabled&&stockProductSelect) stockProductSelect.focus(); else if (detailInput) detailInput.focus(); return; }
     if (!isFinite(price) || price <= 0) { alert('Цена должна быть положительным числом!'); return; }
@@ -4656,8 +4656,8 @@ function saveSale() {
         name: historyDisplayName,
         itemDetails: name,
         productId: String(chosenProduct.id),
-        productName: stockSaleEnabled ? stockCardName : catalogProductName,
-        catalogProductName: stockSaleEnabled ? stockCardName : catalogProductName,
+        productName: catalogProductName,
+        catalogProductName: catalogProductName,
         productOrg: String(chosenProduct.org || getProductCatalogOrg()),
         gender: stockSaleEnabled ? '' : selectedSaleGender,
         genderLabel: stockSaleEnabled ? '' : (selectedSaleGender === 'M' ? 'Мужская (М)' : 'Женская (Ж)'),
