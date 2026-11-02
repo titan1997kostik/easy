@@ -41,7 +41,13 @@
   function qty(pId,sId){ return Number(balances[String(sId)] && balances[String(sId)][String(pId)] && balances[String(sId)][String(pId)].quantity || 0); }
   function sizeLabel(sizes){
     var counts={}; (Array.isArray(sizes)?sizes:[]).forEach(function(s){var k=String(s);counts[k]=(counts[k]||0)+1;});
-    return Object.keys(counts).sort(function(a,b){return Number(a)-Number(b);}).map(function(k){return k+(counts[k]>1?' × '+counts[k]:'');}).join(', ');
+    var letters=['XXS','XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
+    return Object.keys(counts).sort(function(a,b){
+      var an=/^\d+$/.test(a), bn=/^\d+$/.test(b);
+      if(an&&bn)return Number(a)-Number(b);
+      if(an)return -1;if(bn)return 1;
+      return letters.indexOf(a)-letters.indexOf(b);
+    }).map(function(k){return k+(counts[k]>1?' × '+counts[k]:'');}).join(', ');
   }
   function canEditCard(p){ return isAdmin() || (isSeller() && p && (sellerCanSee(p) || (p.status === 'pending' && String(p.createdById) === String(user().id)))); }
   function addAuditSafe(action,details){ try { if(typeof addAudit === 'function') addAudit(action,details); } catch(e) { console.warn(e); } }
@@ -156,35 +162,47 @@
     var p=id?products[id]:null;
     if(p && !canEditCard(p)){alert('Эту карточку нельзя редактировать.');return;}
     editingId=id||'';
-    formSizes=p&&Array.isArray(p.sizes)?p.sizes.slice():(p&&p.size?[String(p.size)]:[]);
+    formSizes=p&&Array.isArray(p.sizes)?p.sizes.map(String):(p&&p.size?[String(p.size)]:[]);
     var combinedName=p?[p.name,p.model].filter(Boolean).join(' '):'';
-    var sizeType=p&&p.sizeType?p.sizeType:'shoes';
-    var html='<div id="stockModal" style="position:fixed;inset:0;background:rgba(20,10,16,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px;"><div class="card" style="width:min(620px,100%);max-height:90vh;overflow:auto;"><div style="display:flex;justify-content:space-between;gap:10px;"><h3>'+(p?'Редактирование карточки':'Новая карточка товара')+'</h3><button class="btn btn-secondary" onclick="stockCloseForm()">✕</button></div><div class="form-group"><label>Название товара / бренд / модель *</label><input id="stockName" value="'+esc(combinedName)+'" maxlength="180" placeholder="Например: Nike Air Max 90"></div><div class="form-group"><label>Категория</label><input id="stockCategory" value="'+esc(p&&p.category)+'" placeholder="Например: кроссовки, футболка"></div><div class="form-group"><label>Артикул</label><input id="stockArticle" value="'+esc(p&&p.article)+'" placeholder="Будет создан автоматически" '+(isSeller()?'readonly':'')+'></div><div class="form-group"><label>Цвет</label><input id="stockColor" value="'+esc(p&&p.color)+'"></div><div class="form-group"><label>Тип размеров</label><select id="stockSizeType"><option value="shoes" '+(sizeType==='shoes'?'selected':'')+'>Обувь (28–50)</option><option value="clothes" '+(sizeType==='clothes'?'selected':'')+'>Одежда (40–58)</option></select></div><div class="form-group"><label>Добавить размер</label><div style="display:flex;gap:8px;align-items:center;"><select id="stockSizeChoice" style="flex:1;"></select><button class="btn btn-secondary" type="button" id="stockAddSize">＋ Добавить</button></div><div id="stockSelectedSizes" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"></div><div style="font-size:12px;color:var(--text-light);margin-top:5px;">Один размер можно добавить несколько раз — количество повторов будет видно в карточке.</div></div><div class="form-group"><label>Описание</label><textarea id="stockDescription" rows="3">'+esc(p&&p.description)+'</textarea></div><div class="form-group"><label>Фото (необязательно)</label><input id="stockPhoto" type="file" accept="image/*"><div style="font-size:12px;color:var(--text-light);">'+(p&&p.photoUrl?'Фото уже прикреплено. Выберите файл, чтобы заменить.':'Можно добавить позже.')+'</div>'+(p&&p.photoUrl?'<label style="display:block;margin-top:6px;"><input id="stockRemovePhoto" type="checkbox"> Удалить текущее фото</label>':'')+'</div>';
+    var html='<div id="stockModal" style="position:fixed;inset:0;background:rgba(20,10,16,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px;"><div class="card" style="width:min(620px,100%);max-height:90vh;overflow:auto;"><div style="display:flex;justify-content:space-between;gap:10px;"><h3>'+(p?'Редактирование карточки':'Новая карточка товара')+'</h3><button class="btn btn-secondary" onclick="stockCloseForm()">✕</button></div><div class="form-group"><label>Название товара / бренд / модель *</label><input id="stockName" value="'+esc(combinedName)+'" maxlength="180" placeholder="Например: Nike Air Max 90"></div><div class="form-group"><label>Категория</label><input id="stockCategory" value="'+esc(p&&p.category)+'" placeholder="Например: кроссовки, футболка"></div><div class="form-group"><label>Артикул</label><input id="stockArticle" value="'+esc(p&&p.article)+'" placeholder="Будет создан автоматически" '+(isSeller()?'readonly':'')+'></div><div class="form-group"><label>Цвет</label><input id="stockColor" value="'+esc(p&&p.color)+'"></div><div class="form-group"><label>Размеры</label><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"><button class="btn btn-secondary" type="button" data-size-mode="numeric" aria-pressed="true">Цифры 26–54</button><button class="btn btn-secondary" type="button" data-size-mode="letters" aria-pressed="false">Буквы</button></div><div id="stockSizeGrid" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;"></div><div style="font-size:12px;color:var(--text-light);margin-top:8px;">Нажмите на размер — каждое нажатие добавляет ещё одну штуку. Повторные размеры учитываются отдельно.</div><div id="stockSelectedSizes" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"></div></div><div class="form-group"><label>Описание</label><textarea id="stockDescription" rows="3">'+esc(p&&p.description)+'</textarea></div><div class="form-group"><label>Фото (необязательно)</label><input id="stockPhoto" type="file" accept="image/*"><div style="font-size:12px;color:var(--text-light);">'+(p&&p.photoUrl?'Фото уже прикреплено. Выберите файл, чтобы заменить.':'Можно добавить позже.')+'</div>'+(p&&p.photoUrl?'<label style="display:block;margin-top:6px;"><input id="stockRemovePhoto" type="checkbox"> Удалить текущее фото</label>':'')+'</div>';
     if(isAdmin()) html+='<div class="form-group"><label>Направление</label><select id="stockDirection"><option value="">Выбрать…</option><option value="krossy" '+(p&&p.direction==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(p&&p.direction==='easy'?'selected':'')+'>Изи</option></select></div>';
     html+='<div id="stockSaveError" style="color:#b42318;font-size:13px;margin:8px 0;"></div><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;"><button class="btn btn-secondary" onclick="stockCloseForm()">Отмена</button><button class="btn btn-primary" onclick="stockSave()">Сохранить</button></div></div></div>';
     document.body.insertAdjacentHTML('beforeend',html);
-    var typeEl=document.getElementById('stockSizeType'), choice=document.getElementById('stockSizeChoice'), selected=document.getElementById('stockSelectedSizes');
-    function refreshSizeOptions(){
-      var type=typeEl.value, min=type==='shoes'?28:40, max=type==='shoes'?50:58, previous=choice.value;
-      choice.innerHTML=''; for(var n=min;n<=max;n++){var o=document.createElement('option');o.value=String(n);o.textContent=String(n);choice.appendChild(o);}
-      if(previous && Number(previous)>=min && Number(previous)<=max)choice.value=previous;
-      drawSizes();
-    }
+    var grid=document.getElementById('stockSizeGrid'), selected=document.getElementById('stockSelectedSizes');
+    var sizeMode='numeric', letters=['XXS','XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
+    function currentSizes(){return sizeMode==='numeric'?Array.from({length:29},function(_,i){return String(i+26);}):letters.slice();}
+    function countSizes(){var counts={};formSizes.forEach(function(v){counts[v]=(counts[v]||0)+1;});return counts;}
     function drawSizes(){
+      var counts=countSizes();grid.innerHTML='';
+      currentSizes().forEach(function(v){
+        var button=document.createElement('button');button.type='button';button.textContent=v+(counts[v]?'  × '+counts[v]:'');
+        button.style.cssText='min-height:42px;border:1px solid '+(counts[v]?'var(--accent,#7c3aed)':'var(--border)')+';border-radius:9px;background:'+(counts[v]?'rgba(124,58,237,.10)':'var(--card-bg,#fff)')+';font-weight:600;cursor:pointer;';
+        button.addEventListener('click',function(){formSizes.push(v);drawSizes();});
+        grid.appendChild(button);
+      });
+      document.querySelectorAll('[data-size-mode]').forEach(function(button){
+        var active=button.getAttribute('data-size-mode')===sizeMode;
+        button.style.opacity=active?'1':'.65';button.setAttribute('aria-pressed',active?'true':'false');
+      });
       selected.innerHTML='';
-      var counts={};formSizes.forEach(function(v){counts[v]=(counts[v]||0)+1;});
-      Object.keys(counts).sort(function(a,b){return Number(a)-Number(b);}).forEach(function(v){
-        var chip=document.createElement('span');chip.style.cssText='display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;background:#fff;';
-        chip.textContent=v+(counts[v]>1?' × '+counts[v]:'');
-        var remove=document.createElement('button');remove.type='button';remove.textContent='−';remove.title='Убрать один размер';remove.style.cssText='border:0;background:transparent;font-size:18px;cursor:pointer;padding:0 2px;';
-        remove.addEventListener('click',function(){var i=formSizes.indexOf(v);if(i>=0)formSizes.splice(i,1);drawSizes();});
-        chip.appendChild(remove);selected.appendChild(chip);
+      var ordered=Object.keys(counts).sort(function(a,b){
+        var an=/^\d+$/.test(a),bn=/^\d+$/.test(b);
+        if(an&&bn)return Number(a)-Number(b);if(an)return -1;if(bn)return 1;
+        return letters.indexOf(a)-letters.indexOf(b);
+      });
+      ordered.forEach(function(v){
+        var chip=document.createElement('span');chip.style.cssText='display:inline-flex;align-items:center;gap:5px;padding:5px 7px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg,#fff);';
+        var label=document.createElement('b');label.textContent=v+' × '+counts[v];chip.appendChild(label);
+        var minus=document.createElement('button');minus.type='button';minus.textContent='−';minus.title='Уменьшить количество';minus.style.cssText='border:0;background:transparent;font-size:18px;cursor:pointer;padding:0 3px;';
+        minus.addEventListener('click',function(){var i=formSizes.indexOf(v);if(i>=0)formSizes.splice(i,1);drawSizes();});
+        var plus=document.createElement('button');plus.type='button';plus.textContent='+';plus.title='Увеличить количество';plus.style.cssText='border:0;background:transparent;font-size:17px;cursor:pointer;padding:0 3px;';
+        plus.addEventListener('click',function(){formSizes.push(v);drawSizes();});
+        chip.appendChild(minus);chip.appendChild(plus);selected.appendChild(chip);
       });
       if(!formSizes.length)selected.textContent='Размеры пока не добавлены';
     }
-    typeEl.addEventListener('change',function(){formSizes=[];refreshSizeOptions();});
-    document.getElementById('stockAddSize').addEventListener('click',function(){formSizes.push(choice.value);drawSizes();});
-    refreshSizeOptions();
+    document.querySelectorAll('[data-size-mode]').forEach(function(button){button.addEventListener('click',function(){sizeMode=button.getAttribute('data-size-mode');drawSizes();});});
+    drawSizes();
   }
   function closeForm(){var el=document.getElementById('stockModal');if(el)el.remove();}
   function save(){
@@ -198,7 +216,7 @@
       article:(document.getElementById('stockArticle').value||'').trim() || (old&&old.article) || ('ST-'+Date.now().toString(36).toUpperCase()),
       model:'',
       color:(document.getElementById('stockColor').value||'').trim(),
-      size:formSizes.length?formSizes[0]:'',sizes:formSizes.slice(),sizeType:document.getElementById('stockSizeType').value,
+      size:formSizes.length?formSizes[0]:'',sizes:formSizes.slice(),
       description:(document.getElementById('stockDescription').value||'').trim(),
       status:old?old.status:'pending',
       createdAt:old?old.createdAt:Date.now(),
