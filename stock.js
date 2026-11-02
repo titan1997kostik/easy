@@ -66,7 +66,7 @@
       if(nav && !nav.querySelector('[data-page="stock"]')){
         var b=document.createElement('button'); b.type='button'; b.className='nav-link'; b.dataset.page='stock';
         b.innerHTML='<span class="nav-icon">📦</span><span>Склад</span>';
-        b.addEventListener('click',function(){window.easyAppSyncShowPage && window.easyAppSyncShowPage('stock'); render();});
+        b.addEventListener('click',function(){window.easyAppSyncShowPage && window.easyAppSyncShowPage('stock');});
         nav.appendChild(b);
       }
     });
@@ -108,6 +108,8 @@
   }
   function render(){
     if(!initPage()) return;
+    var page=document.getElementById('workspacePage-stock');
+    if(!page || !page.classList.contains('active')) return;
     var root=document.getElementById('stockRoot'); if(!root) return;
     if(!user()){root.innerHTML='<div class="card">Войдите в приложение, чтобы открыть склад.</div>';return;}
     if(!canUse()){root.innerHTML='<div class="card">Склад станет доступен после проверки подключения к Firebase.</div>';return;}
