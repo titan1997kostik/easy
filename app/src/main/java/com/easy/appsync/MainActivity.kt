@@ -7,7 +7,6 @@ import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.activity.OnBackPressedCallback
 import android.app.Activity
 
 class MainActivity : Activity() {
@@ -47,11 +46,11 @@ class MainActivity : Activity() {
             webView.restoreState(savedInstanceState)
         }
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (webView.canGoBack()) webView.goBack() else finish()
-            }
-        })
+    }
+
+    @Deprecated("Deprecated in Android API; retained for compatibility with the platform back button")
+    override fun onBackPressed() {
+        if (::webView.isInitialized && webView.canGoBack()) webView.goBack() else super.onBackPressed()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
