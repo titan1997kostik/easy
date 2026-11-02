@@ -129,7 +129,7 @@
     list.sort(function(a,b){return Number(b.updatedAt||b.createdAt||0)-Number(a.updatedAt||a.createdAt||0);});
     var html='';
     if(isAdmin()){
-      html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:7px;flex-wrap:wrap;"><button class="btn '+(adminTab==='shops'?'btn-primary':'btn-secondary')+'" data-stock-tab="shops" type="button">Магазины</button><button class="btn '+(adminTab==='all'?'btn-primary':'btn-secondary')+'" data-stock-tab="all" type="button">Все остатки</button><button class="btn '+(adminTab==='history'?'btn-primary':'btn-secondary')+'" data-stock-tab="history" type="button">История</button></div></div>';
+      html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:7px;flex-wrap:wrap;"><button class="btn '+(adminTab==='shops'?'btn-primary':'btn-secondary')+'" data-stock-tab="shops" type="button">Магазины</button><button class="btn '+(adminTab==='all'?'btn-primary':'btn-secondary')+'" data-stock-tab="all" type="button">Все остатки</button><button class="btn '+(adminTab==='history'?'btn-primary':'btn-secondary')+'" data-stock-tab="history" type="button">История</button><button class="btn '+(adminTab==='sales'?'btn-primary':'btn-secondary')+'" data-stock-tab="sales" type="button">Продажи</button></div></div>';
       if(adminTab==='shops'){
         var totalUnits=0,totalProducts=allProducts().filter(function(p){return p.status==='active';}).length;
         stores.forEach(function(k){Object.keys(balances[k]||{}).forEach(function(pid){totalUnits+=Number((balances[k][pid]||{}).quantity||0);});});
@@ -192,8 +192,41 @@
     if(isAdmin() && adminTab==='history'){
       var recent=Object.keys(movements).map(function(k){return movements[k];}).filter(function(m){return m && m.org===org() && visibleStoreIds().indexOf(String(m.storeId))!==-1;}).sort(function(a,b){return Number(b.createdAt||0)-Number(a.createdAt||0);}).slice(0,100);
       html+='<div class="card"><h3>История складских операций</h3><div style="overflow-x:auto;"><table style="width:100%;min-width:620px;"><thead><tr><th>Дата</th><th>Товар</th><th>Магазин</th><th>Операция</th><th>Изменение</th><th>Остаток после</th></tr></thead><tbody>';
-      recent.forEach(function(m){var prod=products[m.productId]||{};var label=m.type==='receipt'?'Поступление':m.type==='writeoff'?'Списание':m.type==='merge'?'Объединение':'Корректировка';html+='<tr><td>'+esc(new Date(Number(m.createdAt||0)).toLocaleString('ru-RU'))+'</td><td>'+esc(prod.name||m.productName||m.productId||'—')+'</td><td>'+esc(window.STORES[m.storeId]||m.storeId||'—')+'</td><td>'+label+'</td><td>'+(Number(m.quantityDelta)>0?'+':'')+Number(m.quantityDelta||0)+'</td><td>'+(m.after==null?'—':Number(m.after))+'</td></tr>';});
+      recent.forEach(function(m){var prod=products[m.productId]||{};var label=m.type==='receipt'?'Поступление':m.type==='sale'?'Продажа':m.type==='return'?'Возврат':m.type==='sale_return_cancel'?'Отмена возврата':m.type==='writeoff'?'Списание':m.type==='merge'?'Объединение':'Корректировка';html+='<tr><td>'+esc(new Date(Number(m.createdAt||0)).toLocaleString('ru-RU'))+'</td><td>'+esc(prod.name||m.productName||m.productId||'—')+'</td><td>'+esc(window.STORES[m.storeId]||m.storeId||'—')+'</td><td>'+label+'</td><td>'+(Number(m.quantityDelta)>0?'+':'')+Number(m.quantityDelta||0)+'</td><td>'+(m.after==null?'—':Number(m.after))+'</td></tr>';});
       if(!recent.length) html+='<tr><td colspan="6" style="color:var(--text-light);">Операций пока нет.</td></tr>';
+      html+='</tbody></table></div></div>';
+    }
+    if(isAdmin() && adminTab==='sales'){
+      var stockSales=(window.sales||[]).filter(function(s){
+        if(!s||!s.stockProductId||!s.stockStoreId||visibleStoreIds().indexOf(String(s.stockStoreId))===-1)return false;
+        if(s.stockOrg&&s.stockOrg!==org())return false;
+        if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(s.id))return false;
+        if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(s))return false;
+        return true;
+      });
+      var activeStockSales=stockSales.filter(function(s){return !s.returned;});
+      var returnedStockSales=stockSales.filter(function(s){return !!s.returned;});
+      var netRevenue=activeStockSales.reduce(function(sum,s){return sum+(Number(s.price)||0);},0);
+      var returnedRevenue=returnedStockSales.reduce(function(sum,s){return sum+(Number(s.price)||0);},0);
+      var netUnits=activeStockSales.reduce(function(sum,s){return sum+(Number(s.stockQuantity)||1);},0);
+      var groups={},sizesSummary={};
+      stockSales.forEach(function(s){
+        var pid=String(s.stockProductId),name=String(s.stockProductName||s.name||'Без названия');
+        if(!groups[pid])groups[pid]={name:name,sales:0,returned:0,units:0,revenue:0,returnedRevenue:0};
+        var g=groups[pid],q=Number(s.stockQuantity)||1;g.sales++;
+        if(s.returned){g.returned++;g.returnedRevenue+=Number(s.price)||0;}else{g.units+=q;g.revenue+=Number(s.price)||0;}
+        var sk=pid+'|'+String(s.stockSize||'—');
+        if(!sizesSummary[sk])sizesSummary[sk]={name:name,size:String(s.stockSize||'—'),units:0,returned:0};
+        if(s.returned)sizesSummary[sk].returned+=q;else sizesSummary[sk].units+=q;
+      });
+      html+='<div class="card" style="margin-bottom:14px;"><h3>Складские продажи</h3><p style="font-size:12px;color:var(--text-light);">Здесь учитываются только продажи с привязкой к карточке склада. Старые продажи без складской привязки остаются в общей аналитике.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;"><div class="card"><div style="font-size:12px;color:var(--text-light);">Продаж без возврата</div><b style="font-size:22px;">'+activeStockSales.length+'</b></div><div class="card"><div style="font-size:12px;color:var(--text-light);">Продано единиц</div><b style="font-size:22px;">'+netUnits+'</b></div><div class="card"><div style="font-size:12px;color:var(--text-light);">Выручка без возвратов</div><b style="font-size:22px;">'+netRevenue.toLocaleString('ru-RU')+' ₽</b></div><div class="card"><div style="font-size:12px;color:var(--text-light);">Возвраты</div><b style="font-size:22px;">'+returnedStockSales.length+' · '+returnedRevenue.toLocaleString('ru-RU')+' ₽</b></div></div></div>';
+      html+='<div class="card" style="margin-bottom:14px;"><h3>Товары</h3><div style="overflow-x:auto;"><table style="width:100%;min-width:540px;"><thead><tr><th>Карточка склада</th><th>Продаж</th><th>Единиц без возврата</th><th>Возвратов</th><th>Выручка</th></tr></thead><tbody>';
+      Object.keys(groups).sort(function(a,b){return groups[b].units-groups[a].units;}).forEach(function(pid){var g=groups[pid];html+='<tr><td>'+esc(g.name)+'</td><td>'+g.sales+'</td><td>'+g.units+'</td><td>'+g.returned+'</td><td>'+g.revenue.toLocaleString('ru-RU')+' ₽</td></tr>';});
+      if(!Object.keys(groups).length)html+='<tr><td colspan="5" style="color:var(--text-light);">Складских продаж пока нет.</td></tr>';
+      html+='</tbody></table></div></div>';
+      html+='<div class="card"><h3>Продажи по размерам</h3><div style="overflow-x:auto;"><table style="width:100%;min-width:420px;"><thead><tr><th>Товар</th><th>Размер</th><th>Продано</th><th>Возвращено</th></tr></thead><tbody>';
+      Object.keys(sizesSummary).sort(function(a,b){return sizesSummary[b].units-sizesSummary[a].units;}).forEach(function(k){var z=sizesSummary[k];html+='<tr><td>'+esc(z.name)+'</td><td>'+esc(z.size)+'</td><td>'+z.units+'</td><td>'+z.returned+'</td></tr>';});
+      if(!Object.keys(sizesSummary).length)html+='<tr><td colspan="4" style="color:var(--text-light);">Данных по размерам пока нет.</td></tr>';
       html+='</tbody></table></div></div>';
     }
     root.innerHTML=html;
@@ -526,7 +559,7 @@
         },undefined,false).then(function(tx){
           if(!tx.committed)throw new Error('Недостаточно товара выбранного размера. Остаток мог измениться на другом устройстве.');
           nextBalance=tx.snapshot.val()||nextBalance;
-          var now=Date.now(),movementId='stock_sale_'+saleId,persisted=Object.assign({},sale,{stockProductName:String(product.name||sale.stockProductName||''),stockQuantity:quantity,stockStoreId:sid,stockMovementId:movementId,stockSize:size,_pendingSync:false});
+          var now=Date.now(),movementId='stock_sale_'+saleId,persisted=Object.assign({},sale,{stockProductName:String(product.name||sale.stockProductName||''),stockOrg:String(product.org||''),stockQuantity:quantity,stockStoreId:sid,stockMovementId:movementId,stockSize:size,_pendingSync:false});
           var movement={id:movementId,org:product.org,productId:pid,productName:persisted.stockProductName,storeId:sid,type:'sale',size:size,quantityDelta:-quantity,before:before,after:Number(nextBalance.quantity||0),saleId:saleId,createdAt:now,createdById:String(user().id),createdByName:String(user().name||'')};
           var patch={};patch['sales_data/'+saleId]=persisted;patch[MOVEMENTS_PATH+'/'+movementId]=movement;
           return db.ref().update(patch).then(function(){return {sale:persisted,movement:movement};}).catch(function(writeError){
@@ -556,7 +589,7 @@
 
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;
+    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockRefresh=render;
   }
   function start(){
     expose();load();initPage();
