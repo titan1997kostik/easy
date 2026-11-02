@@ -9787,7 +9787,10 @@ function getStorePlanSalesMetrics(storeId, month) {
         if (String(sale.storeId || '') !== shopId) return false;
         var timestamp = parseTimestampMs(sale.timestamp || sale.createdAt);
         if (!timestamp || timestamp < startMs || timestamp > endMs) return false;
-        // A plan counts only sales falling inside a seller's recorded shift.
+        // Historical imports are store-level sales and have no seller shift to match.
+        // Include them in the store's monthly sales plan without assigning them to an employee.
+        if (sale.historicalImport || sale.historicalImportToday) return true;
+        // Regular sales count only when they fall inside a seller's recorded shift.
         return employeeIntervals.some(function(group) {
             return saleBelongsToEmployeeShift(sale, group.employee, group.intervals);
         });
