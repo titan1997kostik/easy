@@ -234,7 +234,7 @@
       var d=document.getElementById('stockDirection');if(d&&d.value)record.direction=d.value;
     }
     if(isAdmin()&&old&&old.status==='pending'&&record.direction)record.status='active';
-    var removePhoto=document.getElementById('stockRemovePhoto');if(removePhoto&&removePhoto.checked){delete record.photoUrl;delete record.photoPath;}
+    var removePhoto=document.getElementById('stockRemovePhoto');if(removePhoto&&removePhoto.checked){delete record.photoUrl;delete record.photoPath;delete record.photoPublicId;}
     var camera=document.getElementById('stockPhotoCamera'),gallery=document.getElementById('stockPhotoGallery');
     var file=!skipPhoto&&((camera&&camera.files&&camera.files[0])||(gallery&&gallery.files&&gallery.files[0]));
     var saveButton=document.querySelector('#stockModal button.btn-primary'),errorBox=document.getElementById('stockSaveError');
@@ -247,37 +247,43 @@
     if(saveButton){saveButton.disabled=true;saveButton.textContent=file?'Загружаем фото…':'Сохраняем…';}
     var upload=Promise.resolve();
     if(file){
-      if(!window.firebase||typeof firebase.storage!=='function'){showError('Firebase Storage не подключён. Можно сохранить карточку без фотографии.',true);return;}
-      try{
-        var safeOrg=String(record.org||'org').replace(/[^a-zA-Z0-9_-]/g,'_');
-        var safeName=String(file.name||'photo.jpg').replace(/[^a-zA-Z0-9._-]/g,'_');
-        var path='stock-products/'+safeOrg+'/'+id+'/'+Date.now()+'_'+safeName;
-        var task=firebase.storage().ref().child(path).put(file,{contentType:file.type||'image/jpeg'});
-        upload=new Promise(function(resolve,reject){
-          var finished=false;
-          var timer=setTimeout(function(){
-            if(finished)return;
-            finished=true;
-            try{task.cancel();}catch(e){}
-            reject(new Error('Загрузка фото не завершилась за 45 секунд. Проверьте интернет и доступ Firebase Storage.'));
-          },45000);
-          task.on('state_changed',function(snapshot){
-            var percent=snapshot.totalBytes?Math.round(snapshot.bytesTransferred/snapshot.totalBytes*100):0;
-            if(saveButton)saveButton.textContent='Загружаем фото… '+percent+'%';
-          },function(error){
-            if(finished)return;finished=true;clearTimeout(timer);reject(error);
-          },function(){
-            if(finished)return;finished=true;clearTimeout(timer);
-            task.snapshot.ref.getDownloadURL().then(function(url){
-              record.photoUrl=url;record.photoPath=path;resolve();
-            }).catch(reject);
-          });
-        });
-      }catch(e){showError('Не удалось начать загрузку фото: '+(e&&e.message?e.message:String(e)),true);return;}
+      var cloudinaryUrl='https://api.cloudinary.com/v1_1/gnesaxoh/image/upload';
+      var uploadPreset='easy_stock_photos';
+      var safeOrg=String(record.org||'org').replace(/[^a-zA-Z0-9_-]/g,'_');
+      upload=new Promise(function(resolve,reject){
+        var xhr=new XMLHttpRequest(), formData=new FormData();
+        formData.append('file',file);
+        formData.append('upload_preset',uploadPreset);
+        formData.append('folder','stock-products/'+safeOrg);
+        xhr.open('POST',cloudinaryUrl,true);
+        xhr.timeout=45000;
+        xhr.upload.onprogress=function(event){
+          if(event.lengthComputable&&saveButton){
+            var percent=Math.round(event.loaded/event.total*100);
+            saveButton.textContent='Загружаем фото… '+percent+'%';
+          }
+        };
+        xhr.onload=function(){
+          var response={};
+          try{response=JSON.parse(xhr.responseText||'{}');}catch(e){}
+          if(xhr.status>=200&&xhr.status<300&&response.secure_url){
+            record.photoUrl=response.secure_url;
+            record.photoPublicId=response.public_id||'';
+            delete record.photoPath;
+            resolve();
+          }else{
+            reject(new Error(response.error&&response.error.message?response.error.message:'Cloudinary вернул ошибку загрузки (HTTP '+xhr.status+').'));
+          }
+        };
+        xhr.onerror=function(){reject(new Error('Не удалось связаться с Cloudinary. Проверьте интернет.'));};
+        xhr.ontimeout=function(){reject(new Error('Загрузка фото не завершилась за 45 секунд. Проверьте интернет.'));};
+        xhr.onabort=function(){reject(new Error('Загрузка фотографии отменена.'));};
+        try{xhr.send(formData);}catch(e){reject(e);}
+      });
     }
     upload.then(function(){return db.ref(PRODUCTS_PATH+'/'+id).set(record);}).then(function(){
       products[id]=record;
-      if(old&&old.photoPath&&old.photoPath!==record.photoPath&&firebase.storage){firebase.storage().ref(old.photoPath).delete().catch(function(){});}
+      
       closeForm();addAuditSafe(old?'stock_product_edit':'stock_product_create',(old?'Изменена':'Создана')+' карточка склада: '+record.name);render();
     }).catch(function(e){
       console.error('Stock card/photo save failed:',e);
