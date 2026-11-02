@@ -1269,7 +1269,8 @@ function invalidateAnalyticsCache() {
 function getAnalyticsScopedData(targetStore, visibleKeys) {
     var visible = (visibleKeys || []).map(String).sort();
     var store = String(targetStore == null || targetStore === '' ? 'all' : targetStore);
-    var key = analyticsDataRevision + '|' + store + '|' + visible.join(',');
+    var recurringOrgKey = isSuperAdmin(currentUser) ? String(currentOrgFilter || 'mine') : String(currentUser.org || 'mine');
+    var key = analyticsDataRevision + '|' + store + '|' + recurringOrgKey + '|' + visible.join(',');
     if (analyticsScopedDataCache[key]) return analyticsScopedDataCache[key];
     var visibleLookup = Object.create(null);
     visible.forEach(function(id) { visibleLookup[id] = true; });
@@ -1285,7 +1286,6 @@ function getAnalyticsScopedData(targetStore, visibleKeys) {
             (store === 'all' || String(expense.storeId) === store) &&
             !isExpenseRecordDeleted(expense.id) && !isStoreDeleted(expense.storeId) && !isRecordBeforeStoreReset(expense);
     });
-    var recurringOrgKey = isSuperAdmin(currentUser) ? String(currentOrgFilter || 'mine') : String(currentUser.org || 'mine');
     var scopedRecurringExpenses = (recurringExpenses || []).filter(function(expense) {
         if (!expense) return false;
         if (String(expense.storeId) === 'all') return store === 'all' && String(expense.org || 'mine') === recurringOrgKey;
@@ -1548,6 +1548,7 @@ function saveSalePurchaseCost(saleId, rawValue) {
     var orgKey = typeof getStoreOrg === 'function' ? String(getStoreOrg(sale.storeId) || 'mine') : String(currentOrgFilter || 'mine');
     var record = { saleId:id, purchaseCost:amount, org:orgKey, storeId:String(sale.storeId || ''), saleDate:getRecordDateString(sale.timestamp || sale.createdAt), updatedAt:Date.now(), updatedBy:String(currentUser.username || currentUser.name || 'Костя'), _pendingSync:true };
     salePurchaseCosts[id] = record;
+    invalidateAnalyticsCache();
     saveSalePurchaseCostsLocal();
     salePurchaseCostStatus('Цена сохранена локально. Выполняется синхронизация…', false);
     refreshPurchaseCostViews();
@@ -1560,6 +1561,7 @@ function clearSalePurchaseCost(saleId) {
     if (!sale || !salePurchaseCosts[id]) return;
     if (!confirm('Убрать закупочную стоимость из этой продажи?')) return;
     salePurchaseCosts[id] = { saleId:id, org:String(salePurchaseCosts[id].org || currentOrgFilter || 'mine'), storeId:String(sale.storeId || ''), updatedAt:Date.now(), updatedBy:String(currentUser.username || 'Костя'), _deletePending:true };
+    invalidateAnalyticsCache();
     saveSalePurchaseCostsLocal();
     salePurchaseCostStatus('Удаление цены сохранено локально. Выполняется синхронизация…', false);
     refreshPurchaseCostViews();
@@ -8610,7 +8612,7 @@ function drawChart() {
             costOfGoods:0, estimatedCostOfGoods:0, costedSalesCount:0, estimatedCostSalesCount:0, costMissingCount:0, costMissingReturnsCount:0, estimatedCostReturnsCount:0, costDataComplete:true, costCalculationAvailable:true, netRevenue:0, grossProfit:null, netProfit:null, averageMarkup:null, grossMargin:null };
     }
     function sumRange(startDate, endDate) {
-        var summaryCacheKey = analyticsDataRevision + '|' + String(targetStore) + '|' + String(startDate) + '|' + String(endDate) + '|' + (isPurchaseCostOwner() ? 'cost' : 'nocost');
+        var summaryCacheKey = analyticsDataRevision + '|' + String(currentUser && currentUser.id || '') + '|' + String(targetStore) + '|' + visibleKeys.slice().sort().join(',') + '|' + String(startDate) + '|' + String(endDate) + '|' + (isPurchaseCostOwner() ? 'cost' : 'nocost');
         if (analyticsSummaryCache[summaryCacheKey]) return Object.assign({}, analyticsSummaryCache[summaryCacheKey]);
         var result = blankSummary();
         // Sales are counted on their original sale date. Returns/cancellations are separate signed events
