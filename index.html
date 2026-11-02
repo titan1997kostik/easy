@@ -1270,6 +1270,14 @@ function invalidateAnalyticsCache() {
     analyticsSellerRowsCache = Object.create(null);
     analyticsProductRowsCache = Object.create(null);
 }
+
+function forceRefreshAnalytics() {
+    if (!currentUser || !isWorkspacePageActive('analytics')) return;
+    invalidateAnalyticsCache();
+    drawChart();
+    var status = document.getElementById('analyticsForceRefreshStatus');
+    if (status) status.textContent = 'Готово · аналитика пересчитана по загруженным данным';
+}
 function getAnalyticsScopedData(targetStore, visibleKeys) {
     var visible = (visibleKeys || []).map(String).sort();
     var store = String(targetStore == null || targetStore === '' ? 'all' : targetStore);
@@ -9509,6 +9517,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       dashboard.appendChild(sellerBreakContainer);
     }
     move(original[7],analyticsPage); // chart
+     analyticsPage.insertAdjacentHTML('beforeend', '<div class="card" id="analyticsForceRefreshCard" style="margin-top:18px;text-align:center;"><button type="button" class="btn btn-secondary" onclick="forceRefreshAnalytics()" style="min-width:220px;">↻ Пересчитать аналитику</button><p id="analyticsForceRefreshStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-light);margin:9px 0 0;">Сбросить локальный кэш и пересчитать показатели по уже загруженным данным</p></div>');
     move(original[8],salesPage); // legacy tab strip (kept for compatibility, visually hidden)
     move(original[9],salesPage);move(original[10],expensePage);move(original[11],cashPage);move(original[12],breaksPage);move(original[13],auditPage);
     // These legacy tab panels were hidden for the old tab interface. They now
