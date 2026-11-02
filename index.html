@@ -1260,11 +1260,15 @@ var analyticsDataRevision = 0;
 var analyticsScopedDataCache = Object.create(null);
 var analyticsSummaryCache = Object.create(null);
 var analyticsMarkupBaselineCache = Object.create(null);
+var analyticsSellerRowsCache = Object.create(null);
+var analyticsProductRowsCache = Object.create(null);
 function invalidateAnalyticsCache() {
     analyticsDataRevision++;
     analyticsScopedDataCache = Object.create(null);
     analyticsSummaryCache = Object.create(null);
     analyticsMarkupBaselineCache = Object.create(null);
+    analyticsSellerRowsCache = Object.create(null);
+    analyticsProductRowsCache = Object.create(null);
 }
 function getAnalyticsScopedData(targetStore, visibleKeys) {
     var visible = (visibleKeys || []).map(String).sort();
@@ -8188,52 +8192,63 @@ function renderSellerAnalytics(startDate, endDate, targetStore) {
     var storeLabel = storeKey === 'all' ? 'Все доступные магазины' : (STORES[storeKey] || ('Магазин ' + storeKey));
     if (periodLabel) periodLabel.textContent = sellerMode ? ('Текущий календарный месяц · ' + storeLabel) : (String(startDate).split('-').reverse().join('.') + ' — ' + String(endDate).split('-').reverse().join('.') + ' · ' + storeLabel);
 
-    // Include currentUser in case their profile has not arrived in the users snapshot yet.
-    var staffSource = (users || []).slice();
-    if (sellerMode && !staffSource.some(function(user) { return user && String(user.id) === String(currentUser.id); })) staffSource.push(currentUser);
-    var staff = staffSource.filter(function(user) {
-        if (!user || user.role !== 'seller' || !isUserVisibleForUser(user)) return false;
-        if (deletedUserIds && deletedUserIds.map(String).indexOf(String(user.id)) !== -1) return false;
-        if (sellerMode) {
-            // Include sellers assigned to this store and sellers who had a confirmed shift here this month,
-            // even if their current assigned store changed during the month.
-            var assignedHere = user.store != null && String(user.store) === storeKey;
-            if (assignedHere) return isStoreVisibleForUser(storeKey);
-            return getEmployeeShiftSales(user, startDate, endDate, sales).some(function(sale) { return String(sale.storeId) === storeKey; });
-        }
-        return user.store == null || String(user.store) === 'all' || isStoreVisibleForUser(user.store);
-    }).slice().sort(function(a,b) { return String(a.name || a.username || '').localeCompare(String(b.name || b.username || ''), 'ru'); });
-
-    var rows = staff.map(function(employee) {
-        var employeeSales = getEmployeeShiftSales(employee, startDate, endDate, sales).filter(function(sale) {
-            return storeKey === 'all' || String(sale.storeId) === storeKey;
+    var sellerRowsCacheKey = analyticsDataRevision + '|' + String(currentUser && currentUser.id || '') + '|' + String(startDate) + '|' + String(endDate) + '|' + storeKey + '|' + (sellerMode ? 'seller' : 'admin');
+    var cachedSellerRows = analyticsSellerRowsCache[sellerRowsCacheKey];
+    var staff, rows;
+    if (cachedSellerRows) {
+        staff = cachedSellerRows.staff;
+        rows = cachedSellerRows.rows;
+    } else {
+        // Include currentUser in case their profile has not arrived in the users snapshot yet.
+        var staffSource = (users || []).slice();
+        if (sellerMode && !staffSource.some(function(user) { return user && String(user.id) === String(currentUser.id); })) staffSource.push(currentUser);
+        var staff = staffSource.filter(function(user) {
+            if (!user || user.role !== 'seller' || !isUserVisibleForUser(user)) return false;
+            if (deletedUserIds && deletedUserIds.map(String).indexOf(String(user.id)) !== -1) return false;
+            if (sellerMode) {
+                // Include sellers assigned to this store and sellers who had a confirmed shift here this month,
+                // even if their current assigned store changed during the month.
+                var assignedHere = user.store != null && String(user.store) === storeKey;
+                if (assignedHere) return isStoreVisibleForUser(storeKey);
+                return getEmployeeShiftSales(user, startDate, endDate, sales).some(function(sale) { return String(sale.storeId) === storeKey; });
+            }
+            return user.store == null || String(user.store) === 'all' || isStoreVisibleForUser(user.store);
+        }).slice().sort(function(a,b) { return String(a.name || a.username || '').localeCompare(String(b.name || b.username || ''), 'ru'); });
+    
+        var rows = staff.map(function(employee) {
+            var employeeSales = getEmployeeShiftSales(employee, startDate, endDate, sales).filter(function(sale) {
+                return storeKey === 'all' || String(sale.storeId) === storeKey;
+            });
+            var revenue = roundMoney(employeeSales.reduce(function(sum, sale) { return sum + (Number(sale.price) || 0); }, 0));
+            var checks = employeeSales.length;
+            var avgCheck = checks ? roundMoney(revenue / checks) : 0;
+            var storesSold = {};
+            employeeSales.forEach(function(sale) { storesSold[String(sale.storeId)] = true; });
+            var storeNames = Object.keys(storesSold).map(function(key) { return STORES[key] || key; });
+            var employeeStore = userStoreLabel(employee, storeNames);
+            var periodStartMs = parseTimestampMs(String(startDate) + 'T00:00:00');
+            var periodEndMs = parseTimestampMs(String(endDate) + 'T23:59:59.999');
+            var employeeShiftRecords = getSalaryReportShiftsForUser(employee).filter(function(shift) {
+                var shiftDate = getRecordDateString(shift.endTime);
+                return shiftDate >= String(startDate) && shiftDate <= String(endDate) &&
+                    (storeKey === 'all' || String(shift.storeId) === storeKey) &&
+                    isStoreVisibleForUser(shift.storeId) && !isStoreDeleted(shift.storeId);
+            });
+            var shiftCount = employeeShiftRecords.length;
+            var salary = roundMoney(employeeShiftRecords.reduce(function(sum, shift) {
+                var key = salaryLedgerKey(shift.shiftId);
+                var ledger = salaryLedger && salaryLedger[key];
+                var amount = ledger && ledger.amount !== undefined && ledger.amount !== null && isFinite(Number(ledger.amount))
+                    ? Number(ledger.amount) : salaryAmountForShift(employee, shift).amount;
+                return sum + (Number(amount) || 0);
+            }, 0));
+            return {employee:employee, name:String(employee.name || employee.username || 'Без имени'), store:employeeStore,
+                revenue:revenue, salary:salary, avgCheck:avgCheck, checks:checks, shifts:shiftCount};
         });
-        var revenue = roundMoney(employeeSales.reduce(function(sum, sale) { return sum + (Number(sale.price) || 0); }, 0));
-        var checks = employeeSales.length;
-        var avgCheck = checks ? roundMoney(revenue / checks) : 0;
-        var storesSold = {};
-        employeeSales.forEach(function(sale) { storesSold[String(sale.storeId)] = true; });
-        var storeNames = Object.keys(storesSold).map(function(key) { return STORES[key] || key; });
-        var employeeStore = userStoreLabel(employee, storeNames);
-        var periodStartMs = parseTimestampMs(String(startDate) + 'T00:00:00');
-        var periodEndMs = parseTimestampMs(String(endDate) + 'T23:59:59.999');
-        var employeeShiftRecords = getSalaryReportShiftsForUser(employee).filter(function(shift) {
-            var shiftDate = getRecordDateString(shift.endTime);
-            return shiftDate >= String(startDate) && shiftDate <= String(endDate) &&
-                (storeKey === 'all' || String(shift.storeId) === storeKey) &&
-                isStoreVisibleForUser(shift.storeId) && !isStoreDeleted(shift.storeId);
-        });
-        var shiftCount = employeeShiftRecords.length;
-        var salary = roundMoney(employeeShiftRecords.reduce(function(sum, shift) {
-            var key = salaryLedgerKey(shift.shiftId);
-            var ledger = salaryLedger && salaryLedger[key];
-            var amount = ledger && ledger.amount !== undefined && ledger.amount !== null && isFinite(Number(ledger.amount))
-                ? Number(ledger.amount) : salaryAmountForShift(employee, shift).amount;
-            return sum + (Number(amount) || 0);
-        }, 0));
-        return {employee:employee, name:String(employee.name || employee.username || 'Без имени'), store:employeeStore,
-            revenue:revenue, salary:salary, avgCheck:avgCheck, checks:checks, shifts:shiftCount};
-    });
+    
+    
+        analyticsSellerRowsCache[sellerRowsCacheKey] = { staff:staff, rows:rows };
+    }
 
     function userStoreLabel(employee, sellingStoreNames) {
         if (sellingStoreNames && sellingStoreNames.length) return sellingStoreNames.join(', ');
@@ -8319,53 +8334,64 @@ function renderBestSellingProducts(startDate, endDate, targetStore, isSeller) {
         ? 'Топ ваших товарных позиций за текущий месяц. Учитываются только продажи, совершённые в ваших зарегистрированных сменах.'
         : 'Рейтинг товарных позиций из каталога по выбранному периоду и магазину. Возвращённые и удалённые продажи не учитываются.';
 
-    var products = getVisibleProductCatalog(true).filter(function(item) { return item && String(item.name || '').trim(); });
-    var productsById = {};
-    var counts = {};
-    function emptyCount() { return {units:0, revenue:0, male:0, female:0}; }
-    products.forEach(function(item) { productsById[String(item.id)] = item; counts[String(item.id)] = emptyCount(); });
-    var visibleKeys = (typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys() : Object.keys(STORES || {})).map(String);
-    var sourceSales;
-    if (isSeller) {
-        sourceSales = typeof getEmployeeShiftSales === 'function'
-            ? getEmployeeShiftSales(currentUser, startDate, endDate, sales)
-            : [];
+    var productRowsCacheKey = analyticsDataRevision + '|' + String(currentUser && currentUser.id || '') + '|' + String(startDate) + '|' + String(endDate) + '|' + selectedStore + '|' + (isSeller ? 'seller' : 'admin');
+    var cachedProductRows = analyticsProductRowsCache[productRowsCacheKey];
+    var rows, unmatched, sourceSales;
+    if (cachedProductRows) {
+        rows = cachedProductRows.rows;
+        unmatched = cachedProductRows.unmatched;
+        sourceSales = cachedProductRows.sourceSales;
     } else {
-        sourceSales = (sales || []).filter(function(sale) {
-            if (!sale || isSaleRecordDeleted(sale.id) || isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale) || sale.returned) return false;
-            var store = String(sale.storeId || '');
-            if (visibleKeys.indexOf(store) === -1) return false;
-            if (selectedStore !== 'all' && store !== selectedStore) return false;
-            var date = getRecordDateString(sale.timestamp || sale.createdAt);
-            if (!date || date < String(startDate) || date > String(endDate)) return false;
-            return true;
-        });
-    }
-    var unmatched = 0;
-    sourceSales.forEach(function(sale) {
-        if (!sale || sale.returned || isSaleRecordDeleted(sale.id) || isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale)) return;
-        if (!isSeller) {
-            var date = getRecordDateString(sale.timestamp || sale.createdAt);
-            if (!date || date < String(startDate) || date > String(endDate)) return;
+        var products = getVisibleProductCatalog(true).filter(function(item) { return item && String(item.name || '').trim(); });
+        var productsById = {};
+        var counts = {};
+        function emptyCount() { return {units:0, revenue:0, male:0, female:0}; }
+        products.forEach(function(item) { productsById[String(item.id)] = item; counts[String(item.id)] = emptyCount(); });
+        var visibleKeys = (typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys() : Object.keys(STORES || {})).map(String);
+        var sourceSales;
+        if (isSeller) {
+            sourceSales = typeof getEmployeeShiftSales === 'function'
+                ? getEmployeeShiftSales(currentUser, startDate, endDate, sales)
+                : [];
+        } else {
+            sourceSales = (sales || []).filter(function(sale) {
+                if (!sale || isSaleRecordDeleted(sale.id) || isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale) || sale.returned) return false;
+                var store = String(sale.storeId || '');
+                if (visibleKeys.indexOf(store) === -1) return false;
+                if (selectedStore !== 'all' && store !== selectedStore) return false;
+                var date = getRecordDateString(sale.timestamp || sale.createdAt);
+                if (!date || date < String(startDate) || date > String(endDate)) return false;
+                return true;
+            });
         }
-        var product = resolveSaleProduct(sale, productsById, products);
-        if (!product) { unmatched++; return; }
-        var id = String(product.id);
-        if (!counts[id]) counts[id] = emptyCount();
-        var quantity = Number(sale.quantity);
-        if (!isFinite(quantity) || quantity <= 0) quantity = 1;
-        var price = Number(sale.price) || 0;
-        var gender = String(sale.gender || sale.itemGender || sale.productGender || '').trim().toUpperCase();
-        var bucket = (gender === 'M' || gender === 'MALE' || gender === 'М' || gender === 'МУЖСКАЯ' || gender === 'МУЖСКОЙ') ? 'male'
-            : (gender === 'F' || gender === 'FEMALE' || gender === 'Ж' || gender === 'ЖЕНСКАЯ' || gender === 'ЖЕНСКИЙ') ? 'female' : null;
-        counts[id].units += quantity;
-        counts[id].revenue += price;
-        if (bucket) counts[id][bucket] += quantity;
-    });
-    var rows = products.map(function(item) {
-        var c = counts[String(item.id)] || emptyCount();
-        return {id:String(item.id), name:String(item.name || ''), archived:item.active === false, units:c.units, revenue:roundMoney(c.revenue), male:c.male, female:c.female};
-    }).filter(function(row) { return row.units > 0; });
+        var unmatched = 0;
+        sourceSales.forEach(function(sale) {
+            if (!sale || sale.returned || isSaleRecordDeleted(sale.id) || isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale)) return;
+            if (!isSeller) {
+                var date = getRecordDateString(sale.timestamp || sale.createdAt);
+                if (!date || date < String(startDate) || date > String(endDate)) return;
+            }
+            var product = resolveSaleProduct(sale, productsById, products);
+            if (!product) { unmatched++; return; }
+            var id = String(product.id);
+            if (!counts[id]) counts[id] = emptyCount();
+            var quantity = Number(sale.quantity);
+            if (!isFinite(quantity) || quantity <= 0) quantity = 1;
+            var price = Number(sale.price) || 0;
+            var gender = String(sale.gender || sale.itemGender || sale.productGender || '').trim().toUpperCase();
+            var bucket = (gender === 'M' || gender === 'MALE' || gender === 'М' || gender === 'МУЖСКАЯ' || gender === 'МУЖСКОЙ') ? 'male'
+                : (gender === 'F' || gender === 'FEMALE' || gender === 'Ж' || gender === 'ЖЕНСКАЯ' || gender === 'ЖЕНСКИЙ') ? 'female' : null;
+            counts[id].units += quantity;
+            counts[id].revenue += price;
+            if (bucket) counts[id][bucket] += quantity;
+        });
+        var rows = products.map(function(item) {
+            var c = counts[String(item.id)] || emptyCount();
+            return {id:String(item.id), name:String(item.name || ''), archived:item.active === false, units:c.units, revenue:roundMoney(c.revenue), male:c.male, female:c.female};
+        }).filter(function(row) { return row.units > 0; });
+    
+        analyticsProductRowsCache[productRowsCacheKey] = { rows:rows, unmatched:unmatched, sourceSales:sourceSales };
+    }
     var metric = metricEl && metricEl.value === 'revenue' ? 'revenue' : 'units';
     rows.sort(function(a,b) { return b[metric] - a[metric] || b.units - a.units || a.name.localeCompare(b.name, 'ru'); });
     var top = rows.slice(0, 10);
