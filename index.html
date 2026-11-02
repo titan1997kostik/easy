@@ -6388,7 +6388,12 @@ function renderSalaryManagement() {
             '<td><input type="number" value="' + base + '" style="width:80px;" onchange="updateSalaryField(\'' + u.id + '\', \'salaryBase\', this.value)"></td>' +
             '<td>' + customText + ' <button class="btn btn-secondary" style="padding:2px 6px;font-size:11px;margin-left:4px;" onclick="openCustomRateEditor(\'' + u.id + '\')">Изменить</button></td>' +
             '<td><button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="openPaymentRateEditor(\'' + u.id + '\')">Оплата</button></td>' +
-            '<td><div style="display:flex;gap:4px;align-items:center;"><input aria-label="Акция до 1000 рублей" title="Акция до 1000 ₽" type="number" min="0" value="' + (Number(u.salaryPromotionUnder1000)||0) + '" style="width:65px;" onchange="updateSalaryField(\\'' + u.id + '\\', \'salaryPromotionUnder1000\\', this.value)"><input aria-label="Акция от 1000 рублей" title="Акция от 1000 ₽" type="number" min="0" value="' + (Number(u.salaryPromotionFrom1000)||0) + '" style="width:65px;" onchange="updateSalaryField(\\'' + u.id + '\\', \'salaryPromotionFrom1000\\', this.value)"></div></td>';
+            '<td><div style="display:flex;gap:4px;align-items:center;"><input aria-label="Акция до 1000 рублей" title="Акция до 1000 ₽" data-salary-field="salaryPromotionUnder1000" type="number" min="0" value="' + (Number(u.salaryPromotionUnder1000)||0) + '" style="width:65px;"><input aria-label="Акция от 1000 рублей" title="Акция от 1000 ₽" data-salary-field="salaryPromotionFrom1000" type="number" min="0" value="' + (Number(u.salaryPromotionFrom1000)||0) + '" style="width:65px;"></div></td>'
+        tr.querySelectorAll('[data-salary-field]').forEach(function(input) {
+            input.addEventListener('change', function() {
+                updateSalaryField(String(u.id), input.getAttribute('data-salary-field'), input.value);
+            });
+        });
         tbody.appendChild(tr);
     });
     
