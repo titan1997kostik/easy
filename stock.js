@@ -131,7 +131,7 @@
       html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+(p.photoUrl?'<img src="'+esc(p.photoUrl)+'" alt="" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color,sizeLabel(shownSizes)].filter(Boolean).join(' · '))+'</div><div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div>'+costHtml+'<div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. по всем магазинам':' шт.')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;">';
       if(canEditCard(p)) html+='<button class="btn btn-secondary" type="button" onclick="stockOpenForm(\''+esc(p.id)+'\')">Изменить</button>';
       if(isAdmin() && p.status==='pending') html+='<button class="btn btn-success" type="button" onclick="stockReview(\''+esc(p.id)+'\')">Проверить</button>';
-      if(isAdmin() && p.status==='active') html+='<button class="btn btn-secondary" type="button" onclick="stockAdjust(\''+esc(p.id)+'\')">Остатки</button>';
+      if(isAdmin() && p.status==='active') html+='<button class="btn btn-secondary" type="button" onclick="stockAdjust(\''+esc(p.id)+'\')">Размеры и остаток</button>';
       if(isSeller() && p.status==='active') html+='<button class="btn btn-secondary" type="button" onclick="stockStoreSizes(\''+esc(p.id)+'\')">Размеры и количество</button>';
       if(isAdmin()) html+='<button class="btn btn-warning" type="button" onclick="stockDelete(\''+esc(p.id)+'\')">Удалить</button>';
       html+='</div></div>';
@@ -304,21 +304,25 @@
     db.ref(PRODUCTS_PATH+'/'+id).update({direction:direction,status:'active',reviewedAt:Date.now(),reviewedById:String(user().id),updatedAt:Date.now()}).then(function(){addAuditSafe('stock_product_approve','Проверена и опубликована карточка: '+p.name+' ('+direction+')');});
   }
   function adjust(id,sid){
-    if(!isAdmin() || !canUse())return;
-    var p=products[id]; if(!p)return;
-    var store=sid||prompt('Введите ID магазина для корректировки остатка:\n'+visibleStoreIds().map(function(k){return k+': '+(STORES[k]||k);}).join('\n'),visibleStoreIds()[0]||'');
-    if(!store || visibleStoreIds().indexOf(String(store))<0)return;
-    var before=qty(id,store), kind=prompt('Тип операции: поступление, списание или корректировка.','поступление');
-    if(kind===null)return;
-    kind=norm(kind); var type=/^пост/.test(kind)?'receipt':/^спис/.test(kind)?'writeoff':/^кор/.test(kind)?'adjustment':'';
-    if(!type){alert('Введите: поступление, списание или корректировка.');return;}
-    var raw=prompt('Текущий остаток: '+before+'. Введите '+(type==='adjustment'?'новое количество':'количество операции')+':',type==='adjustment'?String(before):'1');
-    if(raw===null)return; var amount=Number(raw); if(!Number.isInteger(amount)||amount<0 || (type!=='adjustment'&&amount<1)){alert('Введите целое количество. Для поступления и списания минимум 1.');return;}
-    var after=type==='receipt'?before+amount:type==='writeoff'?before-amount:amount; if(after<0){alert('Нельзя списать больше, чем есть на остатке.');return;}
-    var delta=after-before, mid=uid('sm'), now=Date.now(), patch={};
-    patch[BALANCES_PATH+'/'+store+'/'+id]={quantity:after,updatedAt:now};
-    patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:id,storeId:String(store),type:type,quantityDelta:delta,before:before,after:after,note:type==='receipt'?'Поступление':type==='writeoff'?'Списание':'Корректировка остатка',createdAt:now,createdById:String(user().id),createdByName:user().name||''};
-    db.ref().update(patch).then(function(){addAuditSafe('stock_adjustment','Остаток «'+p.name+'» в магазине «'+(STORES[store]||store)+'»: '+before+' → '+after);}).catch(function(e){alert('Не удалось изменить остаток: '+e.message);});
+    if(!isAdmin()||!canUse())return;
+    var p=products[id];if(!p)return;
+    var stores=visibleStoreIds();if(!stores.length){alert('Сначала добавьте магазины.');return;}
+    var menu=stores.map(function(k,n){return (n+1)+'. '+(STORES[k]||k)+' ['+k+']';}).join('\n');
+    var chosen=prompt('Выберите магазин — введите его номер или ID:\n'+menu,sid||'1');
+    if(chosen===null)return;
+    var store=String(chosen).trim();
+    if(/^\d+$/.test(store)&&Number(store)>=1&&Number(store)<=stores.length)store=stores[Number(store)-1];
+    if(stores.indexOf(store)<0){alert('Магазин не найден.');return;}
+    var current=balances[String(store)]&&balances[String(store)][String(id)]||{};
+    var defaults=Array.isArray(current.sizes)?current.sizes:(p.sizes&&p.sizes.length?p.sizes:(p.size?[p.size]:[]));
+    var raw=prompt('Размеры и остаток для магазина «'+(STORES[store]||store)+'». Введите размеры через запятую. Каждый размер — одна штука, повторения учитываются. Например: 36, 37, 38, 38, 39',defaults.join(', '));
+    if(raw===null)return;
+    var sizes=raw.split(',').map(function(x){return x.trim().toUpperCase();}).filter(Boolean);
+    if(sizes.some(function(x){return !/^(2[6-9]|[3-4][0-9]|5[0-4]|XXS|XS|S|M|L|XL|2XL|3XL|4XL|5XL)$/.test(x);})){alert('Допустимы цифры 26–54 и буквенные размеры от XXS до 5XL.');return;}
+    var before=qty(id,store),after=sizes.length,now=Date.now(),patch={};
+    patch[BALANCES_PATH+'/'+store+'/'+id]={quantity:after,sizes:sizes,updatedAt:now};
+    if(after!==before){var mid=uid('sm');patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:id,productName:p.name,storeId:String(store),type:after>before?'receipt':'adjustment',quantityDelta:after-before,before:before,after:after,note:'Пересчёт остатка по размерам',createdAt:now,createdById:String(user().id),createdByName:user().name||''};}
+    db.ref().update(patch).then(function(){addAuditSafe('stock_sizes_adjustment','Размеры и остаток «'+p.name+'» в магазине «'+(STORES[store]||store)+'»: '+before+' → '+after);render();}).catch(function(e){alert('Не удалось сохранить размеры и остаток: '+e.message);});
   }
   function storeSizes(id){
     if(!isSeller()||!canUse())return;var p=products[id];if(!p||!sellerCanSee(p)||p.status!=='active')return;
