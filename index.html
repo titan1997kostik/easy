@@ -4740,6 +4740,7 @@ function saveSale() {
         if (adminDateInput) adminDateInput.value = '';
         saveAllToLocal();
         renderAll();
+        if (window.stockRefresh) window.stockRefresh();
         if (typeof drawChart === 'function') drawChart();
         if (typeof renderPurchasePlan === 'function' && currentUser && currentUser.role === 'admin') renderPurchasePlan();
         saleSaveInProgress = false;
@@ -4908,7 +4909,7 @@ function returnSale(id) {
                 if (!Array.isArray(returnEvents)) returnEvents = [];
                 returnEvents.push(event);
                 addAudit(nextReturned ? 'return' : 'return_cancel', (nextReturned ? 'Оформлен возврат: ' : 'Отмена возврата: ') + String(sale.name || sale.productName || 'Товар') + ' (' + (Number(sale.price)||0) + ' руб.)');
-                saveAllToLocal(); renderAll(); if (typeof drawChart === 'function') drawChart();
+                saveAllToLocal(); renderAll(); if (window.stockRefresh) window.stockRefresh(); if (typeof drawChart === 'function') drawChart();
             });
         }).catch(function(err) {
             if (err && err.remoteSale) {
@@ -10793,6 +10794,6 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
 </style>
 
 <script src="backup-tools.js"></script>
-<script src="stock.js?v=36"></script>
+<script src="stock.js?v=37"></script>
 </body>
 </html>
