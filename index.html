@@ -1595,6 +1595,7 @@ function countSalesMissingPurchaseCostForVisibleOrg() {
     return (sales || []).filter(function(sale) {
         return sale && sale.id && !isSaleRecordDeleted(sale.id) && !isStoreDeleted(sale.storeId) &&
             !isRecordBeforeStoreReset(sale) && visibleKeys.indexOf(String(sale.storeId)) !== -1 &&
+            !(sale.stockProductId && sale.stockPurchaseCost !== undefined && sale.stockPurchaseCost !== null && sale.stockPurchaseCost !== '' && isFinite(Number(sale.stockPurchaseCost)) && Number(sale.stockPurchaseCost) >= 0) &&
             !purchaseCostIsSet(salePurchaseCosts[String(sale.id)]);
     }).length;
 }
@@ -1684,8 +1685,9 @@ function renderPurchaseCosts() {
         var costCell = document.createElement('td'); costCell.setAttribute('data-label', 'Закупка за эту продажу'); costCell.style.minWidth = '150px';
         var purchaseCostsReadOnly = typeof window.isVovaPrimaryOrgReadOnly === 'function' && window.isVovaPrimaryOrgReadOnly();
         var input = document.createElement('input'); input.type = 'number'; input.min = '0'; input.step = '0.01'; input.inputMode = 'decimal'; input.placeholder = 'Закупка, ₽'; input.value = hasCost ? String(cost) : ''; input.setAttribute('aria-label','Закупочная стоимость для ' + itemName); input.style.cssText = 'width:140px;min-width:140px;'; input.id = 'salePurchaseCostInput_' + id.replace(/[^a-zA-Z0-9_-]/g,'_');
-        input.disabled = purchaseCostsReadOnly;
-        if (purchaseCostsReadOnly) input.title = 'Только просмотр: редактирование в Организации 1 для Вовы отключено.';
+        input.disabled = purchaseCostsReadOnly || stockCostKnown;
+        if (stockCostKnown) input.title = 'Себестоимость автоматически взята из карточки склада.';
+        else if (purchaseCostsReadOnly) input.title = 'Только просмотр: редактирование в Организации 1 для Вовы отключено.';
         costCell.appendChild(input);
         if (!hasCost) {
             var estimatedCost = estimatePurchaseCostForSale(sale, estimateBaseline);
@@ -1698,7 +1700,10 @@ function renderPurchaseCosts() {
         var estimatedForProfit = !hasCost ? estimatePurchaseCostForSale(sale, estimateBaseline) : null;
         row.appendChild(cell(hasCost ? (sale.returned ? '— (возврат)' : formatRubles((Number(sale.price) || 0) - cost)) : (sale.returned || estimatedForProfit === null ? '—' : '≈ ' + formatRubles((Number(sale.price) || 0) - estimatedForProfit)), 'Разница до расходов'));
         var actionCell = document.createElement('td'); actionCell.setAttribute('data-label', 'Действие'); actionCell.style.whiteSpace = 'nowrap';
-        if (purchaseCostsReadOnly) {
+        if (stockCostKnown) {
+            actionCell.textContent = 'Из карточки склада';
+            actionCell.style.cssText = 'white-space:normal;color:var(--text-light);font-size:12px;';
+        } else if (purchaseCostsReadOnly) {
             actionCell.textContent = 'Только просмотр';
             actionCell.style.cssText = 'white-space:normal;color:var(--text-light);font-size:12px;';
         } else {
@@ -4649,8 +4654,8 @@ function saveSale() {
         name: historyDisplayName,
         itemDetails: name,
         productId: String(chosenProduct.id),
-        productName: catalogProductName,
-        catalogProductName: catalogProductName,
+        productName: stockSaleEnabled ? stockCardName : catalogProductName,
+        catalogProductName: stockSaleEnabled ? stockCardName : catalogProductName,
         productOrg: String(chosenProduct.org || getProductCatalogOrg()),
         gender: stockSaleEnabled ? '' : selectedSaleGender,
         genderLabel: stockSaleEnabled ? '' : (selectedSaleGender === 'M' ? 'Мужская (М)' : 'Женская (Ж)'),
@@ -10799,6 +10804,6 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
 </style>
 
 <script src="backup-tools.js"></script>
-<script src="stock.js?v=39"></script>
+<script src="stock.js?v=40"></script>
 </body>
 </html>
