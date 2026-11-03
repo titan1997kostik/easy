@@ -56,6 +56,11 @@
   function canEditCard(p){ return isAdmin() && !!p; }
   function addAuditSafe(action,details){ try { if(typeof addAudit === 'function') addAudit(action,details); } catch(e) { console.warn(e); } }
   function setStatus(msg,isError){ var el=document.getElementById('stockStatus'); if(el){el.textContent=msg || '';el.style.color=isError?'#b42318':'var(--text-light)';} }
+  function cardPhotoUrl(url){
+    url=String(url||'');
+    // Deliver only a thumbnail close to the 76px card image size; keep the original URL in Firebase.
+    return url.replace('/image/upload/','/image/upload/c_fill,w_240,h_240,q_auto:low,f_auto/');
+  }
   function initPage(){
     var shell=document.getElementById('workspaceShell');
     var content=shell && shell.querySelector('.workspace-content');
@@ -161,7 +166,7 @@
       var sizesHtml=shownSizes.length?'<div style="font-size:13px;margin-top:6px;"><span style="color:var(--text-light);">Размеры:</span> <b>'+esc(sizeLabel(shownSizes))+'</b></div>':'<div style="font-size:12px;color:var(--text-light);margin-top:6px;">Размеры пока не добавлены</div>';
       var state=p.status==='pending'?'Ожидает проверки':p.status==='active'?'Опубликован':'Архив';
       var costHtml=isAdmin()&&p.purchaseCost!=null?'<div style="font-size:13px;margin-top:5px;">Закупка: <b>'+esc(p.purchaseCost)+'</b></div>':'';
-      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+(p.photoUrl?'<img src="'+esc(p.photoUrl)+'" alt="" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color].filter(Boolean).join(' · '))+'</div>'+sizesHtml+'<div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div>'+costHtml+'<div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. в этом магазине':' шт.')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+(p.photoUrl?'<img src="'+esc(cardPhotoUrl(p.photoUrl))+'" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color].filter(Boolean).join(' · '))+'</div>'+sizesHtml+'<div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div>'+costHtml+'<div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. в этом магазине':' шт.')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;">';
       if(canEditCard(p)) html+='<button class="btn btn-secondary" type="button" onclick="stockOpenForm(\''+esc(p.id)+'\')">Изменить</button>';
       if(isAdmin() && p.status==='pending') html+='<button class="btn btn-success" type="button" onclick="stockReview(\''+esc(p.id)+'\')">Проверить</button>';
       if(isSeller() && p.status==='active') html+='<button class="btn btn-secondary" type="button" onclick="stockAddSizes(\''+esc(p.id)+'\')">＋ Добавить размер</button>';
