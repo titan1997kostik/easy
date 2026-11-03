@@ -166,7 +166,7 @@
       var sizesHtml=shownSizes.length?'<div style="font-size:13px;margin-top:6px;"><span style="color:var(--text-light);">Размеры:</span> <b>'+esc(sizeLabel(shownSizes))+'</b></div>':'<div style="font-size:12px;color:var(--text-light);margin-top:6px;">Размеры пока не добавлены</div>';
       var state=p.status==='pending'?'Ожидает проверки':p.status==='active'?'Опубликован':'Архив';
       var costHtml=isAdmin()&&p.purchaseCost!=null?'<div style="font-size:13px;margin-top:5px;">Закупка: <b>'+esc(p.purchaseCost)+'</b></div>':'';
-      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">'+(p.photoUrl?'<img src="'+esc(cardPhotoUrl(p.photoUrl))+'" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color].filter(Boolean).join(' · '))+'</div>'+sizesHtml+'<div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div>'+costHtml+'<div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. в этом магазине':' шт.')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div '+(isSeller()&&p.status==='active'?'data-stock-photo="'+esc(p.id)+'" title="Нажмите, чтобы заменить фото"':'')+' style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;'+(isSeller()&&p.status==='active'?'cursor:pointer;outline:1px dashed var(--primary);':'')+'">'+(p.photoUrl?'<img src="'+esc(cardPhotoUrl(p.photoUrl))+'" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b '+(isSeller()&&p.status==='active'?'data-stock-rename="'+esc(p.id)+'" title="Нажмите, чтобы изменить название" style="cursor:pointer;border-bottom:1px dashed var(--primary);"':'')+'>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color].filter(Boolean).join(' · '))+'</div>'+sizesHtml+'<div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div>'+costHtml+'<div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. в этом магазине':' шт.')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;">';
       if(canEditCard(p)) html+='<button class="btn btn-secondary" type="button" onclick="stockOpenForm(\''+esc(p.id)+'\')">Изменить</button>';
       if(isAdmin() && p.status==='pending') html+='<button class="btn btn-success" type="button" onclick="stockReview(\''+esc(p.id)+'\')">Проверить</button>';
       if(isSeller() && p.status==='active') html+='<button class="btn btn-secondary" type="button" onclick="stockAddSizes(\''+esc(p.id)+'\')">＋ Добавить размер</button>';
@@ -254,6 +254,8 @@
     if(manualMergeButton) manualMergeButton.addEventListener('click',function(){if(manualMergeSource&&manualMergeTarget&&manualMergeSource!==manualMergeTarget)merge(manualMergeSource,manualMergeTarget);});
     var dupToggle=root.querySelector('#stockDuplicatesToggle');
     if(dupToggle) dupToggle.addEventListener('click',function(){duplicatesExpanded=!duplicatesExpanded;render();});
+    root.querySelectorAll('[data-stock-rename]').forEach(function(el){el.addEventListener('click',function(){renameProduct(el.getAttribute('data-stock-rename'));});});
+    root.querySelectorAll('[data-stock-photo]').forEach(function(el){el.addEventListener('click',function(){chooseProductPhoto(el.getAttribute('data-stock-photo'));});});
     root.querySelectorAll('[data-stock-merge-source]').forEach(function(b){b.addEventListener('click',function(){merge(b.getAttribute('data-stock-merge-source'),b.getAttribute('data-stock-merge-target'));});});
   }
   function openForm(id){
@@ -532,7 +534,51 @@
     }).catch(function(e){alert('Не удалось объединить карточки: '+e.message);});
   }
   function openMergeDialog(id,targetId){merge(id,targetId);}
-  function setSearch(v){searchText=v||'';render();}
+  function renameProduct(id){
+    if(!isSeller())return;
+    var p=products[String(id)];
+    if(!p||!sellerCanSee(p)||p.status!=='active')return;
+    var next=window.prompt('Новое наименование товара:',String(p.name||''));
+    if(next===null)return;
+    next=next.trim();
+    if(!next){alert('Наименование не может быть пустым.');return;}
+    if(next.length>180){alert('Наименование должно быть не длиннее 180 символов.');return;}
+    if(next===String(p.name||''))return;
+    var patch={};patch[PRODUCTS_PATH+'/'+id+'/name']=next;patch[PRODUCTS_PATH+'/'+id+'/updatedAt']=Date.now();patch[PRODUCTS_PATH+'/'+id+'/updatedById']=String(user().id);
+    db.ref().update(patch).then(function(){p.name=next;p.updatedAt=Date.now();addAuditSafe('stock_product_rename','Продавец изменил наименование товара: '+next);render();}).catch(function(e){alert('Не удалось изменить наименование: '+(e&&e.message||e));});
+  }
+  function chooseProductPhoto(id){
+    if(!isSeller())return;
+    var p=products[String(id)];
+    if(!p||!sellerCanSee(p)||p.status!=='active')return;
+    var input=document.createElement('input');input.type='file';input.accept='image/*';input.capture='environment';input.style.display='none';
+    document.body.appendChild(input);
+    input.addEventListener('change',function(){
+      var file=input.files&&input.files[0];input.remove();if(!file)return;
+      if(!/^image\//i.test(file.type)){alert('Выберите файл изображения.');return;}
+      if(file.size>8*1024*1024){alert('Фото должно быть не больше 8 МБ.');return;}
+      setStatus('Загружаем новую фотографию…');
+      var data=new FormData();data.append('file',file);data.append('upload_preset','easy_stock_photos');data.append('folder','stock-products/'+String(p.org||'org').replace(/[^a-zA-Z0-9_-]/g,'_'));
+      var xhr=new XMLHttpRequest();xhr.open('POST','https://api.cloudinary.com/v1_1/gnesaxoh/image/upload',true);xhr.timeout=45000;
+      xhr.onload=function(){
+        var response={};try{response=JSON.parse(xhr.responseText||'{}');}catch(e){}
+        if(xhr.status<200||xhr.status>=300||!response.secure_url){setStatus('');alert(response.error&&response.error.message||'Не удалось загрузить фотографию.');return;}
+        var patch={};patch[PRODUCTS_PATH+'/'+id+'/photoUrl']=response.secure_url;patch[PRODUCTS_PATH+'/'+id+'/photoPublicId']=response.public_id||'';patch[PRODUCTS_PATH+'/'+id+'/updatedAt']=Date.now();patch[PRODUCTS_PATH+'/'+id+'/updatedById']=String(user().id);
+        db.ref().update(patch).then(function(){p.photoUrl=response.secure_url;p.photoPublicId=response.public_id||'';p.updatedAt=Date.now();addAuditSafe('stock_product_photo','Продавец обновил фото товара: '+(p.name||id));setStatus('Фотография обновлена.');render();}).catch(function(e){setStatus('');alert('Фото загружено, но не удалось сохранить карточку: '+(e&&e.message||e));});
+      };
+      xhr.onerror=function(){setStatus('');alert('Не удалось связаться с Cloudinary. Проверьте интернет.');};
+      xhr.ontimeout=function(){setStatus('');alert('Загрузка фото не завершилась за 45 секунд.');};
+      xhr.send(data);
+    },{once:true});
+    input.click();
+  }
+  function setSearch(v){
+    var input=document.getElementById('stockSearch'),start=null,end=null;
+    if(input){try{start=input.selectionStart;end=input.selectionEnd;}catch(e){}}
+    searchText=v||'';render();
+    var next=document.getElementById('stockSearch');
+    if(next){next.focus();try{if(start!==null)next.setSelectionRange(start,end);}catch(e){}}
+  }
   function setFilter(v){activeFilter=v||'all';render();}
   function getSaleOptions(sid){
     sid=String(sid||'');if(!canUse()||!sid||visibleStoreIds().map(String).indexOf(sid)===-1||(isSeller()&&sid!==storeId()))return [];
