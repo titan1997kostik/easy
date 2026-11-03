@@ -3,8 +3,9 @@
  * Firebase API/database responses are deliberately NOT cached; only the app shell and static assets are.
  */
 'use strict';
-var APP_CACHE = 'easy-app-sync-shell-v34';
-var RUNTIME_CACHE = 'easy-app-sync-static-v34';
+var APP_CACHE = 'easy-app-sync-shell-v35';
+var RUNTIME_CACHE = 'easy-app-sync-static-v35';
+var IMAGE_CACHE = 'easy-app-sync-product-images-v1';
 
 self.addEventListener('install', function(event) {
   event.waitUntil(
@@ -42,7 +43,8 @@ self.addEventListener('activate', function(event) {
     caches.keys().then(function(keys) {
       return Promise.all(keys.filter(function(key) {
         return (key.indexOf('easy-app-sync-shell-') === 0 && key !== APP_CACHE) ||
-               (key.indexOf('easy-app-sync-static-') === 0 && key !== RUNTIME_CACHE);
+               (key.indexOf('easy-app-sync-static-') === 0 && key !== RUNTIME_CACHE) ||
+               (key.indexOf('easy-app-sync-product-images-') === 0 && key !== IMAGE_CACHE);
       }).map(function(key) { return caches.delete(key); }));
     }).then(function() { return self.clients.claim(); })
   );
@@ -63,6 +65,40 @@ function cacheStaticResponse(request, response) {
   if (!response || (!response.ok && response.type !== 'opaque')) return Promise.resolve();
   return caches.open(RUNTIME_CACHE).then(function(cache) {
     return cache.put(request, response.clone()).catch(function() {});
+  });
+}
+
+function isProductImage(request, url) {
+  return request.method === 'GET' && request.destination === 'image' &&
+    url.hostname === 'res.cloudinary.com' &&
+    url.pathname.indexOf('/image/upload/') !== -1;
+}
+
+function trimProductImageCache(cache) {
+  return cache.keys().then(function(keys) {
+    var excess = keys.length - 300;
+    if (excess <= 0) return;
+    return Promise.all(keys.slice(0, excess).map(function(key) { return cache.delete(key); }));
+  });
+}
+
+function handleProductImage(request, event) {
+  return caches.open(IMAGE_CACHE).then(function(cache) {
+    return cache.match(request).then(function(cached) {
+      var refresh = fetch(request).then(function(response) {
+        if (response && response.ok && response.type !== 'opaque') {
+          return cache.put(request, response.clone()).then(function() {
+            return trimProductImageCache(cache);
+          }).then(function() { return response; });
+        }
+        return response;
+      });
+      if (cached) {
+        event.waitUntil(refresh.catch(function() {}));
+        return cached;
+      }
+      return refresh;
+    });
   });
 }
 
@@ -104,7 +140,7 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // Static scripts (Firebase SDK, MQTT library) are cached after being fetched online.
+  // Product thumbnails from Cloudinary use a dedicated bounded cache; Firebase data is untouched.\n  if (isProductImage(request, url)) {\n    event.respondWith(handleProductImage(request, event));\n    return;\n  }\n\n  // Static scripts (Firebase SDK, MQTT library) are cached after being fetched online.
   // This intentionally excludes firebaseio/database API requests and all dynamic writes.
   if (isCacheableStatic(request, url)) {
     event.respondWith(
