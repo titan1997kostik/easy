@@ -290,7 +290,7 @@
     if(!categoryNames.length){categorySelect.options[0].textContent='Список товаров пока пуст';categorySelect.disabled=true;}
     var grid=document.getElementById('stockSizeGrid'), selected=document.getElementById('stockSelectedSizes');
     var editStoreSelect=document.getElementById('stockEditStore');
-    if(editStoreSelect)editStoreSelect.addEventListener('change',function(){var balance=balances[String(this.value)]&&balances[String(this.value)][String(p.id)]||{};formSizes=Array.isArray(balance.sizes)?balance.sizes.map(String):[];drawSizes();});
+    if(editStoreSelect)editStoreSelect.addEventListener('change',function(){selectedStoreId=String(this.value||'');var balance=balances[selectedStoreId]&&balances[selectedStoreId][String(p.id)]||{};formSizes=Array.isArray(balance.sizes)?balance.sizes.map(String):[];drawSizes();});
     var sizeMode='numeric', letters=['XXS','XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
     function currentSizes(){return sizeMode==='numeric'?Array.from({length:30},function(_,i){return String(i+25);}):letters.slice();}
     function countSizes(){var counts={};formSizes.forEach(function(v){counts[v]=(counts[v]||0)+1;});return counts;}
@@ -345,7 +345,7 @@
       category:(document.getElementById('stockCategory').value||'').trim(),
       article:(document.getElementById('stockArticle').value||'').trim() || (old&&old.article) || ('ST-'+Date.now().toString(36).toUpperCase()),
       model:'',color:(document.getElementById('stockColor').value||'').trim(),
-      size:isSeller()&&old?(old.size||''):(formSizes.length?formSizes[0]:''),sizes:isSeller()&&old?(Array.isArray(old.sizes)?old.sizes.slice():(old.size?[old.size]:[])):(isAdmin()&&old?(Array.isArray(old.sizes)?old.sizes.slice():(old.size?[old.size]:[])):formSizes.slice()),
+      size:isSeller()&&old?(old.size||''):(isAdmin()&&old?(old.size||''):(formSizes.length?formSizes[0]:'')),sizes:isSeller()&&old?(Array.isArray(old.sizes)?old.sizes.slice():(old.size?[old.size]:[])):(isAdmin()&&old?(Array.isArray(old.sizes)?old.sizes.slice():(old.size?[old.size]:[])):formSizes.slice()),
       status:old?old.status:'pending',createdAt:old?old.createdAt:Date.now(),
       createdById:old?old.createdById:String(user().id),
       createdByName:old?old.createdByName:(user().name||user().username||''),
