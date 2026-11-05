@@ -4738,6 +4738,8 @@ function saveSale() {
         storeId: storeId,
         storeName: STORES[storeId],
         seller: currentUser.name,
+        recordedByRole: String(currentUser.role || ''),
+        recordedById: String(currentUser.id || ''),
         returned: false,
         timestamp: timestamp,
         createdAt: Date.now(),
@@ -4774,7 +4776,7 @@ function saveSale() {
         }
     }
 
-    if(stockSaleEnabled){var sp=document.getElementById('stockSaleProduct'),ss=document.getElementById('stockSaleSize'),stockProductId=sp?String(sp.value||''):'',stockSize=ss?String(ss.value||'').toUpperCase():'',stockQuantity=1;if(sp&&sp.dataset.storeId!==String(storeId)){refreshStockSaleProducts();alert('Магазин изменился. Выберите карточку склада и размер заново.');return;}var manualSizeInput=document.getElementById('stockSaleManualSize'),manualStockSize=ss&&ss.value==='__manual__'&&manualSizeInput?String(manualSizeInput.value||'').trim().toUpperCase():'';if(manualStockSize)stockSize=manualStockSize;if(!stockProductId||!stockSize||ss&&ss.value==='__manual__'&&!manualStockSize){alert('Выберите карточку склада и укажите размер.');return;}saleData.stockProductId=stockProductId;saleData.stockSize=stockSize;saleData.stockQuantity=1;saleData.stockStoreId=String(storeId);saleData.stockSale=true;}
+    if(stockSaleEnabled){var sp=document.getElementById('stockSaleProduct'),ss=document.getElementById('stockSaleSize'),stockProductId=sp?String(sp.value||''):'',stockSize=ss?String(ss.value||'').toUpperCase():'',stockQuantity=1;if(sp&&sp.dataset.storeId!==String(storeId)){refreshStockSaleProducts();alert('Магазин изменился. Выберите карточку склада и размер заново.');return;}var manualSizeInput=document.getElementById('stockSaleManualSize'),manualStockSize=ss&&ss.value==='__manual__'&&manualSizeInput?String(manualSizeInput.value||'').trim().toUpperCase():'';if(manualStockSize)stockSize=manualStockSize;if(!stockProductId||!stockSize||ss&&ss.value==='__manual__'&&!manualStockSize){alert('Выберите карточку склада и укажите размер.');return;}saleData.stockProductId=stockProductId;saleData.stockSize=stockSize;saleData.itemDetails=String(name||stockCardName)+' · размер '+stockSize;saleData.stockQuantity=1;saleData.stockStoreId=String(storeId);saleData.stockSale=true;}
 
     saleSaveInProgress = true;
     var saveSaleButton = document.getElementById('saveSaleButton');
@@ -9797,10 +9799,17 @@ function getStorePlanSalesMetrics(storeId, month) {
         if (String(sale.storeId || '') !== shopId) return false;
         var timestamp = parseTimestampMs(sale.timestamp || sale.createdAt);
         if (!timestamp || timestamp < startMs || timestamp > endMs) return false;
-        // Historical imports are store-level sales and have no seller shift to match.
-        // Include them in the store's monthly sales plan without assigning them to an employee.
-        if (sale.historicalImport || sale.historicalImportToday) return true;
-        // Regular sales count only when they fall inside a seller's recorded shift.
+        // Historical imports and administrator-entered sales are store-level records, not seller-shift records.
+        if (sale.historicalImport || sale.historicalImportToday || String(sale.recordedByRole || '') === 'admin') return true;
+        var recorderId = String(sale.recordedById || '');
+        var recorderName = String(sale.seller || sale.sellerName || '');
+        var enteredByAdmin = (users || []).some(function(person) {
+            if (!person || person.role !== 'admin') return false;
+            if (recorderId) return String(person.id || '') === recorderId;
+            return recorderName && (recorderName === String(person.name || '') || recorderName === String(person.username || ''));
+        });
+        if (enteredByAdmin) return true;
+        // Regular seller sales count only when they fall inside a seller's recorded shift.
         return employeeIntervals.some(function(group) {
             return saleBelongsToEmployeeShift(sale, group.employee, group.intervals);
         });
