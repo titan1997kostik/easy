@@ -393,8 +393,6 @@
     var d=prompt('Направление карточки: введите «Кроссы» или «Изи».','Кроссы'); if(!d)return;
     var direction=/^крос/i.test(d.trim())?'krossy':/^изи/i.test(d.trim())?'easy':'';
     if(!direction){alert('Введите «Кроссы» или «Изи».');return;}
-    var dup=possibleDuplicates(p,id);
-    if(dup.length && !confirm('Найдены возможные совпадения: '+dup.map(function(x){return x.name;}).join(', ')+'. Всё равно опубликовать отдельную карточку?'))return;
     db.ref(PRODUCTS_PATH+'/'+id).update({direction:direction,status:'active',reviewedAt:Date.now(),reviewedById:String(user().id),updatedAt:Date.now()}).then(function(){addAuditSafe('stock_product_approve','Проверена и опубликована карточка: '+p.name+' ('+direction+')');});
   }
   function adjust(id,sid){
