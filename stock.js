@@ -16,9 +16,7 @@
   var searchText = '';
   var editingId = '';
   var selectedPhoto = null;
-  var duplicatesExpanded = false;
-  var manualMergeSource = '';
-  var manualMergeTarget = '';
+  var mergeSelectingId = '';
   var formSizes = [];
   var refs = {};
 
@@ -108,15 +106,6 @@
       },function(err){ console.error('Stock sync '+name,err); loaded[name]=true; render(); });
     });
   }
-  function possibleDuplicates(candidate,excludeId){
-    var n=norm(candidate.name), a=norm(candidate.article), c=norm(candidate.color), z=norm(candidate.size), m=norm(candidate.model);
-    return allProducts().filter(function(p){
-      if(String(p.id)===String(excludeId) || p.status==='archived' || p.status==='merged') return false;
-      var pn=norm(p.name), pa=norm(p.article), pm=norm(p.model);
-      var compatible=(!c || !p.color || c===norm(p.color)) && (!z || !p.size || z===norm(p.size));
-      return compatible && ((a && pa && a===pa && n===pn) || (n && pn===n) || (m && pm===m));
-    }).slice(0,8);
-  }
   function getStoreDirectionSetting(storeKey){return String(storeDirections[String(storeKey)]||'');}
   function saveStoreDirectionSetting(storeKey,direction){
     var key=String(storeKey||''),value=String(direction||'');
@@ -158,6 +147,10 @@
     html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;"><div><h3 style="margin:0 0 4px;">'+(isAdmin()?'Товары магазина «'+esc(STORES[selectedStoreId]||selectedStoreId)+'»':'Товары')+'</h3><div style="font-size:12px;color:var(--text-light);">'+(isAdmin()?'Общий каталог организации':'Каталог вашего магазина')+'</div></div>'+'<button class="btn btn-primary" type="button" onclick="stockOpenForm()">＋ Новая карточка</button>'+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><input id="stockSearch" type="search" placeholder="Поиск по названию, артикулу, цвету…" value="'+esc(searchText)+'" oninput="stockSetSearch(this.value)" style="flex:1;min-width:180px;">';
     if(isAdmin()) html+='<select id="stockFilter" onchange="stockSetFilter(this.value)" style="min-width:150px;"><option value="all" '+(activeFilter==='all'?'selected':'')+'>Все карточки</option><option value="pending" '+(activeFilter==='pending'?'selected':'')+'>Ожидают проверки</option><option value="active" '+(activeFilter==='active'?'selected':'')+'>Опубликованные</option><option value="krossy" '+(activeFilter==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(activeFilter==='easy'?'selected':'')+'>Изи</option></select>';
     html+='</div><div id="stockStatus" style="font-size:12px;margin-top:8px;color:var(--text-light);"></div></div>';
+    if(isAdmin()&&mergeSelectingId){
+      var selectedMain=products[mergeSelectingId];
+      html+='<div class="card" style="margin-bottom:12px;border:1px solid var(--warning);"><b>Выбрана главная карточка:</b> '+esc(selectedMain&&selectedMain.name||'Товар')+'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">Теперь выберите вторую карточку. Объединение доступно, только если фактические остатки находятся в разных магазинах.</div></div>';
+    }
     if(!list.length) html+='<div class="card" style="text-align:center;color:var(--text-light);">Карточек пока нет. Создайте первую карточку товара.</div>';
     list.forEach(function(p){
       var balanceStoreId=isAdmin()?String(selectedStoreId):String(storeId());
@@ -169,26 +162,18 @@
       var costHtml=isAdmin()&&p.purchaseCost!=null?'<div style="font-size:13px;margin-top:5px;">Закупка: <b>'+esc(p.purchaseCost)+'</b></div>':'';
       html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div '+(isSeller()&&p.status==='active'?'data-stock-photo="'+esc(p.id)+'" title="Нажмите, чтобы заменить фото"':'')+' style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;'+(isSeller()&&p.status==='active'?'cursor:pointer;outline:1px dashed var(--primary);':'')+'">'+(p.photoUrl?'<img src="'+esc(cardPhotoUrl(p.photoUrl))+'" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b '+(isSeller()&&p.status==='active'?'data-stock-rename="'+esc(p.id)+'" title="Нажмите, чтобы изменить название" style="cursor:pointer;border-bottom:1px dashed var(--primary);"':'')+'>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color].filter(Boolean).join(' · '))+'</div>'+sizesHtml+'<div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div>'+costHtml+'<div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. в этом магазине':' шт.')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;">';
       if(canEditCard(p)) html+='<button class="btn btn-secondary" type="button" onclick="stockOpenForm(\''+esc(p.id)+'\')">Изменить</button>';
+      if(isAdmin() && p.status==='active'){
+        if(!mergeSelectingId) html+='<button class="btn btn-warning" type="button" data-stock-merge-start="'+esc(p.id)+'">Объединить</button>';
+        else if(String(mergeSelectingId)!==String(p.id)){
+          var eligibility=mergeEligibility(mergeSelectingId,p.id);
+          html+='<button class="btn '+(eligibility.ok?'btn-warning':'btn-secondary')+'" type="button" data-stock-merge-finish="'+esc(p.id)+'" '+(eligibility.ok?'':'disabled title="'+esc(eligibility.reason)+'"')+'>Объединить с этой карточкой</button>';
+        } else html+='<button class="btn btn-secondary" type="button" data-stock-merge-cancel="1">Отменить выбор</button>';
+      }
       if(isAdmin() && p.status==='pending') html+='<button class="btn btn-success" type="button" onclick="stockReview(\''+esc(p.id)+'\')">Проверить</button>';
       if(isSeller() && p.status==='active') html+='<button class="btn btn-secondary" type="button" onclick="stockAddSizes(\''+esc(p.id)+'\')">＋ Добавить размер</button>';
       if(isAdmin()) html+='<button class="btn btn-warning" type="button" onclick="stockDelete(\''+esc(p.id)+'\')">Удалить</button>';
       html+='</div></div>';
     });
-    }
-    if(isAdmin() && adminTab==='shops'){
-      var mergeChoices=allProducts().filter(function(p){return p.status==='active'||p.status==='pending';}).sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'ru');});
-      html+='<div class="card" style="margin-bottom:14px;"><h3 style="margin:0 0 6px;">Ручное объединение карточек</h3><p style="font-size:12px;color:var(--text-light);">Если автоматическая проверка не распознала дубль, выберите две карточки самостоятельно. Первая карточка будет объединена со второй. Если одна из них уже опубликована, основной останется опубликованная карточка.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;"><div><label for="stockManualMergeSource">Какую карточку объединить</label><select id="stockManualMergeSource" style="width:100%;"><option value="">Выберите карточку…</option>'+mergeChoices.map(function(p){return '<option value="'+esc(p.id)+'" '+(manualMergeSource===String(p.id)?'selected':'')+'>'+esc(p.name||'Без названия')+' · '+esc(p.article||p.id)+'</option>';}).join('')+'</select></div><div><label for="stockManualMergeTarget">В какую карточку перенести</label><select id="stockManualMergeTarget" style="width:100%;"><option value="">Выберите основную карточку…</option>'+mergeChoices.map(function(p){return '<option value="'+esc(p.id)+'" '+(manualMergeTarget===String(p.id)?'selected':'')+'>'+esc(p.name||'Без названия')+' · '+esc(p.article||p.id)+'</option>';}).join('')+'</select></div></div><button class="btn btn-warning" type="button" id="stockManualMergeButton" style="margin-top:10px;" '+(!manualMergeSource||!manualMergeTarget||manualMergeSource===manualMergeTarget?'disabled':'')+'>Объединить выбранные карточки</button></div>';
-    }
-    if(isAdmin() && adminTab==='shops'){
-      html+='<div class="card"><div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;"><h3 style="margin:0;">Возможные дубли</h3><button class="btn btn-secondary" type="button" id="stockDuplicatesToggle">'+(duplicatesExpanded?'Скрыть проверку':'Проверить дубли')+'</button></div><p style="font-size:12px;color:var(--text-light);">Проверка запускается только по запросу, чтобы не замедлять открытие склада.</p>';
-      if(duplicatesExpanded){
-        var candidates=allProducts().filter(function(p){return p.status==='pending'||p.status==='active';});
-        var dupes=[], seenPairs={};
-        candidates.forEach(function(p){possibleDuplicates(p,p.id).forEach(function(m){var pair=[String(p.id),String(m.id)].sort().join('|');if(!seenPairs[pair]){seenPairs[pair]=true;dupes.push({p:p,m:m});}});});
-        if(!dupes.length) html+='<div style="font-size:13px;color:var(--text-light);">Подозрительных совпадений не найдено.</div>';
-        dupes.slice(0,100).forEach(function(d){html+='<div style="padding:9px 0;border-top:1px solid var(--border);"><b>'+esc(d.p.name)+'</b><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-light);margin-top:5px;">Похоже на: '+esc(d.m.name)+' ('+esc(d.m.article||'без артикула')+') <button class="btn btn-warning" type="button" data-stock-merge-source="'+esc(d.p.id)+'" data-stock-merge-target="'+esc(d.m.id)+'">Объединить</button></div></div>';});
-      }
-      html+='</div>';
     }
     if(isAdmin() && adminTab==='all'){
       html+='<div class="card"><h3>Все остатки по магазинам</h3><p style="font-size:12px;color:var(--text-light);">Остатки каждого товара отдельно по каждому магазину.</p><div style="overflow-x:auto;"><table style="width:100%;min-width:480px;"><thead><tr><th>Товар</th><th>Магазин</th><th>Остаток</th><th></th></tr></thead><tbody>';
@@ -238,15 +223,11 @@
     root.innerHTML=html;
     root.querySelectorAll('[data-stock-tab]').forEach(function(b){b.addEventListener('click',function(){adminTab=b.getAttribute('data-stock-tab');render();});});
     root.querySelectorAll('[data-stock-select-store]').forEach(function(b){b.addEventListener('click',function(){selectedStoreId=b.getAttribute('data-stock-select-store');render();});});
-    var manualSourceSelect=root.querySelector('#stockManualMergeSource'),manualTargetSelect=root.querySelector('#stockManualMergeTarget'),manualMergeButton=root.querySelector('#stockManualMergeButton');
-    if(manualSourceSelect) manualSourceSelect.addEventListener('change',function(){manualMergeSource=String(this.value||'');render();});
-    if(manualTargetSelect) manualTargetSelect.addEventListener('change',function(){manualMergeTarget=String(this.value||'');render();});
-    if(manualMergeButton) manualMergeButton.addEventListener('click',function(){if(manualMergeSource&&manualMergeTarget&&manualMergeSource!==manualMergeTarget)merge(manualMergeSource,manualMergeTarget);});
-    var dupToggle=root.querySelector('#stockDuplicatesToggle');
-    if(dupToggle) dupToggle.addEventListener('click',function(){duplicatesExpanded=!duplicatesExpanded;render();});
     root.querySelectorAll('[data-stock-rename]').forEach(function(el){el.addEventListener('click',function(){renameProduct(el.getAttribute('data-stock-rename'));});});
     root.querySelectorAll('[data-stock-photo]').forEach(function(el){el.addEventListener('click',function(){chooseProductPhoto(el.getAttribute('data-stock-photo'));});});
-    root.querySelectorAll('[data-stock-merge-source]').forEach(function(b){b.addEventListener('click',function(){merge(b.getAttribute('data-stock-merge-source'),b.getAttribute('data-stock-merge-target'));});});
+    root.querySelectorAll('[data-stock-merge-start]').forEach(function(b){b.addEventListener('click',function(){mergeSelectingId=String(b.getAttribute('data-stock-merge-start')||'');render();});});
+    root.querySelectorAll('[data-stock-merge-cancel]').forEach(function(b){b.addEventListener('click',function(){mergeSelectingId='';render();});});
+    root.querySelectorAll('[data-stock-merge-finish]').forEach(function(b){b.addEventListener('click',function(){merge(mergeSelectingId,b.getAttribute('data-stock-merge-finish'));});});
   }
   function openForm(id){
     if(!isAdmin()&&!isSeller()){alert('Нет доступа к созданию карточек.');return;}
@@ -488,47 +469,58 @@
     Object.keys(movements).forEach(function(mid){var m=movements[mid];if(m&&String(m.productId)===String(id))patch[MOVEMENTS_PATH+'/'+mid+'/productName']=p.name;});
     db.ref().update(patch).then(function(){addAuditSafe('stock_product_delete','Полностью удалена карточка склада: '+p.name);}).catch(function(e){alert('Не удалось удалить карточку: '+e.message);});
   }
-  function merge(id,targetId){
+  function activeStockStores(productId){
+    return visibleStoreIds().filter(function(store){
+      return Number(qty(productId,store))>0;
+    }).map(String);
+  }
+  function mergeEligibility(mainId,sourceId){
+    var main=products[String(mainId)],source=products[String(sourceId)];
+    if(!main||!source)return {ok:false,reason:'Карточка не найдена.'};
+    if(String(mainId)===String(sourceId))return {ok:false,reason:'Нельзя объединить карточку саму с собой.'};
+    if(main.status!=='active'||source.status!=='active'||main.mergedInto||source.mergedInto)return {ok:false,reason:'Можно объединять только активные карточки.'};
+    if(main.org!==source.org || (main.direction&&source.direction&&main.direction!==source.direction))return {ok:false,reason:'Карточки должны относиться к одной организации и направлению.'};
+    var mainStores=activeStockStores(mainId),sourceStores=activeStockStores(sourceId);
+    if(!mainStores.length||!sourceStores.length)return {ok:false,reason:'У обеих карточек должны быть фактические остатки.'};
+    var overlap=mainStores.filter(function(s){return sourceStores.indexOf(s)!==-1;});
+    if(overlap.length)return {ok:false,reason:'В обеих карточках есть остатки в одном магазине: '+overlap.map(function(s){return String(STORES[s]||s);}).join(', ')+'.'};
+    return {ok:true,mainStores:mainStores,sourceStores:sourceStores};
+  }
+  function merge(mainId,sourceId){
     if(!isAdmin()||!canUse())return;
-    var sourceId=String(id),keepId=String(targetId),a=products[sourceId],b=products[keepId];
-    if(!a||!b||sourceId===keepId)return;
-    if(a.status==='merged'||b.status==='merged'||a.status==='archived'||b.status==='archived'){alert('Выберите две действующие карточки.');return;}
-    if(a.status==='active' && b.status==='pending'){var swap=a;a=b;b=swap;var swapId=sourceId;sourceId=keepId;keepId=swapId;}
-    if(a.org!==b.org || (a.direction && b.direction && a.direction!==b.direction)){alert('Объединять можно только карточки одной организации и совместимого направления.');return;}
-    if(!confirm('Объединить «'+a.name+'» с карточкой «'+b.name+'»? Основной останется опубликованная карточка, если одна из них уже опубликована; иначе — выбранная вторая карточка. Остатки и размеры по каждому магазину будут сложены, исходная карточка останется в истории как объединённая.'))return;
+    mainId=String(mainId||'');sourceId=String(sourceId||'');
+    var eligibility=mergeEligibility(mainId,sourceId);
+    if(!eligibility.ok){alert(eligibility.reason);return;}
+    var main=products[mainId],source=products[sourceId];
+    var sourceStoreNames=eligibility.sourceStores.map(function(s){return String(STORES[s]||s);}).join(', ');
+    if(!confirm('Объединить «'+source.name+'» в главную карточку «'+main.name+'»? Остатки второй карточки из магазинов '+sourceStoreNames+' будут перенесены. Первая карточка останется главной.'))return;
     var patch={},now=Date.now();
+    eligibility.sourceStores.forEach(function(store){
+      var sourceBalance=balances[store]&&balances[store][sourceId]||{};
+      if(Number(sourceBalance.quantity||0)<=0)return;
+      patch[BALANCES_PATH+'/'+store+'/'+mainId]=Object.assign({},sourceBalance,{updatedAt:now});
+      patch[BALANCES_PATH+'/'+store+'/'+sourceId]=null;
+    });
+    // Remove any zero-only balance records for the source so the merged card is fully consolidated.
     visibleStoreIds().forEach(function(store){
-      var sourceBalance=balances[String(store)]&&balances[String(store)][sourceId]||{};
-      var targetBalance=balances[String(store)]&&balances[String(store)][keepId]||{};
-      var sourceQty=Number(sourceBalance.quantity||0),targetQty=Number(targetBalance.quantity||0);
-      var sourceSizes=Array.isArray(sourceBalance.sizes)?sourceBalance.sizes:[];
-      var targetSizes=Array.isArray(targetBalance.sizes)?targetBalance.sizes:[];
-      if(sourceBalance && Object.keys(sourceBalance).length){
-        var combined={};
-        Object.keys(targetBalance).forEach(function(k){combined[k]=targetBalance[k];});
-        combined.quantity=sourceQty+targetQty;
-        if(sourceSizes.length||targetSizes.length)combined.sizes=targetSizes.concat(sourceSizes);
-        combined.updatedAt=now;
-        patch[BALANCES_PATH+'/'+store+'/'+keepId]=combined;
+      if(eligibility.sourceStores.indexOf(String(store))===-1 && balances[String(store)] && balances[String(store)][sourceId]){
         patch[BALANCES_PATH+'/'+store+'/'+sourceId]=null;
       }
     });
-    var mid=uid('sm');
-    patch[MOVEMENTS_PATH+'/'+mid]={id:mid,org:org(),productId:keepId,mergedProductId:sourceId,type:'merge',createdAt:now,createdById:String(user().id),note:'Объединение карточки «'+a.name+'» с «'+b.name+'»'};
+    var movementId=uid('sm');
+    patch[MOVEMENTS_PATH+'/'+movementId]={id:movementId,org:org(),productId:mainId,mergedProductId:sourceId,type:'merge',createdAt:now,createdById:String(user().id),createdByName:String(user().name||''),note:'Объединение «'+source.name+'» в главную карточку «'+main.name+'». Магазины: '+sourceStoreNames};
     patch[PRODUCTS_PATH+'/'+sourceId+'/status']='merged';
-    patch[PRODUCTS_PATH+'/'+sourceId+'/direction']=b.direction||a.direction||null;
-    patch[PRODUCTS_PATH+'/'+sourceId+'/mergedInto']=keepId;
+    patch[PRODUCTS_PATH+'/'+sourceId+'/mergedInto']=mainId;
     patch[PRODUCTS_PATH+'/'+sourceId+'/mergedAt']=now;
-    var targetUpdates={updatedAt:now};
-    ['category','color','brand','model','photoUrl','photoPublicId','article'].forEach(function(field){if(!b[field]&&a[field])targetUpdates[field]=a[field];});
-    Object.keys(targetUpdates).forEach(function(field){patch[PRODUCTS_PATH+'/'+keepId+'/'+field]=targetUpdates[field];});
+    patch[PRODUCTS_PATH+'/'+sourceId+'/mergedById']=String(user().id);
+    patch[PRODUCTS_PATH+'/'+sourceId+'/mergedByName']=String(user().name||'');
+    patch[PRODUCTS_PATH+'/'+mainId+'/updatedAt']=now;
     db.ref().update(patch).then(function(){
-      manualMergeSource='';manualMergeTarget='';
-      addAuditSafe('stock_product_merge','Объединены карточки «'+a.name+'» → «'+b.name+'»');
+      mergeSelectingId='';
+      addAuditSafe('stock_product_merge','Объединена карточка «'+source.name+'» в главную карточку «'+main.name+'». Перенесены магазины: '+sourceStoreNames);
       render();
-    }).catch(function(e){alert('Не удалось объединить карточки: '+e.message);});
+    }).catch(function(e){alert('Не удалось объединить карточки: '+(e&&e.message||e));});
   }
-  function openMergeDialog(id,targetId){merge(id,targetId);}
   function renameProduct(id){
     if(!isSeller())return;
     var p=products[String(id)];
@@ -617,7 +609,7 @@
   function prepareSaleReturn(sale,nextReturned,eventId){
     if(!sale||!sale.stockProductId)return Promise.resolve(null);
     if(!navigator.onLine||!canUse())return Promise.reject(new Error('Для возврата складской продажи требуется подключение к Firebase.'));
-    var sid=String(sale.stockStoreId||sale.storeId),pid=String(sale.stockProductId),size=String(sale.stockSize||'').toUpperCase(),quantity=Number(sale.stockQuantity||1);
+    var sid=String(sale.stockStoreId||sale.storeId),originalPid=String(sale.stockProductId),pid=String((products[originalPid]&&products[originalPid].mergedInto)||originalPid),size=String(sale.stockSize||'').toUpperCase(),quantity=Number(sale.stockQuantity||1);
     if(!sid||!pid||!size||!Number.isInteger(quantity)||quantity<1)return Promise.reject(new Error('В складской продаже отсутствуют корректные данные товара и размера.'));
     var ref=db.ref(BALANCES_PATH+'/'+sid+'/'+pid),before=0,after=0,delta=nextReturned?quantity:-quantity;
     return ref.transaction(function(current){
@@ -635,7 +627,7 @@
   function prepareSaleDelete(sale){
     if(!sale||!sale.stockProductId||sale.returned)return Promise.resolve(null);
     if(!navigator.onLine||!canUse())return Promise.reject(new Error('Для удаления складской продажи требуется подключение к Firebase.'));
-    var sid=String(sale.stockStoreId||sale.storeId),pid=String(sale.stockProductId),size=String(sale.stockSize||'').toUpperCase(),quantity=Number(sale.stockQuantity||1);
+    var sid=String(sale.stockStoreId||sale.storeId),originalPid=String(sale.stockProductId),pid=String((products[originalPid]&&products[originalPid].mergedInto)||originalPid),size=String(sale.stockSize||'').toUpperCase(),quantity=Number(sale.stockQuantity||1);
     if(!sid||!pid||!size||!Number.isInteger(quantity)||quantity<1)return Promise.reject(new Error('В продаже отсутствуют корректные данные склада.'));
     var ref=db.ref(BALANCES_PATH+'/'+sid+'/'+pid),before=0,after=0;
     return ref.transaction(function(current){current=current||{};var sizes=Array.isArray(current.sizes)?current.sizes.slice():[];before=sizes.length;for(var i=0;i<quantity;i++)sizes.push(size);after=sizes.length;return Object.assign({},current,{sizes:sizes,quantity:after,updatedAt:Date.now()});},undefined,false).then(function(tx){
@@ -647,7 +639,7 @@
   }
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;
+    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;
   }
   function start(){
     expose();load();initPage();
