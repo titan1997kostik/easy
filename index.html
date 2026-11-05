@@ -2000,7 +2000,7 @@ function renderStoresManagement() {
     }
     var visibleKeys = getVisibleStoreKeys();
     var html = '<div style="margin-bottom:12px;"><button class="btn btn-success" style="padding:6px 14px;" onclick="addStore()">+ Добавить магазин</button></div>';
-    html += '<div class="stores-management-table-wrap" style="width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="stores-management-table" style="width:100%;min-width:600px;border-collapse:collapse;"><thead><tr style="background:var(--bg-card);"><th style="padding:8px; text-align:left;">Магазин</th><th style="padding:8px; text-align:center;">Смена</th><th style="padding:8px; text-align:right;">Действие</th></tr></thead><tbody>';
+    html += '<div class="stores-management-table-wrap" style="width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;"><table class="stores-management-table" style="width:100%;min-width:820px;border-collapse:collapse;"><thead><tr style="background:var(--bg-card);"><th style="padding:8px;text-align:left;">Магазин</th><th style="padding:8px;text-align:center;">Смена</th><th style="padding:8px;text-align:left;">Направление</th><th style="padding:8px;text-align:right;">Действие</th></tr></thead><tbody>';
     visibleKeys.forEach(function(key) {
         var shiftInfo = '&mdash;';
         var shift = storeShifts[key];
@@ -2011,10 +2011,21 @@ function renderStoresManagement() {
         } else {
             shiftInfo = '<span style="color:var(--text-light);">Закрыта</span>';
         }
-        html += '<tr><td style="padding:8px;">' + escapeProductText(STORES[key]) + '</td><td style="padding:8px; text-align:center;">' + shiftInfo + '</td><td style="padding:8px; text-align:right; white-space:nowrap;"><button class="btn btn-warning" style="padding:4px 10px; font-size:12px; margin-right:4px;" onclick="resetStore(\'' + key + '\')">Сбросить</button><button class="btn btn-danger" style="padding:4px 10px; font-size:12px;" onclick="deleteStore(\'' + key + '\')">Удалить</button></td></tr>';
+        var direction=typeof window.stockGetStoreDirection==='function'?window.stockGetStoreDirection(key):'';
+        html += '<tr><td style="padding:8px;">' + escapeProductText(STORES[key]) + '</td><td style="padding:8px;text-align:center;">' + shiftInfo + '</td><td style="padding:8px;min-width:220px;"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;"><select data-store-direction="' + escapeProductText(key) + '" style="min-width:130px;flex:1;padding:7px;font-size:13px;"><option value="" ' + (!direction?'selected':'') + '>Не настроено</option><option value="krossy" ' + (direction==='krossy'?'selected':'') + '>Кроссы</option><option value="easy" ' + (direction==='easy'?'selected':'') + '>Изи</option><option value="mixed" ' + (direction==='mixed'?'selected':'') + '>Смешанный</option></select><button type="button" class="btn btn-secondary" data-save-store-direction="' + escapeProductText(key) + '" style="padding:6px 9px;font-size:12px;">Сохранить</button></div></td><td style="padding:8px;text-align:right;white-space:nowrap;"><button class="btn btn-warning" style="padding:4px 10px;font-size:12px;margin-right:4px;" onclick="resetStore(\'' + key + '\')">Сбросить</button><button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="deleteStore(\'' + key + '\')">Удалить</button></td></tr>';
     });
     html += '</tbody></table></div>';
     container.innerHTML = html;
+    container.querySelectorAll('[data-save-store-direction]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            var key=button.getAttribute('data-save-store-direction');
+            var select=container.querySelector('[data-store-direction="'+key+'"]');
+            if(!select || !select.value){alert('Выберите направление магазина.');return;}
+            if(typeof window.stockSaveStoreDirection!=='function'){alert('Настройка склада ещё загружается. Повторите попытку.');return;}
+            button.disabled=true;button.textContent='Сохраняем…';
+            window.stockSaveStoreDirection(key,select.value).then(function(){button.textContent='Сохранено';setTimeout(function(){button.disabled=false;button.textContent='Сохранить';},900);}).catch(function(error){alert('Не удалось сохранить направление: '+(error&&error.message||error));button.disabled=false;button.textContent='Сохранить';});
+        });
+    });
 }
 
 var calendarMonth = null;
@@ -10678,14 +10689,14 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
     var old=getSelectedStoreQuantities();var saved=(typeof prefill!=='undefined'&&prefill!==null)?prefill:old;var keys=storesForCurrentOrg();host.innerHTML='';
     if(!keys.length){host.innerHTML='<div class="purchase-journal-empty">В этой организации пока нет доступных магазинов.</div>';updateFormSummary();return;}
     keys.forEach(function(key){
-      var oldAlloc=saved[key];var isChecked=!!oldAlloc;var quantity=isChecked?Number(oldAlloc.quantity)||1:1;
+      var oldAlloc=saved[key];var isChecked=!!oldAlloc;var quantity=isChecked?Number(oldAlloc.quantity)||0:0;
       var manuallySet=!!(oldAlloc&&oldAlloc.manual)||!!(editingId&&isChecked);
       var row=document.createElement('div');row.className='purchase-journal-store-row'+(isChecked?' selected':'');row.setAttribute('data-qty-manual',manuallySet?'1':'0');
       var label=document.createElement('label');label.className='purchase-journal-store-name';
       var check=document.createElement('input');check.type='checkbox';check.className='purchase-journal-store-check purchase-journal-mutate';check.value=key;check.checked=isChecked;check.setAttribute('aria-label','Выбрать магазин '+storeName(key));
       var title=document.createElement('span');title.textContent=storeName(key);label.appendChild(check);label.appendChild(title);
       var qty=document.createElement('input');qty.type='number';qty.className='purchase-journal-store-qty purchase-journal-qty purchase-journal-mutate';qty.min='1';qty.step='1';qty.inputMode='numeric';qty.placeholder='Кол-во';qty.value=isChecked?String(quantity):'';qty.disabled=!isChecked;qty.setAttribute('aria-label','Количество для '+storeName(key));
-      check.addEventListener('change',function(){row.classList.toggle('selected',check.checked);qty.disabled=!check.checked;if(check.checked){if(!qty.value)qty.value=(lastQuantityDefault&&Number(lastQuantityDefault)>0)?lastQuantityDefault:'1';row.setAttribute('data-qty-manual','0');}else{qty.value='';row.setAttribute('data-qty-manual','0');}updateFormSummary();});
+      check.addEventListener('change',function(){row.classList.toggle('selected',check.checked);qty.disabled=!check.checked;if(check.checked){qty.value='';row.setAttribute('data-qty-manual','0');}else{qty.value='';row.setAttribute('data-qty-manual','0');}updateFormSummary();});
       qty.addEventListener('input',function(){
         row.setAttribute('data-qty-manual','1');
         var raw=String(qty.value||'').trim();var parsed=Number(raw);
@@ -10723,7 +10734,7 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
   function startBudgetListener(){if(!canView()||!currentScope)return;var ref=budgetRemoteRef();if(!ref)return;if(budgetListenerRef&&budgetListenerScope===currentScope)return;stopBudgetListener();budgetListenerRef=ref;budgetListenerScope=currentScope;budgetListenerFn=function(snapshot){var val=snapshot&&snapshot.val?snapshot.val():{};var remote=Object.create(null);Object.keys(val||{}).forEach(function(key){var x=val[key];if(!x||typeof x!=='object'||!x.date)return;remote[String(x.date).slice(0,10)]={date:String(x.date).slice(0,10),amount:Number(x.amount)||0,org:String(x.org||currentScope),updatedAt:Number(x.updatedAt)||0,updatedBy:String(x.updatedBy||'')};});Object.keys(budgetsByDate||{}).forEach(function(date){var local=budgetsByDate[date];if(local&&local._pendingSync)remote[date]=local;});budgetsByDate=remote;saveBudgetCache();renderBudgetPanel();syncPendingBudgets();};budgetListenerRef.on('value',budgetListenerFn,function(err){console.warn('Не удалось загрузить бюджет закупки:',err);});}
   function stopBudgetListener(){if(currentScope)saveBudgetCache();if(budgetListenerRef&&budgetListenerFn&&typeof budgetListenerRef.off==='function')budgetListenerRef.off('value',budgetListenerFn);budgetListenerRef=null;budgetListenerFn=null;budgetListenerScope='';Object.keys(budgetWrites).forEach(function(k){delete budgetWrites[k];});}
   function setCategory(category){selectedCategory=category==='clothing'?'clothing':'shoes';var b=node('purchaseJournalCategoryShoes'),c=node('purchaseJournalCategoryClothing');if(b)b.classList.toggle('active',selectedCategory==='shoes');if(c)c.classList.toggle('active',selectedCategory==='clothing');}
-  function resetForm(keepDate){var previousDate=activePurchaseDate();editingId='';lastQuantityDefault='';setCategory('shoes');var name=node('purchaseJournalName'),supplier=node('purchaseJournalSupplier'),cost=node('purchaseJournalUnitCost'),date=node('purchaseJournalDate'),save=node('purchaseJournalSaveButton');if(name)name.value='';if(supplier)supplier.value='';if(cost)cost.value='';if(date)date.value=keepDate?previousDate:today();if(save)save.textContent='＋ Добавить закупку';renderStorePicker({});updateFormSummary();renderBudgetPanel(true);}
+  function resetForm(keepDate){var previousDate=activePurchaseDate();editingId='';lastQuantityDefault='';var name=node('purchaseJournalName'),supplier=node('purchaseJournalSupplier'),cost=node('purchaseJournalUnitCost'),date=node('purchaseJournalDate'),save=node('purchaseJournalSaveButton');if(name)name.value='';if(supplier)supplier.value='';if(cost)cost.value='';if(date)date.value=keepDate?previousDate:today();if(save)save.textContent='＋ Добавить закупку';renderStorePicker({});updateFormSummary();renderBudgetPanel(true);}
   function startEdit(id){if(!canEdit()){alert('В Организации 1 Вове доступен только просмотр.');return;}var r=records.find(function(x){return x&&String(x.id)===String(id)&&!x._deletePending;});if(!r)return;if(r.closed){alert('Закрытую закупку нельзя изменять.');return;}if(editingId===String(id)){resetForm(true);return;}editingId=String(r.id);lastQuantityDefault='';setCategory(r.category);node('purchaseJournalName').value=r.name||'';node('purchaseJournalSupplier').value=r.supplier||'';node('purchaseJournalUnitCost').value=String(Number(r.unitCost)||0);node('purchaseJournalDate').value=r.date||today();var map={};(r.allocations||[]).forEach(function(a){map[String(a.storeId)]={quantity:Number(a.quantity)||1,manual:true};});renderStorePicker(map);node('purchaseJournalSaveButton').textContent='Сохранить изменения';renderBudgetPanel(true);var card=node('purchaseJournalCard');if(card)card.scrollIntoView({behavior:'smooth',block:'start'});node('purchaseJournalName').focus({preventScroll:true});}
   function saveRecord(){
     if(!canEdit()){alert('У вас нет прав на изменение журнала закупок.');return;}
