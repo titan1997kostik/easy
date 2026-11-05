@@ -103,6 +103,7 @@
         else storeDirections=v;
         loaded[name]=true;
         render();
+        if(name==='directions'&&typeof window.renderStoresManagement==='function')window.renderStoresManagement();
         if(window.refreshStockSaleProducts && document.getElementById('stockSaleEnabled') && document.getElementById('stockSaleEnabled').checked) window.refreshStockSaleProducts();
       },function(err){ console.error('Stock sync '+name,err); loaded[name]=true; render(); });
     });
@@ -116,25 +117,16 @@
       return compatible && ((a && pa && a===pa && n===pn) || (n && pn===n) || (m && pm===m));
     }).slice(0,8);
   }
-  function renderDirectionSettings(){
-    var panel=document.getElementById('storesManagePanel');
-    var listHost=document.getElementById('storesManagement');
-    if(!panel||!listHost)return;
-    var host=document.getElementById('stockStoreDirectionsPanel');
-    if(!host){host=document.createElement('section');host.id='stockStoreDirectionsPanel';host.className='admin-panel';host.style.cssText='margin-top:14px;background:var(--card);border:1px solid var(--border);';panel.appendChild(host);}
-    var allowed=!!(isAdmin()&&typeof isSuperAdmin==='function'&&isSuperAdmin(user()));
-    host.style.display=allowed?'':'none';
-    if(!allowed)return;
-    var keys=visibleStoreIds();
-    var html='<h3 style="margin-top:0;">Направления магазинов</h3><p style="font-size:12px;color:var(--text-light);margin-bottom:10px;">Выберите складское направление для каждого магазина. Эта настройка определяет, какие товары доступны продавцам.</p>';
-    if(!keys.length)html+='<div style="font-size:13px;color:var(--text-light);">Сначала добавьте магазины.</div>';
-    keys.forEach(function(k){var v=storeDirection(k);html+='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--border);"><b style="flex:1;min-width:130px;">'+esc(STORES[k]||k)+'</b><select data-stock-store="'+esc(k)+'" style="flex:1;min-width:140px;"><option value="">Не настроено</option><option value="krossy" '+(v==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(v==='easy'?'selected':'')+'>Изи</option><option value="mixed" '+(v==='mixed'?'selected':'')+'>Смешанный</option></select><button class="btn btn-secondary" type="button" data-stock-save-store="'+esc(k)+'">Сохранить</button></div>';});
-    host.innerHTML=html;
-    host.querySelectorAll('[data-stock-save-store]').forEach(function(b){b.addEventListener('click',function(){var k=b.getAttribute('data-stock-save-store'),sel=host.querySelector('[data-stock-store="'+k+'"]');if(!sel||!sel.value){alert('Выберите направление магазина.');return;}b.disabled=true;b.textContent='Сохраняем…';db.ref(DIRECTIONS_PATH+'/'+k).set(sel.value).then(function(){storeDirections[k]=sel.value;addAuditSafe('stock_store_direction','Изменено направление магазина «'+(STORES[k]||k)+'»: '+sel.value);renderDirectionSettings();}).catch(function(e){alert('Не удалось сохранить направление магазина: '+(e&&e.message||e));b.disabled=false;b.textContent='Сохранить';});});});
+  function getStoreDirectionSetting(storeKey){return String(storeDirections[String(storeKey)]||'');}
+  function saveStoreDirectionSetting(storeKey,direction){
+    var key=String(storeKey||''),value=String(direction||'');
+    if(!key||['krossy','easy','mixed'].indexOf(value)===-1)return Promise.reject(new Error('Выберите корректное направление магазина.'));
+    if(!isAdmin()||typeof isSuperAdmin!=='function'||!isSuperAdmin(user()))return Promise.reject(new Error('Недостаточно прав для изменения направления.'));
+    return db.ref(DIRECTIONS_PATH+'/'+key).set(value).then(function(){storeDirections[key]=value;addAuditSafe('stock_store_direction','Изменено направление магазина «'+(STORES[key]||key)+'»: '+value);return value;});
   }
+
   function render(){
     if(!initPage()) return;
-    renderDirectionSettings();
     var page=document.getElementById('workspacePage-stock');
     if(!page || !page.classList.contains('active')) return;
     var root=document.getElementById('stockRoot'); if(!root) return;
@@ -655,7 +647,7 @@
   }
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;
+    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMerge=merge;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;
   }
   function start(){
     expose();load();initPage();
@@ -666,7 +658,7 @@
     }
     var originalShow=window.easyAppSyncShowPage;
     if(typeof originalShow==='function'&&!originalShow._stockWrapped){
-      var wrapped=function(id){if(id==='stock'){show();return;}var result=originalShow.apply(this,arguments);if(id==='stores')renderDirectionSettings();return result;};
+      var wrapped=function(id){if(id==='stock'){show();return;}var result=originalShow.apply(this,arguments);if(id==='stores'&&typeof window.renderStoresManagement==='function')window.renderStoresManagement();return result;};
       wrapped._stockWrapped=true;window.easyAppSyncShowPage=wrapped;
     }
     // Avoid observing stockRoot mutations: render() updates innerHTML and would retrigger itself.
