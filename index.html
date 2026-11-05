@@ -5287,6 +5287,19 @@ function retryPendingOfflineShiftOpen() {
     renderShiftBtn();
 }
 
+function confirmShiftCashBalance(storeId, opening) {
+    var balance = getCashDrawerBalanceAsOf(String(storeId), Date.now());
+    var amount = roundMoney(Number(balance && balance.actualCash) || 0);
+    var action = opening ? 'открытии' : 'закрытии';
+    var answer = window.confirm('Сейчас в кассе ' + formatRubles(amount) + '?\n\nНажмите «Да», если сумма совпадает. Если сумма не совпадает — нажмите «Нет» и свяжитесь с администратором. Касса всё равно ' + (opening ? 'откроется' : 'закроется') + '.');
+    if (!answer) {
+        var storeName = String(STORES[storeId] || storeId);
+        var employeeName = String(currentUser && (currentUser.name || currentUser.username) || 'Неизвестный сотрудник');
+        addAudit('cash_balance_mismatch', 'Сотрудник нажал «Нет» при ' + action + ' кассы. Магазин: ' + storeName + '. Расчётная сумма: ' + formatRubles(amount) + '. Сотрудник должен связаться с администратором.');
+    }
+    return {amount:amount, confirmed:answer};
+}
+
 function toggleShift() {
     if (!checkSessionBeforeAction()) return;
     if (!canUseStoreData()) { alert('Подождите завершения проверки синхронизации и повторите действие. Для первого запуска требуется интернет, чтобы приложение загрузило список магазинов.'); return; }
@@ -5299,6 +5312,7 @@ function toggleShift() {
         alert('Для этого магазина уже есть несинхронизированная офлайн-смена. Не открывайте новую: сначала администратор должен проверить и повторить синхронизацию предыдущей.'); return;
     }
     var opening = !existingLocalShift;
+    if (opening) confirmShiftCashBalance(shiftStore, true);
     var shiftNetworkAvailable = !!syncConnected && !(typeof navigator !== 'undefined' && navigator.onLine === false);
     if (!shiftNetworkAvailable && !opening) { alert('Смену можно открыть без интернета, но для её закрытия требуется подключение, чтобы безопасно сохранить историю и начисление зарплаты.'); return; }
     if (!shiftNetworkAvailable && opening) {
@@ -5342,6 +5356,7 @@ function toggleShift() {
         var unansweredTasks = getOpenTasksForUser(currentUser.id);
         if (unansweredTasks.length) { if (typeof window.easyAppSyncShowPage === 'function') window.easyAppSyncShowPage('tasks'); renderTasks(); alert('Нельзя закрыть смену: ответьте на все открытые задания. Осталось без ответа: ' + unansweredTasks.length + '.'); return; }
     }
+    if (!opening) confirmShiftCashBalance(shiftStore, false);
     var nowMs = Date.now();
     var newShiftData = { userId:String(currentUser.id), userName:currentUser.name, storeId:shiftStore,
         startTime:nowMs, shiftId:shiftStore + '_' + String(nowMs), openedAt:nowMs };
