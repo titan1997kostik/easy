@@ -6823,7 +6823,7 @@ function renderShiftBtn() {
         btn.className = 'btn btn-success';
         btn.disabled = false;
     }
-    btn.onclick = toggleShift;
+    btn.onclick = function() { toggleShift(); };
 }
 
 
