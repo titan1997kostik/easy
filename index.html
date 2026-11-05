@@ -5287,20 +5287,51 @@ function retryPendingOfflineShiftOpen() {
     renderShiftBtn();
 }
 
-function confirmShiftCashBalance(storeId, opening) {
+function showShiftCashConfirmation(storeId, opening, callback) {
     var balance = getCashDrawerBalanceAsOf(String(storeId), Date.now());
     var amount = roundMoney(Number(balance && balance.actualCash) || 0);
-    var action = opening ? 'открытии' : 'закрытии';
-    var answer = window.confirm('Сейчас в кассе ' + formatRubles(amount) + '?\n\nНажмите «Да», если сумма совпадает. Если сумма не совпадает — нажмите «Нет» и свяжитесь с администратором. Касса всё равно ' + (opening ? 'откроется' : 'закроется') + '.');
-    if (!answer) {
-        var storeName = String(STORES[storeId] || storeId);
-        var employeeName = String(currentUser && (currentUser.name || currentUser.username) || 'Неизвестный сотрудник');
-        addAudit('cash_balance_mismatch', 'Сотрудник нажал «Нет» при ' + action + ' кассы. Магазин: ' + storeName + '. Расчётная сумма: ' + formatRubles(amount) + '. Сотрудник должен связаться с администратором.');
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.58);display:flex;align-items:center;justify-content:center;padding:18px;';
+    var modal = document.createElement('div');
+    modal.style.cssText = 'width:100%;max-width:390px;background:var(--card-bg,#fff);color:var(--text,#222);border-radius:16px;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,.28);text-align:center;';
+    var heading = document.createElement('div');
+    heading.textContent = 'Сейчас в кассе ' + formatRubles(amount) + '?';
+    heading.style.cssText = 'font-size:19px;font-weight:700;line-height:1.4;margin-bottom:12px;';
+    var note = document.createElement('div');
+    note.textContent = 'Если сумма не совпадает, нажмите «Нет» и свяжитесь с администратором. Касса всё равно ' + (opening ? 'откроется' : 'закроется') + '.';
+    note.style.cssText = 'font-size:14px;line-height:1.5;margin-bottom:20px;color:var(--text-light,#666);';
+    var actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:12px;';
+    function makeButton(label, background) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.style.cssText = 'flex:1;min-height:46px;border:0;border-radius:10px;font-size:16px;font-weight:700;color:#fff;background:' + background + ';cursor:pointer;';
+        return button;
     }
-    return {amount:amount, confirmed:answer};
+    var yes = makeButton('Да', '#16a34a');
+    var no = makeButton('Нет', '#dc2626');
+    function finish(answer) {
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        callback(answer, amount);
+    }
+    yes.addEventListener('click', function(){ finish(true); });
+    no.addEventListener('click', function(){ finish(false); });
+    actions.appendChild(yes);
+    actions.appendChild(no);
+    modal.appendChild(heading);
+    modal.appendChild(note);
+    modal.appendChild(actions);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
 }
 
-function toggleShift() {
+function logShiftCashMismatch(storeId, opening, amount) {
+    var action = opening ? 'открытии' : 'закрытии';
+    addAudit('cash_balance_mismatch', 'Сотрудник нажал «Нет» при ' + action + ' кассы. Магазин: ' + String(STORES[storeId] || storeId) + '. Расчётная сумма: ' + formatRubles(amount) + '. Сотрудник должен связаться с администратором.');
+}
+
+function toggleShift(cashCheckDone, cashAnswer, cashAmount) {
     if (!checkSessionBeforeAction()) return;
     if (!canUseStoreData()) { alert('Подождите завершения проверки синхронизации и повторите действие. Для первого запуска требуется интернет, чтобы приложение загрузило список магазинов.'); return; }
     if (isShiftMutating) { alert('Смена уже обрабатывается. Подождите.'); return; }
@@ -5312,7 +5343,8 @@ function toggleShift() {
         alert('Для этого магазина уже есть несинхронизированная офлайн-смена. Не открывайте новую: сначала администратор должен проверить и повторить синхронизацию предыдущей.'); return;
     }
     var opening = !existingLocalShift;
-    if (opening) confirmShiftCashBalance(shiftStore, true);
+    if (opening && !cashCheckDone) { showShiftCashConfirmation(shiftStore, true, function(answer, amount){ toggleShift(true, answer, amount); }); return; }
+    if (opening && cashCheckDone && cashAnswer === false) logShiftCashMismatch(shiftStore, true, cashAmount);
     var shiftNetworkAvailable = !!syncConnected && !(typeof navigator !== 'undefined' && navigator.onLine === false);
     if (!shiftNetworkAvailable && !opening) { alert('Смену можно открыть без интернета, но для её закрытия требуется подключение, чтобы безопасно сохранить историю и начисление зарплаты.'); return; }
     if (!shiftNetworkAvailable && opening) {
@@ -5356,7 +5388,8 @@ function toggleShift() {
         var unansweredTasks = getOpenTasksForUser(currentUser.id);
         if (unansweredTasks.length) { if (typeof window.easyAppSyncShowPage === 'function') window.easyAppSyncShowPage('tasks'); renderTasks(); alert('Нельзя закрыть смену: ответьте на все открытые задания. Осталось без ответа: ' + unansweredTasks.length + '.'); return; }
     }
-    if (!opening) confirmShiftCashBalance(shiftStore, false);
+    if (!opening && !cashCheckDone) { showShiftCashConfirmation(shiftStore, false, function(answer, amount){ toggleShift(true, answer, amount); }); return; }
+    if (!opening && cashCheckDone && cashAnswer === false) logShiftCashMismatch(shiftStore, false, cashAmount);
     var nowMs = Date.now();
     var newShiftData = { userId:String(currentUser.id), userName:currentUser.name, storeId:shiftStore,
         startTime:nowMs, shiftId:shiftStore + '_' + String(nowMs), openedAt:nowMs };
