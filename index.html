@@ -1003,6 +1003,14 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
             </div>
             <p id="analyticsCostProfitWarning" class="analytics-help" style="display:none;margin:12px 0 16px;">Показатели прибыли сначала рассчитываются предварительно по средней наценке, затем уточняются после ввода фактических закупочных цен.</p>
 
+            <section class="analytics-detail-card" id="analyticsStockValuationCard" style="margin:0 0 14px;">
+                <div class="analytics-section-heading"><h4>Финансовая оценка складских остатков</h4><span>Все магазины и склад хранения</span></div>
+                <div class="analytics-kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin:0;">
+                    <div class="analytics-kpi"><div class="analytics-kpi-label">Закупочная стоимость остатков</div><div class="analytics-kpi-value" id="analyticsStockPurchaseValue">—</div><div class="analytics-kpi-note" id="analyticsStockPurchaseNote">Загрузка складских данных</div></div>
+                    <div class="analytics-kpi analytics-kpi-primary"><div class="analytics-kpi-label">Стоимость остатков при реализации</div><div class="analytics-kpi-value" id="analyticsStockRealizationValue">—</div><div class="analytics-kpi-note" id="analyticsStockRealizationNote">Средняя фактическая цена или средняя наценка</div></div>
+                    <div class="analytics-kpi"><div class="analytics-kpi-label">Количество товаров в остатках</div><div class="analytics-kpi-value" id="analyticsStockUnits">—</div><div class="analytics-kpi-note">По всем местам хранения</div></div>
+                </div>
+            </section>
 
             <div class="analytics-main-grid">
                 <section class="analytics-detail-card">
@@ -8816,6 +8824,23 @@ function closeAnalyticsCalculation() {
 }
 window.addEventListener('keydown', function(event) { if (event.key === 'Escape') closeAnalyticsCalculation(); });
 
+function renderStockFinancialAnalytics(averageMarkup) {
+    var card=document.getElementById('analyticsStockValuationCard');if(!card)return;
+    var isSeller=currentUser&&currentUser.role==='seller';card.style.display=isSeller?'none':'block';if(isSeller)return;
+    var summary=typeof window.stockGetFinancialSummary==='function'?window.stockGetFinancialSummary(averageMarkup):null;
+    function money(v){return Number(v||0).toLocaleString('ru-RU',{maximumFractionDigits:2})+' ₽';}
+    function set(id,value){var el=document.getElementById(id);if(el)el.textContent=value;}
+    if(!summary){set('analyticsStockPurchaseValue','—');set('analyticsStockRealizationValue','—');set('analyticsStockUnits','—');set('analyticsStockPurchaseNote','Складские данные пока недоступны');set('analyticsStockRealizationNote','Складские данные пока недоступны');return;}
+    set('analyticsStockPurchaseValue',summary.purchaseKnownUnits?money(summary.purchase):'Нет данных');
+    set('analyticsStockRealizationValue',(summary.realizationKnownUnits+summary.realizationMarkupUnits)?money(summary.realization):'Нет данных');
+    set('analyticsStockUnits',Number(summary.units||0).toLocaleString('ru-RU'));
+    set('analyticsStockPurchaseNote','Оценено единиц: '+summary.purchaseKnownUnits+' · без закупочной цены: '+summary.purchaseUnknownUnits);
+    var note='По фактическим продажам: '+summary.realizationKnownUnits+' ед.';
+    if(summary.realizationMarkupUnits)note+=' · по средней наценке '+Number(averageMarkup).toLocaleString('ru-RU',{maximumFractionDigits:2})+'%: '+summary.realizationMarkupUnits+' ед.';
+    if(summary.realizationUnknownUnits)note+=' · без оценки: '+summary.realizationUnknownUnits+' ед.';
+    set('analyticsStockRealizationNote',note);
+}
+
 function drawChart() {
     if (!isWorkspacePageActive('analytics')) return;
 
@@ -8872,6 +8897,7 @@ function drawChart() {
     var activeSalaryExpenses = analyticsScopeData.salaryExpenses;
 
     var purchaseCostMarkupBaseline = isPurchaseCostOwner() ? getPurchaseCostMarkupBaseline(targetStore, visibleKeys) : { markup:null, priceCostRatio:null, count:0, fallback:false };
+    renderStockFinancialAnalytics(purchaseCostMarkupBaseline.markup);
     function getAnalyticalPurchaseCost(saleId) {
         var known = getPurchaseCostForSale(saleId);
         if (known !== null) return { cost:known, estimated:false };
