@@ -9244,6 +9244,43 @@ function drawChart() {
         analyticsSummaryCache[summaryCacheKey] = Object.assign({}, result);
         return result;
     }
+
+    // Public read-only financial summary for the Business Advisor.
+    // Reuses the same cost, returns, payroll, recurring-expense, tax and acquiring
+    // rules as the main Analytics page instead of maintaining a second calculation.
+    window.getEasyFinancialSummary = function(startDate, endDate, requestedStore) {
+        if (!isPurchaseCostOwner()) return null;
+        var previous = {
+            targetStore:targetStore,
+            analyticsScopeData:analyticsScopeData,
+            activeSales:activeSales,
+            activeExpenses:activeExpenses,
+            activeRecurringExpenses:activeRecurringExpenses,
+            activeSalaryExpenses:activeSalaryExpenses,
+            purchaseCostMarkupBaseline:purchaseCostMarkupBaseline
+        };
+        try {
+            var nextStore = requestedStore == null || requestedStore === '' ? targetStore : String(requestedStore);
+            if (nextStore !== 'all' && visibleKeys.indexOf(nextStore) === -1) return null;
+            targetStore = nextStore;
+            analyticsScopeData = getAnalyticsScopedData(targetStore, visibleKeys);
+            activeSales = analyticsScopeData.sales;
+            activeExpenses = analyticsScopeData.expenses;
+            activeRecurringExpenses = analyticsScopeData.recurringExpenses;
+            activeSalaryExpenses = analyticsScopeData.salaryExpenses;
+            purchaseCostMarkupBaseline = getPurchaseCostMarkupBaseline(targetStore, visibleKeys);
+            return Object.assign({}, sumRange(startDate, endDate));
+        } finally {
+            targetStore = previous.targetStore;
+            analyticsScopeData = previous.analyticsScopeData;
+            activeSales = previous.activeSales;
+            activeExpenses = previous.activeExpenses;
+            activeRecurringExpenses = previous.activeRecurringExpenses;
+            activeSalaryExpenses = previous.activeSalaryExpenses;
+            purchaseCostMarkupBaseline = previous.purchaseCostMarkupBaseline;
+        }
+    };
+
     function dateKey(date) { return getLocalDateString(date); }
     function addDays(date, amount) { var d = new Date(date.getFullYear(), date.getMonth(), date.getDate()); d.setDate(d.getDate() + amount); return d; }
     function shiftYear(date, amount) { return new Date(date.getFullYear() + amount, date.getMonth(), date.getDate()); }
