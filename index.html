@@ -4626,8 +4626,6 @@ function renderPurchaseCardRanking(useCachedResult) {
     storeSelect.innerHTML='<option value="all">Все магазины</option>';
     storeKeys.forEach(function(key){var option=document.createElement('option');option.value=String(key);option.textContent=String(STORES[key]||key);storeSelect.appendChild(option);});
     if(storeKeys.some(function(key){return String(key)===previousStore;}))storeSelect.value=previousStore;else storeSelect.value='all';
-    var rankingFilterKey=[periodSelect.value||'30',storeSelect.value||'all',document.getElementById('purchaseRankingStartDate')?document.getElementById('purchaseRankingStartDate').value:'',document.getElementById('purchaseRankingEndDate')?document.getElementById('purchaseRankingEndDate').value:''].join('|');
-    if(purchaseRankingFilterKey!==rankingFilterKey){purchaseRankingFilterKey=rankingFilterKey;purchaseRankingVisibleCount=10;purchaseRankingCachedKey='';purchaseRankingCachedResult=null;}
     var period=periodSelect.value||'30',today=new Date();today=new Date(today.getFullYear(),today.getMonth(),today.getDate());
     var startDate='',endDate='',previousStart='',previousEnd='',periodLabel='Всё время';
     if(period==='custom'){
@@ -4655,6 +4653,8 @@ function renderPurchaseCardRanking(useCachedResult) {
             periodLabel='Последние '+days+' дней';
         }
     }
+    var rankingFilterKey=[periodSelect.value||'30',storeSelect.value||'all',document.getElementById('purchaseRankingStartDate')?document.getElementById('purchaseRankingStartDate').value:'',document.getElementById('purchaseRankingEndDate')?document.getElementById('purchaseRankingEndDate').value:''].join('|');
+    if(purchaseRankingFilterKey!==rankingFilterKey){purchaseRankingFilterKey=rankingFilterKey;purchaseRankingVisibleCount=10;purchaseRankingCachedKey='';purchaseRankingCachedResult=null;}
     if(typeof window.stockGetCardSalesRanking!=='function'){list.innerHTML='<div style="padding:16px;color:var(--text-light);">Модуль складской аналитики ещё загружается.</div>';if(status)status.textContent='Ожидаем загрузку складского модуля.';return;}
     var rankingRequestKey=[period,startDate,endDate,storeSelect.value||'all',previousStart,previousEnd].join('|');
     var result=useCachedResult&&purchaseRankingCachedKey===rankingRequestKey?purchaseRankingCachedResult:window.stockGetCardSalesRanking(startDate,endDate,storeSelect.value||'all',previousStart,previousEnd);
