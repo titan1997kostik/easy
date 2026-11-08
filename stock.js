@@ -1073,7 +1073,9 @@
       }
       if(Math.abs(verified-current)>0.001)known=false;
       availableDays=Math.min(periodDays,Math.max(0,availableDays));
-      return {known:known,availableDays:availableDays,currentStock:current};
+      var eligibilityDays=availableDays,todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+      if(endMs>=todayStart&&current>0)eligibilityDays+=Math.max(0,1-(now-todayStart)/DAY);
+      return {known:known,availableDays:availableDays,eligibilityDays:eligibilityDays,currentStock:current};
     }
     active.forEach(function(product){
       var pid=String(product.id),allSold=0,allRevenue=0,allCurrent=0,knownDays=0,knownStores=0,qualifiedStores=0,sold=0,revenue=0,currentStock=0,availableDays=0,shopsWithSales=0;
@@ -1081,7 +1083,7 @@
         var stats=getAvailability(pid,String(sid)),saleStats=salesByKey[pid+'|'+String(sid)]||{units:0,revenue:0};
         allSold+=saleStats.units;allRevenue+=saleStats.revenue;allCurrent+=stats.currentStock;
         if(stats.known){knownStores++;knownDays+=stats.availableDays;}
-        if(stats.known&&stats.availableDays+0.01>=requiredDays){
+        if(stats.known&&stats.eligibilityDays+0.01>=requiredDays){
           qualifiedStores++;sold+=saleStats.units;revenue+=saleStats.revenue;currentStock+=stats.currentStock;availableDays+=stats.availableDays;
           if(saleStats.units>0)shopsWithSales++;
         }
