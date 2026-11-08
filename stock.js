@@ -816,11 +816,13 @@
         var periodEvents=events.filter(function(e){return e.at>=startMs&&e.at<=endMs;});
         var deltaAfterStart=events.filter(function(e){return e.at>=startMs&&e.at<=now;}).reduce(function(sum,e){return sum+e.delta;},0);
         var opening=current-deltaAfterStart,availableDays=0,known=true;
-        if(periodEvents.length&&periodEvents[0].before!==null&&isFinite(periodEvents[0].before))opening=periodEvents[0].before;
-        else if(!periodEvents.length){
+        var firstAfterStart=events.filter(function(e){return e.at>=startMs&&e.at<=now;})[0];
+        if(firstAfterStart&&firstAfterStart.before!==null&&isFinite(firstAfterStart.before))opening=firstAfterStart.before;
+        else if(!firstAfterStart){
           var balance=balances[sid]&&balances[sid][pid]||{},updated=stockDateMs(balance.updatedAt);
           if(updated>startMs&&updated<=now)known=false;
-        }
+          else opening=current;
+        }else known=false;
         if(opening<0){known=false;opening=0;}
         var cursor=startMs,level=opening;
         periodEvents.forEach(function(event){
