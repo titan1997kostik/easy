@@ -9896,6 +9896,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       {id:'expenses',label:'Расходы',icon:'↘'},
       {id:'cash',label:'Касса магазинов',icon:'▤'},
       {id:'analytics',label:'Аналитика',icon:'▥'},
+      {id:'advisor',label:'Умный помощник',icon:'✦',group:'АНАЛИТИКА'},
+
       {id:'tasks',label:'Задания',icon:'✓'},
       {id:'breaks',label:'Перерывы',icon:'☕'},
       {id:'audit',label:'Журнал действий',icon:'◷'},
@@ -9913,7 +9915,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var quick=document.createElement('div');quick.className='quick-actions';quick.innerHTML='<button class="quick-action" type="button" data-jump="purchaseJournal"><span>📦</span><span>Закупка товара</span></button><button class="quick-action" type="button" data-jump="sale"><span>＋</span><span>Записать продажу</span></button><button class="quick-action" type="button" data-jump="expense"><span>↘</span><span>Записать расход</span></button><button class="quick-action" type="button" data-jump="cash"><span>▤</span><span>Проверить кассу</span></button><button class="quick-action" type="button" data-jump="tasks" aria-label="Задания"><span>✓</span><span>Задания</span><span class="task-notice-count" hidden aria-hidden="true"></span></button><button class="quick-action" type="button" data-jump="costs" aria-label="Себестоимость товаров"><span>🧾</span><span>Без себестоимости</span><span class="cost-notice-count" hidden aria-hidden="true"></span></button>';dashboard.appendChild(quick);
     var sellerPlanWidget=document.createElement('section');sellerPlanWidget.id='sellerStoreSalesPlanWidget';sellerPlanWidget.className='card seller-plan-widget';sellerPlanWidget.innerHTML='<button id="sellerPlanToggle" class="seller-plan-toggle" type="button" onclick="toggleSellerSalesPlanDetails()" aria-expanded="false" aria-controls="sellerPlanProgress"><span class="seller-plan-toggle-row"><span><span class="seller-plan-toggle-title">План продаж</span><span id="sellerPlanStoreMonth" class="seller-plan-toggle-subtitle">Текущий месяц</span></span><span class="seller-plan-toggle-score"><span id="sellerPlanCompactPercent">—</span><span class="seller-plan-toggle-chevron" aria-hidden="true">⌄</span></span></span><span class="seller-plan-toggle-track" aria-hidden="true"><span id="sellerPlanCompactBar" class="seller-plan-toggle-fill" style="display:block;width:0%"></span></span></button><div id="sellerPlanProgress" class="seller-plan-details" hidden><div class="sales-plan-progress-list"><div class="sales-plan-empty">Загружаем план магазина…</div></div></div>';dashboard.appendChild(sellerPlanWidget);
     if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(true);
-    var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации');
+    var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), advisorPage=makePage('advisor','Умный помощник'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации');
     purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Оценка спроса отдельно по каждой карточке и магазину. Остатки — текущие; продажи учитываются за всю доступную историю. Расчётный горизонт запаса — 14 дней. Блок только показывает аналитику и ничего не записывает.</p></div><button type="button" class="btn btn-secondary" onclick="renderPurchaseRecommendations()">Обновить рекомендации</button></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все магазины</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка складских данных…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div><p id="purchaseRecommendationFootnote" style="font-size:12px;color:var(--text-light);margin:10px 0 0;">Продажи без привязки к карточке склада не распределяются автоматически. При неполной истории программа не выдаёт количество к закупке.</p></section>');
     costsPage.insertAdjacentHTML('beforeend', `
       <div class="card sale-cost-manager-card">
@@ -9987,6 +9989,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     function showPage(id){
       if(!pages[id])id='dashboard';
       if(id==='purchase'&&(!window.currentUser||window.currentUser.role!=='admin'))id='dashboard';
+      if(id==='advisor'&&(!window.currentUser||window.currentUser.role!=='admin'))id='dashboard';
       if(id==='costs'&&(!window.isPurchaseCostOwner||!window.isPurchaseCostOwner()))id='dashboard';
       if(window.currentUser&&window.currentUser.role==='seller'&&(id==='audit'||id==='orgs'))id='dashboard';
       document.querySelectorAll('#workspaceShell .workspace-page').forEach(function(page){page.classList.toggle('active',page.id==='workspacePage-'+id);});
@@ -9997,6 +10000,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(id==='breaks'&&typeof renderBreaksTable==='function')renderBreaksTable();
       if(id==='audit'&&typeof renderAuditLog==='function')renderAuditLog();
       if(id==='analytics'&&typeof drawChart==='function')drawChart();
+      if(id==='advisor'&&typeof window.renderBusinessAdvisor==='function')window.renderBusinessAdvisor();
       if(id==='tasks'&&typeof renderTasks==='function')renderTasks();
       if(id==='staff'){if(typeof renderUserManageTable==='function')renderUserManageTable();if(typeof renderEmployeePerformance==='function')renderEmployeePerformance();}
       if(id==='stores'&&typeof renderStoresManagement==='function')renderStoresManagement();
@@ -10013,6 +10017,10 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     function syncAdminNav(){
       [['staff','adminPanel'],['stores','storesManagePanel'],['salary','salaryManagePanel'],['purchase','adminPanel'],['orgs','orgsManagePanel']].forEach(function(pair){var panel=document.getElementById(pair[1]);var links=document.querySelectorAll('[data-page="'+pair[0]+'"]');var hidden=!panel||panel.classList.contains('hidden')||panel.style.display==='none';links.forEach(function(link){link.style.display=hidden?'none':'';});});
       var sellerMode = !!(window.currentUser && window.currentUser.role === 'seller');
+      var advisorAllowed = !!(window.currentUser && window.currentUser.role === 'admin');
+      document.querySelectorAll('[data-page="advisor"]').forEach(function(link){link.style.display=advisorAllowed?'':'none';});
+      var advisorPageEl = document.getElementById('workspacePage-advisor');
+      if (!advisorAllowed && advisorPageEl && advisorPageEl.classList.contains('active')) showPage('dashboard');
       document.querySelectorAll('[data-page="costs"], [data-jump="costs"]').forEach(function(link){link.style.display=(window.isPurchaseCostOwner && window.isPurchaseCostOwner())?'':'none';});
       if (typeof updatePurchaseCostDashboardNotice === 'function') updatePurchaseCostDashboardNotice();
       var costsPageEl = document.getElementById('workspacePage-costs');
@@ -11234,5 +11242,6 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
 
 <script src="backup-tools.js"></script>
 <script src="stock.js?v=48"></script>
+<script src="business-advisor.js?v=1"></script>
 </body>
 </html>
