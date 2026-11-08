@@ -83,11 +83,7 @@
         '<section class="card" id="businessAdvisorFinanceCard" style="padding:18px;margin:0 0 18px;">' +
           '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">' +
             '<div><h3 style="margin:0;border:0;padding:0;">Финансовый директор</h3><p style="font-size:12px;color:var(--text-light);margin:4px 0 0;">Прибыль с учётом себестоимости, возвратов, расходов, зарплат, налогов и комиссий.</p></div>' +
-            '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">' +
-            (typeof window.isPurchaseCostOwner === 'function' && window.isPurchaseCostOwner()
-              ? '<button type="button" class="btn btn-secondary" onclick="showAnalyticsCalculation(\'expenses\')" style="padding:6px 9px;font-size:11px;">Расчёт расходов</button><button type="button" class="btn btn-secondary" onclick="showAnalyticsCalculation(\'profit\')" style="padding:6px 9px;font-size:11px;">Расчёт прибыли</button>'
-              : '') +
-            '<span style="font-size:10px;font-weight:750;color:#28764d;background:#eef8f1;padding:5px 8px;border-radius:999px;">ЕДИНЫЙ РАСЧЁТ EASY</span></div>' +
+            '<span style="font-size:10px;font-weight:750;color:#28764d;background:#eef8f1;padding:5px 8px;border-radius:999px;">ЕДИНЫЙ РАСЧЁТ EASY</span>' +
           '</div>' +
           '<div id="businessAdvisorFinanceMetrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:9px;"></div>' +
           '<div id="businessAdvisorFinanceQuality" style="font-size:12px;line-height:1.55;margin:12px 0;padding:10px 12px;border-radius:10px;background:#f8f5f7;color:var(--text-light);"></div>' +
@@ -552,6 +548,7 @@
     }).filter(function(item) { return !!item.summary; });
 
     var recommendations = [];
+    var nonReturnedChecks = currentSales.checks - currentSales.returnedChecks;
     if (currentSales.checks === 0) {
       recommendations.push(recommendation('info','ℹ','Пока недостаточно продаж для анализа','За выбранный период не найдено продаж в доступных данных. Когда появятся записи, здесь будут динамика выручки, возвраты и сравнение магазинов.','Продажи за период ' + bounds.start.split('-').reverse().join('.') + ' — ' + bounds.end.split('-').reverse().join('.') + '; доступных магазинов: ' + visibleKeys.length + '.','sales'));
     } else if (salesChange !== null && salesChange <= -0.15 && previousSales.checks >= 3 && currentSales.checks >= 3) {
@@ -626,14 +623,15 @@
     }
     var metrics = el('businessAdvisorMetrics');
     if (metrics) {
-      var returnOperations = financialCurrent
-        ? num(financialCurrent.returnOperationsCount || returnedReceiptCount)
-        : num(currentSales.returnedChecks);
-      metrics.innerHTML =
-        metricCard('Чеки с возвратом', String(returnedReceiptCount),
-          'Операций возврата за период: ' + returnOperations) +
-        metricCard('Доля чеков с возвратом', pct(returnReceiptRate),
-          'От общего количества продаж за выбранный период');
+      metrics.innerHTML = financialCurrent
+        ? metricCard('Количество продаж', String(financialCurrent.salesCount), 'По дате продажи; возвраты учитываются отдельно') +
+          metricCard('Средний чек', money(financialCurrent.avgCheck), 'По чекам до вычета возвратов') +
+          metricCard('Чеки с возвратом', String(returnedReceiptCount), (financialCurrent.returnOperationsCount || returnedReceiptCount) + ' операций возврата') +
+          metricCard('Сумма возвратов', money(financialCurrent.returns), 'По датам фактических операций')
+        : metricCard('Количество продаж', String(nonReturnedChecks), 'Возвраты исключены из количества') +
+          metricCard('Средний чек', money(currentSales.averageCheck), 'По продажам без возвратов') +
+          metricCard('Количество возвратов', String(currentSales.returnedChecks), 'Сумма: ' + money(currentSales.returnedRevenue)) +
+          metricCard('Доля возвратов', pct(currentSales.returnRate), 'От количества продаж за период');
     }
     renderFinancialPanel(financialCurrent, financialPrevious, financeStoreRows, selectedStore);
     renderExpenseAnalysis(financialCurrent, financeStoreRows, selectedStore);
