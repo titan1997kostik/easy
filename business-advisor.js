@@ -251,9 +251,9 @@
     var profitNote = !profitAvailable ? 'Не хватает подтверждённой себестоимости' : (current.costDataComplete ? 'Расчёт по фактической себестоимости' : 'Предварительно: часть себестоимости оценена');
     metrics.innerHTML =
       metricCard('Выручка после возвратов', money(current.netRevenue), money(current.returns) + ' возвратов за период') +
-      metricCard('Валовая прибыль', grossAvailable ? money(current.grossProfit) : '—', grossAvailable ? 'После себестоимости товара' : 'Неполная себестоимость') +
-      metricCard('Чистая прибыль', profitAvailable ? money(current.netProfit) : '—', profitNote) +
-      metricCard('Валовая маржа', grossAvailable && current.grossMargin !== null ? financialPercent(current.grossMargin) : '—', 'Валовая прибыль / выручка после возвратов');
+      metricCard('Валовая прибыль', grossAvailable ? ((!current.costDataComplete ? '≈ ' : '') + money(current.grossProfit)) : '—', grossAvailable ? 'После себестоимости товара' : 'Неполная себестоимость') +
+      metricCard('Чистая прибыль', profitAvailable ? ((!current.costDataComplete ? '≈ ' : '') + money(current.netProfit)) : '—', profitNote) +
+      metricCard('Валовая маржа', grossAvailable && current.grossMargin !== null ? ((!current.costDataComplete ? '≈ ' : '') + financialPercent(current.grossMargin)) : '—', 'Валовая прибыль / выручка после возвратов');
 
     var actualShare = current.salesCount > 0 ? current.costedSalesCount / current.salesCount : 1;
     var qualityText = 'Фактическая себестоимость указана для ' + current.costedSalesCount + ' из ' + current.salesCount + ' продаж (' + financialPercent(actualShare * 100) + '). ';
@@ -261,7 +261,7 @@
       qualityText += 'Себестоимость продаж и возвратов в этом периоде подтверждена фактическими закупочными ценами.';
       quality.style.background = '#eef8f1'; quality.style.color = '#28764d';
     } else if (current.costCalculationAvailable) {
-      qualityText += 'В прибыль включена предварительная оценка себестоимости: ' + current.estimatedCostSalesCount + ' продаж и ' + current.estimatedCostReturnsCount + ' возвратных операций. Для точной цифры заполните недостающие закупочные цены.';
+      qualityText += 'В прибыль включена предварительная оценка себестоимости: ' + current.estimatedCostSalesCount + ' продаж и ' + current.estimatedCostReturnsCount + ' возвратных операций. Оценка построена по средней наценке из ' + (current.costMarkupSampleCount || 0) + ' продаж с фактической закупочной ценой' + (current.costEstimateFallback ? ' по всем доступным магазинам, поскольку по выбранному магазину пока нет своей базы' : ' выбранного магазина/периода') + '. Для точной цифры заполните недостающие закупочные цены.';
       quality.style.background = '#fff7e8'; quality.style.color = '#7b5211';
     } else {
       qualityText += 'Часть операций не имеет даже расчётной себестоимости. Поэтому чистая прибыль скрыта, чтобы не показывать ложную точность.';
@@ -293,6 +293,7 @@
       var expenseRatioCurrent = current.netRevenue > 0 ? current.allExpenses / current.netRevenue : 0;
       var expenseRatioPrevious = previous.netRevenue > 0 ? previous.allExpenses / previous.netRevenue : 0;
       var lines = [];
+      if (!current.costDataComplete || !previous.costDataComplete) lines.push('<p><strong>Внимание:</strong> сравнение предварительное, поскольку в одном из периодов использовалась оценочная себестоимость.</p>');
       lines.push('<p><strong>Изменение чистой прибыли:</strong> ' + (deltaProfit > 0 ? '+' : '') + money(deltaProfit) + ' (' +
         (financialChange(current.netProfit, previous.netProfit) === null ? 'нет базы для процента' : (financialChange(current.netProfit, previous.netProfit) >= 0 ? '+' : '') + financialPercent(financialChange(current.netProfit, previous.netProfit) * 100)) + ').</p>');
       lines.push('<p>Влияние факторов: выручка после возвратов ' + (deltaRevenue > 0 ? '+' : '') + money(deltaRevenue) +
@@ -321,7 +322,7 @@
       storeHost.innerHTML = storeRows.map(function(item) {
         var summary = item.summary;
         var ready = summary && summary.costCalculationAvailable && summary.netProfit !== null && summary.netProfit !== undefined;
-        var net = ready ? money(summary.netProfit) : '—';
+        var net = ready ? ((!summary.costDataComplete ? '≈ ' : '') + money(summary.netProfit)) : '—';
         var margin = ready && summary.grossMargin !== null ? financialPercent(summary.grossMargin) : '—';
         var state = !ready ? 'Себестоимость неполная' : summary.costDataComplete ? 'Фактические цены' : 'Есть оценка';
         return '<article style="border:1px solid var(--border);border-radius:10px;padding:10px;background:#fff;min-width:0;">' +
@@ -345,8 +346,8 @@
         'Оценено ' + current.estimatedCostSalesCount + ' продаж и ' + current.estimatedCostReturnsCount + ' возвратных операций.','costs'));
     }
     if (current.costCalculationAvailable && current.netProfit !== null && current.netProfit < 0) {
-      recommendations.push(recommendation('danger','↘','Период завершён с убытком',
-        'После себестоимости, зарплат, регулярных и прочих расходов, налогов и комиссий результат отрицательный: ' + money(current.netProfit) + '.',
+      recommendations.push(recommendation('danger','↘',current.costDataComplete ? 'Период завершён с убытком' : 'Предварительно: период убыточен',
+        (current.costDataComplete ? 'После себестоимости' : 'По оценочной себестоимости') + ', зарплат, регулярных и прочих расходов, налогов и комиссий результат отрицательный: ' + money(current.netProfit) + '.',
         'Выручка после возвратов ' + money(current.netRevenue) + '; себестоимость ' + money(current.costOfGoods) + '; все расходы ' + money(current.allExpenses) + '.','analytics'));
     }
     if (previous && current.costCalculationAvailable && previous.costCalculationAvailable &&
@@ -357,14 +358,15 @@
       var expenseDelta = num(current.allExpenses) - num(previous.allExpenses);
       var significantDrop = profitDelta < -Math.max(5000, Math.abs(num(previous.netProfit)) * 0.1);
       if (significantDrop) {
+        var comparisonIsEstimated = !current.costDataComplete || !previous.costDataComplete;
         var impacts = [
           {name:'снижение выручки после возвратов',value:revenueDelta},
           {name:'рост себестоимости',value:-costDelta},
           {name:'рост всех расходов',value:-expenseDelta}
         ].filter(function(item){return item.value<0;}).sort(function(a,b){return a.value-b.value;});
         var mainCause = impacts.length ? impacts[0].name : 'изменение структуры продаж и расходов';
-        recommendations.push(recommendation('danger','📉','Чистая прибыль заметно снизилась',
-          'Прибыль уменьшилась на ' + money(Math.abs(profitDelta)) + ' относительно предыдущего равного периода. Главный отрицательный вклад внесло ' + mainCause + '.',
+        recommendations.push(recommendation('danger','📉',comparisonIsEstimated ? 'Оценка прибыли показывает снижение' : 'Чистая прибыль заметно снизилась',
+          (comparisonIsEstimated ? 'По предварительной оценке ' : '') + 'прибыль уменьшилась на ' + money(Math.abs(profitDelta)) + ' относительно предыдущего равного периода. Главный отрицательный вклад внесло ' + mainCause + '.',
           'Изменение прибыли: ' + money(profitDelta) + '; выручка после возвратов: ' + money(revenueDelta) + '; себестоимость: ' + money(costDelta) + '; все расходы: ' + money(expenseDelta) + '.','analytics'));
       } else if (revenueDelta > 0 && profitDelta < 0) {
         recommendations.push(recommendation('warning','↔','Выручка растёт, а прибыль снижается',
