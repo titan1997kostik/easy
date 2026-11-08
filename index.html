@@ -945,8 +945,6 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
             <div>
                 <h3>Аналитика магазина</h3>
                 <p id="analyticsScopeLabel">Сводка по выбранному периоду и магазину</p>
-                <div id="analyticsDataStatus" role="status" aria-live="polite" style="display:none;font-size:12px;line-height:1.45;color:var(--text-light);margin-top:4px;"></div>
-                <button type="button" id="analyticsRetryDataButton" class="btn btn-secondary" style="display:none;margin-top:7px;padding:6px 10px;font-size:12px;" onclick="retryAnalyticsDataLoad()">Повторить загрузку данных</button>
             </div>
             <div class="analytics-controls">
                 <select id="chartMetricSelect" onchange="if(typeof drawChart==='function')drawChart()" aria-label="Показатель на графике">
@@ -1289,7 +1287,6 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 <script>
 // ========== DATA STORES ==========
 var sales = [];
-var analyticsSourceLoadState = { sales:false, expenses:false, stores:false };
 var salePurchaseCosts = {}; // owner-only cost data, stored separately from sales records
 var salePurchaseCostsLoaded = false;
 var salePurchaseCostsRef = null;
@@ -2949,7 +2946,6 @@ function applySalesSnapshot(snapshot) {
         }
     });
     sales = arr;
-    analyticsSourceLoadState.sales = true;
     if (typeof window.stockInvalidateReplenishmentCache === 'function') window.stockInvalidateReplenishmentCache();
     invalidateAnalyticsCache();
     scheduleLocalCacheSave();
@@ -2979,7 +2975,6 @@ function applyExpensesSnapshot(snapshot) {
         }
     });
     expenses = arr;
-    analyticsSourceLoadState.expenses = true;
     invalidateAnalyticsCache();
     scheduleLocalCacheSave();
     if (currentUser) scheduleWorkspaceRender();
@@ -2988,7 +2983,6 @@ function applyExpensesSnapshot(snapshot) {
 function applyStoresSnapshot(snapshot) {
     var val = snapshot.val() || {};
     STORES = {};
-    analyticsSourceLoadState.stores = true;
     if (val && typeof val === 'object') {
         Object.keys(val).forEach(function(key) {
             if (val[key] !== null && !isStoreDeleted(key)) STORES[key] = val[key];
@@ -9020,75 +9014,6 @@ function renderStockFinancialAnalytics(averageMarkup) {
     set('analyticsStockRealizationNote',note);
 }
 
-function setAnalyticsDataUnavailable(message, canRetry) {
-    var status = document.getElementById('analyticsDataStatus');
-    var retry = document.getElementById('analyticsRetryDataButton');
-    if (status) {
-        status.textContent = message;
-        status.style.display = 'block';
-    }
-    if (retry) retry.style.display = canRetry ? 'inline-flex' : 'none';
-    [
-        'analyticsKpiRevenue','analyticsKpiSalesCount','analyticsKpiAvgCheck',
-        'analyticsKpiTaxes','analyticsKpiSalaryExpenses','analyticsKpiReturns',
-        'analyticsKpiAllExpenses','analyticsKpiNetProfit','analyticsKpiMarkup',
-        'analyticsKpiCostCoverage'
-    ].forEach(function(id) {
-        var node = document.getElementById(id);
-        if (node) node.textContent = '—';
-    });
-    [
-        'analyticsKpiRevenueChange','analyticsKpiSalesChange','analyticsKpiAvgChange',
-        'analyticsKpiTaxesChange','analyticsKpiSalaryExpensesChange',
-        'analyticsKpiReturnsChange','analyticsKpiAllExpensesChange'
-    ].forEach(function(id) {
-        var node = document.getElementById(id);
-        if (node) node.textContent = message;
-    });
-    var canvas = document.getElementById('revenueChart');
-    var ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
-    if (ctx) {
-        ctx.clearRect(0, 0, canvas.width || 1000, canvas.height || 280);
-        ctx.fillStyle = '#8e7781';
-        ctx.font = '13px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(message, (canvas.width || 1000) / 2, (canvas.height || 280) / 2);
-    }
-}
-
-function retryAnalyticsDataLoad() {
-    if (!currentUser || !isWorkspacePageActive('analytics')) return;
-    if (!syncConnected) {
-        setAnalyticsDataUnavailable('Нет соединения с Firebase. Проверьте интернет и повторите загрузку.', false);
-        return;
-    }
-    if (typeof refreshDeletionLedgersFromServerAndFlush === 'function') refreshDeletionLedgersFromServerAndFlush();
-    if (!db || !db.ref) {
-        setAnalyticsDataUnavailable('Firebase пока недоступен. Повторите попытку позже.', true);
-        return;
-    }
-    Promise.all([
-        db.ref('stores_data').once('value'),
-        db.ref('sales_data').once('value'),
-        db.ref('expenses_data').once('value')
-    ]).then(function(snapshots) {
-        // Never apply sales or expenses until fresh deletion/reset markers have been checked.
-        if (!canUseStoreData()) {
-            setAnalyticsDataUnavailable('Проверяем актуальность данных магазинов в Firebase…', true);
-            return;
-        }
-        applyStoresSnapshot(snapshots[0]);
-        applySalesSnapshot(snapshots[1]);
-        applyExpensesSnapshot(snapshots[2]);
-        invalidateAnalyticsCache();
-        drawChart();
-    }).catch(function(error) {
-        console.warn('Повторная загрузка аналитики не удалась:', error);
-        setAnalyticsDataUnavailable('Не удалось получить данные из Firebase. Проверьте подключение и нажмите «Повторить загрузку данных».', true);
-    });
-}
-
 function drawChart() {
     if (!isWorkspacePageActive('analytics')) return;
 
@@ -9129,22 +9054,6 @@ function drawChart() {
         if (storeFilterEl && storeFilterEl.value) targetStore = storeFilterEl.value;
     }
     var visibleKeys = typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys().map(String) : [];
-    var analyticsStatus = document.getElementById('analyticsDataStatus');
-    var analyticsRetry = document.getElementById('analyticsRetryDataButton');
-    if (syncConnected && (!canUseStoreData() ||
-        !analyticsSourceLoadState.stores ||
-        !analyticsSourceLoadState.sales ||
-        !analyticsSourceLoadState.expenses)) {
-        if (!canUseStoreData() && !ledgerRefreshInProgress) refreshDeletionLedgersFromServerAndFlush();
-        setAnalyticsDataUnavailable('Загружаем продажи и расходы из Firebase. Пока загрузка не завершена, показатели не рассчитываются.', true);
-        return;
-    }
-    if (!visibleKeys.length) {
-        setAnalyticsDataUnavailable('Нет доступных магазинов в выбранной организации. Проверьте выбор организации и доступ к магазинам.', false);
-        return;
-    }
-    if (analyticsStatus) analyticsStatus.style.display = 'none';
-    if (analyticsRetry) analyticsRetry.style.display = 'none';
     var analyticsScopeData = getAnalyticsScopedData(targetStore, visibleKeys);
     var activeSales = analyticsScopeData.sales;
     if (isSeller) {
