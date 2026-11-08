@@ -4659,7 +4659,7 @@ function switchPurchaseCardRankingMode(mode){
     updatePurchaseCardRankingModeUI();
     renderPurchaseCardRanking();
 }
-function renderPurchaseCardAntiRanking(result,periodLabel,storeIsAll){
+function renderPurchaseCardAntiRanking(result,periodLabel,storeIsAll,selectedStoreName){
     var list=document.getElementById('purchaseCardRankingList');
     var status=document.getElementById('purchaseRankingStatus');
     var more=document.getElementById('purchaseRankingMore');
@@ -4667,37 +4667,47 @@ function renderPurchaseCardAntiRanking(result,periodLabel,storeIsAll){
     var rows=result.rows||[],insufficient=result.insufficientRows||[];
     function h(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
     function n(value,digits){return Number(value||0).toLocaleString('ru-RU',{maximumFractionDigits:digits==null?1:digits});}
-    if(status)status.textContent=periodLabel+' · '+(storeIsAll?'все магазины':'выбранный магазин')+' · слабые продажи: '+rows.length+' · недостаточно данных: '+insufficient.length+' · порог наличия: от 7 дней и 50% периода';
     var visible=rows.slice(0,purchaseAntiRankingVisibleCount);
-    var html='';
-    if(!rows.length)html='<div style="padding:16px;color:var(--text-light);">Нет карточек, которые одновременно имеют достаточную историю наличия и низкие продажи. Карточки с неполной историей вынесены ниже.</div>';
-    html+=visible.map(function(row,index){
-        var photoUrl=String(row.photoUrl||'');
-        var photo=/^https?:\/\//i.test(photoUrl)?'<img src="'+h(photoUrl)+'" alt="" loading="lazy" decoding="async" style="width:58px;height:58px;object-fit:cover;border-radius:9px;background:var(--surface,#f3f4f6);flex:0 0 58px;">':'<span style="width:58px;height:58px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--surface,#f3f4f6);font-size:24px;flex:0 0 58px;">📦</span>';
-        function metric(label,value){return '<div style="min-width:0;padding:8px 10px;border-radius:8px;background:var(--surface,#f7f7f7);"><div style="font-size:11px;color:var(--text-light);margin-bottom:3px;">'+label+'</div><div style="font-size:14px;font-weight:700;overflow-wrap:anywhere;">'+value+'</div></div>';}
-        var soldLabel=row.soldUnits<=0?'<span style="color:#b42318;">Нет продаж</span>':n(row.soldUnits,0)+' шт.';
-        var availability=n(row.availableDays,1)+' из '+n(row.expectedStoreDays,1)+' магазин-дней';
-        var metrics=metric('Продано',soldLabel)+
-          metric('Средние продажи за день наличия',n(row.averageDailySales,3)+' шт.')+
-          metric('Наличие',availability)+
-          metric('Остаток сейчас',n(row.currentStock,0)+' шт.')+
-          metric('Выручка',n(row.revenue,0)+' ₽')+
-          metric('Магазины с надёжными данными',row.storesWithData+' из '+row.storesTotal);
-        var partialNote=row.excludedStoreCount>0?'<div style="font-size:11px;color:var(--text-light);margin-top:7px;">В расчёт не вошли '+row.excludedStoreCount+' магазин(а) с недостаточной историей.</div>':'';
-        return '<article style="border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:12px;min-width:0;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;min-width:0;"><div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#fff0f0;color:#b42318;font-size:13px;font-weight:800;flex:0 0 28px;">'+(index+1)+'</div>'+photo+'<div style="font-size:14px;font-weight:700;min-width:0;overflow-wrap:anywhere;">'+h(row.productName)+'</div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:7px;">'+metrics+'</div>'+partialNote+'</article>';
-    }).join('');
+    if(status)status.textContent=periodLabel+' · '+(storeIsAll?'все магазины':h(selectedStoreName||'выбранный магазин'))+' · показано '+visible.length+' из '+rows.length+' карточек · недостаточно данных: '+insufficient.length;
+    if(!rows.length){
+        list.innerHTML='<div style="padding:16px;color:var(--text-light);">Нет карточек с подтверждённой историей наличия для антирейтинга. Проверьте раздел «Недостаточно данных» ниже.</div>';
+    }else{
+        list.innerHTML=visible.map(function(row,index){
+            var photoUrl=String(row.photoUrl||'');
+            var photo=/^https?:\/\//i.test(photoUrl)?'<img src="'+h(photoUrl)+'" alt="" loading="lazy" decoding="async" style="width:58px;height:58px;object-fit:cover;border-radius:9px;background:var(--surface,#f3f4f6);flex:0 0 58px;">':'<span style="width:58px;height:58px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--surface,#f3f4f6);font-size:24px;flex:0 0 58px;">📦</span>';
+            function metric(label,value){return '<div style="min-width:0;padding:8px 10px;border-radius:8px;background:var(--surface,#f7f7f7);"><div style="font-size:11px;color:var(--text-light);margin-bottom:3px;">'+label+'</div><div style="font-size:14px;font-weight:700;overflow-wrap:anywhere;">'+value+'</div></div>';}
+            var availabilityPercent=row.expectedStoreDays>0?row.availableDays/row.expectedStoreDays*100:0;
+            var soldValue=row.soldUnits<=0?'<span style="color:#b42318;">0 шт. · нет продаж</span>':n(row.soldUnits,0)+' шт.';
+            var metrics=metric('Продано',soldValue)+
+                metric('Средние продажи',n(row.averageDailySales,2)+' шт./день наличия')+
+                metric('Наличие',n(row.availableDays,1)+' дн. · '+n(availabilityPercent,0)+'%')+
+                metric('Остаток '+(storeIsAll?'по магазинам с данными':'в магазине'),n(row.currentStock,0)+' шт.')+
+                metric('Выручка',n(row.revenue,0)+' ₽')+
+                metric('Магазинов с данными',row.storesWithData+' из '+row.storesTotal);
+            var partialNote=row.excludedStoreCount>0?'<div style="font-size:11px;color:var(--text-light);margin-top:7px;">Не включены '+row.excludedStoreCount+' магазин(а) с недостаточной историей наличия.</div>':'';
+            return '<article style="border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:12px;min-width:0;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;min-width:0;"><div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--surface,#f3f4f6);font-size:12px;font-weight:800;flex:0 0 28px;">'+(index+1)+'</div>'+photo+'<div style="font-size:14px;font-weight:700;min-width:0;overflow-wrap:anywhere;">'+h(row.productName)+'</div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:7px;">'+metrics+'</div>'+partialNote+'</article>';
+        }).join('');
+    }
     if(insufficient.length){
         var insufficientVisible=insufficient.slice(0,purchaseAntiRankingInsufficientVisibleCount);
-        html+='<details open style="margin-top:14px;border:1px dashed var(--border);border-radius:10px;padding:12px;"><summary style="cursor:pointer;font-weight:700;">Недостаточно данных · '+insufficient.length+' карточек</summary><p style="font-size:12px;color:var(--text-light);margin:8px 0 10px;">Эти карточки не включены в антирейтинг: по ним пока нельзя достоверно оценить спрос. Например, товар мог отсутствовать на складе большую часть периода.</p><div style="display:flex;flex-direction:column;gap:8px;">'+insufficientVisible.map(function(row){
+        var insufficientCards=insufficientVisible.map(function(row){
             var photoUrl=String(row.photoUrl||'');
-            var photo=/^https?:\/\//i.test(photoUrl)?'<img src="'+h(photoUrl)+'" alt="" loading="lazy" decoding="async" style="width:42px;height:42px;object-fit:cover;border-radius:8px;flex:0 0 42px;">':'<span style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--surface,#f3f4f6);font-size:20px;flex:0 0 42px;">📦</span>';
-            return '<div style="border:1px solid var(--border);border-radius:9px;padding:9px;display:flex;align-items:center;gap:9px;min-width:0;">'+photo+'<div style="min-width:0;flex:1;"><div style="font-size:13px;font-weight:700;overflow-wrap:anywhere;">'+h(row.productName)+'</div><div style="font-size:11px;color:var(--text-light);">'+h(row.reason)+' · наличие: '+n(row.availableDays,1)+' из '+n(row.expectedStoreDays,1)+' магазин-дней</div><div style="font-size:11px;color:var(--text-light);">Продано за период: '+n(row.soldUnits,0)+' шт. · остаток: '+n(row.currentStock,0)+' шт.</div></div></div>';
-        }).join('')+'</div>'+(insufficient.length>insufficientVisible.length?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseCardAntiInsufficient()" style="width:100%;margin-top:9px;">Показать ещё 10 карточек · осталось '+(insufficient.length-insufficientVisible.length)+'</button>':'')+'</details>';
+            var photo=/^https?:\/\//i.test(photoUrl)?'<img src="'+h(photoUrl)+'" alt="" loading="lazy" decoding="async" style="width:58px;height:58px;object-fit:cover;border-radius:9px;background:var(--surface,#f3f4f6);flex:0 0 58px;">':'<span style="width:58px;height:58px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--surface,#f3f4f6);font-size:24px;flex:0 0 58px;">📦</span>';
+            function metric(label,value){return '<div style="min-width:0;padding:8px 10px;border-radius:8px;background:var(--surface,#f7f7f7);"><div style="font-size:11px;color:var(--text-light);margin-bottom:3px;">'+label+'</div><div style="font-size:14px;font-weight:700;overflow-wrap:anywhere;">'+value+'</div></div>';}
+            var availabilityPercent=row.expectedStoreDays>0?row.availableDays/row.expectedStoreDays*100:0;
+            var metrics=metric('Продано',n(row.soldUnits,0)+' шт.')+
+                metric('Подтверждённое наличие',n(row.availableDays,1)+' дн. · '+n(availabilityPercent,0)+'%')+
+                metric('Остаток сейчас',n(row.currentStock,0)+' шт.')+
+                metric('Выручка',n(row.revenue,0)+' ₽')+
+                metric('Магазинов с данными',row.storesWithData+' из '+row.storesTotal)+
+                metric('Почему нет в рейтинге',h(row.reason));
+            return '<article style="border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:12px;min-width:0;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;min-width:0;"><div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--surface,#f3f4f6);font-size:11px;font-weight:800;flex:0 0 28px;">—</div>'+photo+'<div style="font-size:14px;font-weight:700;min-width:0;overflow-wrap:anywhere;">'+h(row.productName)+'</div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:7px;">'+metrics+'</div></article>';
+        }).join('');
+        list.insertAdjacentHTML('beforeend','<details style="margin-top:14px;border:1px solid var(--border);border-radius:12px;padding:12px;"><summary style="cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;">Недостаточно данных · '+insufficient.length+' карточек <span style="font-size:12px;color:var(--text-light);font-weight:400;">Показать</span></summary><p style="font-size:12px;color:var(--text-light);margin:8px 0 10px;">Эти товары не включены в антирейтинг: пока недостаточно подтверждённого наличия, чтобы честно оценить спрос.</p><div style="display:flex;flex-direction:column;gap:10px;">'+insufficientCards+'</div>'+(insufficient.length>insufficientVisible.length?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseCardAntiInsufficient()" style="width:100%;margin-top:10px;">Показать ещё 10 · осталось '+(insufficient.length-insufficientVisible.length)+'</button>':'')+'</details>');
     }
-    list.innerHTML=html;
     if(more){
         var remaining=rows.length-visible.length;
-        more.innerHTML=remaining>0?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseCardRanking()" style="width:100%;">Показать ещё 10 · осталось '+remaining+'</button>':'';
+        more.innerHTML=remaining>0?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseCardRanking()" style="width:100%;">Показать ещё 10 · осталось '+remaining+'</button>':(rows.length?'<div style="font-size:12px;color:var(--text-light);text-align:center;padding:8px 0;">Показаны все '+rows.length+' карточек</div>':'');
     }
 }
 function showMorePurchaseCardAntiInsufficient(){
@@ -4760,7 +4770,7 @@ function renderPurchaseCardRanking(useCachedResult) {
         var antiResult=useCachedResult&&purchaseAntiRankingCachedKey===rankingRequestKey?purchaseAntiRankingCachedResult:window.stockGetCardSalesAntiRanking(startDate,endDate,storeSelect.value||'all');
         if(antiResult&&antiResult.ready){purchaseAntiRankingCachedKey=rankingRequestKey;purchaseAntiRankingCachedResult=antiResult;}
         if(!antiResult||!antiResult.ready){var antiMoreWait=document.getElementById('purchaseRankingMore');if(antiMoreWait)antiMoreWait.innerHTML='';list.innerHTML='<div style="padding:16px;color:var(--text-light);">'+h(antiResult&&antiResult.message||'Загрузка истории наличия…')+'</div>';if(status)status.textContent=antiResult&&antiResult.message||'Загрузка…';return;}
-        renderPurchaseCardAntiRanking(antiResult,periodLabel,storeIsAll);
+        renderPurchaseCardAntiRanking(antiResult,periodLabel,storeIsAll,String(STORES[storeSelect.value]||storeSelect.value||''));
         return;
     }
     if(typeof window.stockGetCardSalesRanking!=='function'){var rankMoreWait=document.getElementById('purchaseRankingMore');if(rankMoreWait)rankMoreWait.innerHTML='';list.innerHTML='<div style="padding:16px;color:var(--text-light);">Модуль складской аналитики ещё загружается.</div>';if(status)status.textContent='Ожидаем загрузку складского модуля.';return;}
