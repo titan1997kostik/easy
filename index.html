@@ -2079,6 +2079,7 @@ var deletionLedgersFresh = false;
 var deletionLedgersVerifiedOnce = false;
 var syncConnectionKnown = false;
 var firebaseSyncError = '';
+var firebaseCoreDataErrors = Object.create(null);
 var ledgerRefreshInProgress = false;
 var queuedSalesSnapshot = null;
 var queuedExpensesSnapshot = null;
@@ -2205,7 +2206,11 @@ function attachIncrementalCollectionListener(ref, collectionName) {
         scheduleWorkspaceRender();
     }
     rebuildIndex();
-    var errorHandler = function(error) { console.error('Ошибка потоковой синхронизации ' + collectionName + ':', error); };
+    var errorHandler = function(error) {
+        var path = collectionName === 'sales' ? 'sales_data' : 'expenses_data';
+        setFirebaseCoreDataError(path, error);
+        console.error('Ошибка потоковой синхронизации ' + collectionName + ':', error);
+    };
     ref.on('child_added', function(snapshot) { handle('child_added', snapshot); }, errorHandler);
     ref.on('child_changed', function(snapshot) { handle('child_changed', snapshot); }, errorHandler);
     ref.on('child_removed', function(snapshot) { handle('child_removed', snapshot); }, errorHandler);
@@ -2230,6 +2235,7 @@ function startIncrementalSalesExpensesListeners() {
         scheduleWorkspaceRender();
     }).catch(function(error) {
         console.warn('Не удалось переключить продажи и расходы на потоковую синхронизацию; оставляем полный слушатель:', error);
+        setFirebaseCoreDataError('sales_data / expenses_data', error);
     }).finally(function() { incrementalSalesExpensesStarting = false; });
 }
 
@@ -2687,17 +2693,34 @@ function setFirebaseSyncError(path, error) {
     if (indicator) indicator.className = 'sync-indicator connecting';
     if (dot) dot.className = 'sync-dot connecting';
     if (label) {
-        label.textContent = String(path || '').indexOf('JavaScript') === 0 ? 'Ошибка JavaScript приложения' : 'Firebase: ошибка синхронизации';
+        var isJavaScript = String(path || '').indexOf('JavaScript') === 0 || String(path || '').indexOf('Promise') === 0;
+        label.textContent = (isJavaScript ? 'Ошибка приложения: ' : 'Ошибка Firebase: ') + firebaseSyncError;
         label.title = firebaseSyncError;
     }
     console.error('Ошибка синхронизации Easy в ' + path + ':', error);
 }
 
 function clearFirebaseSyncError() {
+    if (Object.keys(firebaseCoreDataErrors).length) return;
     firebaseSyncError = '';
     window.easyAppSyncFirebaseError = '';
     var label = document.getElementById('syncText');
-    if (label) label.title = '';
+    if (label) { label.title = ''; label.textContent = syncConnected ? 'Firebase: подключено' : 'Firebase: нет соединения'; }
+}
+
+function setFirebaseCoreDataError(path, error) {
+    firebaseCoreDataErrors[String(path)] = {
+        code: error && error.code ? String(error.code) : '',
+        message: error && error.message ? String(error.message) : String(error || 'Неизвестная ошибка')
+    };
+    setFirebaseSyncError(path, error);
+    if (currentUser && isWorkspacePageActive('analytics') && typeof drawChart === 'function') drawChart();
+}
+
+function clearFirebaseCoreDataError(path) {
+    delete firebaseCoreDataErrors[String(path)];
+    if (!Object.keys(firebaseCoreDataErrors).length && firebaseSyncError.indexOf(String(path)) === 0) clearFirebaseSyncError();
+    if (currentUser && isWorkspacePageActive('analytics') && typeof drawChart === 'function') drawChart();
 }
 
 function readFirebaseLedger(path) {
@@ -3046,10 +3069,11 @@ function applyStoresSnapshot(snapshot) {
 
 salesDataRef = db.ref('sales_data');
 salesRootValueListener = function(snapshot) {
+    clearFirebaseCoreDataError('sales_data');
     if (!deletionLedgersLoaded) { queuedSalesSnapshot = snapshot; return; }
     applySalesSnapshot(snapshot);
 };
-salesDataRef.on('value', salesRootValueListener);
+salesDataRef.on('value', salesRootValueListener, function(error) { setFirebaseCoreDataError('sales_data', error); });
 
 // Shared product catalogue: historical sale records retain productId even when a product is archived or renamed.
 db.ref('products_catalog_data').on('value', function(snapshot) {
@@ -3075,10 +3099,11 @@ db.ref('products_catalog_data').on('value', function(snapshot) {
 
 expensesDataRef = db.ref('expenses_data');
 expensesRootValueListener = function(snapshot) {
+    clearFirebaseCoreDataError('expenses_data');
     if (!deletionLedgersLoaded) { queuedExpensesSnapshot = snapshot; return; }
     applyExpensesSnapshot(snapshot);
 };
-expensesDataRef.on('value', expensesRootValueListener);
+expensesDataRef.on('value', expensesRootValueListener, function(error) { setFirebaseCoreDataError('expenses_data', error); });
 
 // Recurring monthly expenses are stored once in Firebase and prorated by calendar day in analytics.
 db.ref('recurring_expenses_data').on('value', function(snapshot) {
@@ -3262,11 +3287,12 @@ db.ref('breaks_data').on('value', function(snapshot) {
 });
 
 db.ref('stores_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('stores_data');
     if (!deletionLedgersLoaded) { queuedStoresSnapshot = snapshot; return; }
     isRemoteChange = true;
     applyStoresSnapshot(snapshot);
     isRemoteChange = false;
-});
+}, function(error) { setFirebaseCoreDataError('stores_data', error); });
 
 db.ref('orgs_data').on('value', function(snapshot) {
     isRemoteChange = true;
@@ -6947,7 +6973,7 @@ function renderActiveWorkspace() {
         if (syncDot) syncDot.className = 'sync-dot connecting';
         if (syncTextNode) {
             if (firebaseSyncError) {
-                syncTextNode.textContent = firebaseSyncError.indexOf('JavaScript') === 0 ? 'Ошибка JavaScript приложения' : 'Firebase: ошибка синхронизации';
+                syncTextNode.textContent = firebaseSyncError;
                 syncTextNode.title = firebaseSyncError;
             } else if (!syncConnectionKnown) {
                 syncTextNode.textContent = 'Firebase: ожидаем ответ сервера';
@@ -9105,6 +9131,33 @@ function drawChart() {
     if (!canvas || typeof currentUser === 'undefined' || !currentUser) return;
     var ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    var coreErrorKeys = Object.keys(firebaseCoreDataErrors);
+    if (coreErrorKeys.length) {
+        var failureText = 'Не удалось загрузить данные: ' + coreErrorKeys.map(function(key) {
+            var item = firebaseCoreDataErrors[key] || {};
+            return key + (item.code ? ' [' + item.code + ']' : '');
+        }).join(', ');
+        var scopeLabel = document.getElementById('analyticsScopeLabel');
+        if (scopeLabel) scopeLabel.textContent = failureText;
+        [
+            'analyticsKpiRevenue','analyticsKpiSalesCount','analyticsKpiAvgCheck',
+            'analyticsKpiTaxes','analyticsKpiSalaryExpenses','analyticsKpiReturns',
+            'analyticsKpiAllExpenses','analyticsKpiNetProfit','analyticsKpiMarkup',
+            'analyticsKpiCostCoverage'
+        ].forEach(function(id) {
+            var node = document.getElementById(id);
+            if (node) node.textContent = '—';
+        });
+        var chartWidth = canvas.width || 1000, chartHeight = canvas.height || 280;
+        ctx.clearRect(0, 0, chartWidth, chartHeight);
+        ctx.fillStyle = '#9a5269';
+        ctx.font = '13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(failureText.slice(0, 130), chartWidth / 2, chartHeight / 2);
+        return;
+    }
 
     var metricSelect = document.getElementById('chartMetricSelect');
     var isSeller = currentUser.role === 'seller';
