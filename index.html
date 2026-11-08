@@ -8446,7 +8446,8 @@ function deleteRecurringExpense(id) {
     });
 }
 
-function getRecurringExpenseAccrualForRange(records, startDate, endDate) {
+function getRecurringExpenseAccrualDetailsForRange(records, startDate, endDate) {
+    var rows = [];
     var total = 0;
     (records || []).forEach(function(item) {
         if (!item) return;
@@ -8461,6 +8462,7 @@ function getRecurringExpenseAccrualForRange(records, startDate, endDate) {
         var fromDate = new Date(fromParts[0], fromParts[1] - 1, fromParts[2]);
         var toDate = new Date(toParts[0], toParts[1] - 1, toParts[2]);
         var monthCursor = new Date(fromDate.getFullYear(), fromDate.getMonth(), 1);
+        var accrued = 0;
         var guard = 0;
         while (monthCursor <= toDate && guard < 2400) {
             var monthFirst = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
@@ -8469,12 +8471,21 @@ function getRecurringExpenseAccrualForRange(records, startDate, endDate) {
             var segmentEnd = toDate < monthLast ? toDate : monthLast;
             var activeDays = Math.floor((segmentEnd.getTime() - segmentStart.getTime()) / 86400000) + 1;
             var daysInMonth = monthLast.getDate();
-            if (activeDays > 0) total += amount * activeDays / daysInMonth;
+            if (activeDays > 0) accrued += amount * activeDays / daysInMonth;
             monthCursor = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1);
             guard++;
         }
+        if (accrued > 0) {
+            total += accrued;
+            var shared = String(item.storeId) === 'all';
+            rows.push({id:String(item.id || ''),title:String(item.title || 'Регулярный расход'),amountMonthly:amount,amount:roundMoney(accrued),storeId:shared ? 'all' : String(item.storeId || ''),storeName:shared ? 'Все магазины (общий расход)' : String(item.storeName || STORES[String(item.storeId)] || item.storeId || 'Магазин'),shared:shared,startDate:String(item.startDate || ''),endDate:String(item.endDate || '')});
+        }
     });
-    return roundMoney(total);
+    return {rows:rows,total:roundMoney(total)};
+}
+
+function getRecurringExpenseAccrualForRange(records, startDate, endDate) {
+    return getRecurringExpenseAccrualDetailsForRange(records, startDate, endDate).total;
 }
 
 // Returns only shifts explicitly belonging to the employee. Closed shifts come from history;
@@ -9291,7 +9302,28 @@ function drawChart() {
             activeRecurringExpenses = analyticsScopeData.recurringExpenses;
             activeSalaryExpenses = analyticsScopeData.salaryExpenses;
             purchaseCostMarkupBaseline = getPurchaseCostMarkupBaseline(targetStore, visibleKeys);
-            return Object.assign({}, sumRange(startDate, endDate));
+            var summary = Object.assign({}, sumRange(startDate, endDate));
+            function inRequestedRange(record) {
+                var day = getRecordDateString(record && (record.timestamp || record.createdAt));
+                return day >= startDate && day <= endDate;
+            }
+            var ordinaryRows = (activeExpenses || []).filter(function(item) { return item && String(item.source || '') !== 'salary_payout' && inRequestedRange(item); }).map(function(item) {
+                return {id:String(item.id || ''),title:String(item.reason || item.title || item.description || 'Расход без описания'),amount:Number(item.amount) || 0,storeId:String(item.storeId || ''),storeName:String(item.storeName || STORES[String(item.storeId)] || item.storeId || 'Магазин'),timestamp:item.timestamp || item.createdAt || null};
+            });
+            var recurringDetails = getRecurringExpenseAccrualDetailsForRange(activeRecurringExpenses, startDate, endDate);
+            var salaryRows = (activeSalaryExpenses || []).filter(function(item) { return item && String(item.source || '') !== 'salary_payout' && inRequestedRange(item); }).map(function(item) {
+                return {id:String(item.id || ''),title:String(item.employee || item.userName || 'Начисление зарплаты'),amount:Number(item.amount) || 0,storeId:String(item.storeId || ''),storeName:String(item.storeName || STORES[String(item.storeId)] || item.storeId || 'Магазин'),shiftId:String(item.shiftId || ''),timestamp:item.timestamp || item.createdAt || null};
+            });
+            var salaryRowsTotal = salaryRows.reduce(function(total, item) { return total + item.amount; }, 0);
+            var ordinaryTotal = ordinaryRows.reduce(function(total, item) { return total + item.amount; }, 0);
+            summary.expenseDetails = {
+                ordinary:ordinaryRows,ordinaryTotal:roundMoney(ordinaryTotal),
+                recurring:recurringDetails.rows,recurringTotal:recurringDetails.total,
+                sharedRecurringTotal:roundMoney(recurringDetails.rows.filter(function(item) { return item.shared; }).reduce(function(total, item) { return total + item.amount; }, 0)),
+                salary:salaryRows,salaryRecordedTotal:roundMoney(salaryRowsTotal),
+                salaryUnattributedTotal:roundMoney(Math.max(0, (Number(summary.salaryExpenses) || 0) - salaryRowsTotal))
+            };
+            return summary;
         } finally {
             targetStore = previous.targetStore;
             analyticsScopeData = previous.analyticsScopeData;
