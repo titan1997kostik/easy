@@ -772,7 +772,7 @@
     return current;
   }
   function getReplenishmentRecommendations(startDate,endDate,selectedStore,targetDays){
-    if(!isAdmin()||!Object.keys(loaded).every(function(k){return loaded[k];}))return {ready:false,rows:[],message:'Складские данные ещё загружаются.'};
+    if(!isAdmin()||!loaded.products||!loaded.balances||!loaded.movements)return {ready:false,rows:[],message:'Складские данные ещё загружаются.'};
     var now=Date.now(),endMs=now,startMs=Infinity;
     var target=Math.max(1,Math.min(60,Number(targetDays)||14));
     var salesRows=window.sales||[];
