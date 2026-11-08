@@ -144,7 +144,7 @@
     list.sort(function(a,b){return Number(b.updatedAt||b.createdAt||0)-Number(a.updatedAt||a.createdAt||0);});
     var html='';
     if(isAdmin()){
-      if(['shops','history','analytics'].indexOf(adminTab)===-1)adminTab='shops';html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:7px;flex-wrap:wrap;"><button class="btn '+(adminTab==='shops'?'btn-primary':'btn-secondary')+'" data-stock-tab="shops" type="button">Магазины</button><button class="btn '+(adminTab==='analytics'?'btn-primary':'btn-secondary')+'" data-stock-tab="analytics" type="button">Финансовая аналитика</button><button class="btn '+(adminTab==='history'?'btn-primary':'btn-secondary')+'" data-stock-tab="history" type="button">История</button></div></div>';
+      if(adminTab!=='shops'&&adminTab!=='history')adminTab='shops';html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:7px;flex-wrap:wrap;"><button class="btn '+(adminTab==='shops'?'btn-primary':'btn-secondary')+'" data-stock-tab="shops" type="button">Магазины</button><button class="btn '+(adminTab==='history'?'btn-primary':'btn-secondary')+'" data-stock-tab="history" type="button">История</button></div></div>';
       if(adminTab==='shops'){
         var totalUnits=0,totalProducts=allProducts().filter(function(p){return p.status==='active';}).length;
         locations.forEach(function(k){Object.keys(balances[k]||{}).forEach(function(pid){totalUnits+=Number((balances[k][pid]||{}).quantity||0);});});
@@ -192,44 +192,6 @@
       html+='<div class="card"><h3>Все остатки по магазинам</h3><p style="font-size:12px;color:var(--text-light);">Остатки каждого товара отдельно по каждому магазину.</p><div style="overflow-x:auto;"><table style="width:100%;min-width:480px;"><thead><tr><th>Товар</th><th>Магазин</th><th>Остаток</th><th></th></tr></thead><tbody>';
       allProducts().filter(function(p){return p.status==='active';}).forEach(function(p){visibleStoreIds().forEach(function(s){html+='<tr><td>'+esc(p.name)+'</td><td>'+esc(window.STORES[s]||s)+'</td><td>'+qty(p.id,s)+'</td><td><button class="btn btn-secondary" type="button" onclick="stockAdjust(\''+esc(p.id)+'\',\''+esc(s)+'\')">Изменить</button></td></tr>';});});
       html+='</tbody></table></div></div>';
-    }
-    if(isAdmin() && adminTab==='analytics'){
-      var activeProducts=allProducts().filter(function(p){return p.status==='active';});
-      var salesByProduct={};
-      (window.sales||[]).forEach(function(s){
-        if(!s||!s.stockProductId||!s.stockStoreId||s.returned)return;
-        if(s.stockOrg&&String(s.stockOrg)!==String(org()))return;
-        if(visibleStoreIds().indexOf(String(s.stockStoreId))===-1)return;
-        if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(s.id))return;
-        if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(s))return;
-        var pid=String(s.stockProductId),seen={},resolved=pid;
-        while(products[resolved]&&products[resolved].mergedInto&&!seen[resolved]){seen[resolved]=true;resolved=String(products[resolved].mergedInto);}
-        var units=Number(s.stockQuantity)||1,amount=Number(s.price)||0;
-        if(!Number.isFinite(units)||units<=0||!Number.isFinite(amount)||amount<0)return;
-        if(!salesByProduct[resolved])salesByProduct[resolved]={units:0,revenue:0};
-        salesByProduct[resolved].units+=units;salesByProduct[resolved].revenue+=amount;
-      });
-      var totals={units:0,purchase:0,purchaseKnownUnits:0,purchaseUnknownUnits:0,saleEstimate:0,saleKnownUnits:0,saleUnknownUnits:0};
-      var rows=[];
-      activeProducts.forEach(function(p){
-        var pid=String(p.id),units=locations.reduce(function(sum,loc){return sum+qty(pid,loc);},0);
-        if(units<=0)return;
-        var hasCost=p.purchaseCost!==null&&p.purchaseCost!==undefined&&p.purchaseCost!==''&&Number.isFinite(Number(p.purchaseCost))&&Number(p.purchaseCost)>=0;
-        var purchase=hasCost?units*Number(p.purchaseCost):null;
-        var history=salesByProduct[pid],average=history&&history.units>0?history.revenue/history.units:null;
-        var estimate=average===null?null:units*average;
-        totals.units+=units;
-        if(hasCost){totals.purchase+=purchase;totals.purchaseKnownUnits+=units;}else totals.purchaseUnknownUnits+=units;
-        if(estimate!==null){totals.saleEstimate+=estimate;totals.saleKnownUnits+=units;}else totals.saleUnknownUnits+=units;
-        rows.push({name:p.name||'Без названия',category:p.category||'Без категории',units:units,purchase:purchase,average:average,estimate:estimate});
-      });
-      rows.sort(function(a,b){return (b.estimate||0)-(a.estimate||0)||String(a.name).localeCompare(String(b.name),'ru');});
-      function money(v){return Number(v||0).toLocaleString('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:2})+' ₽';}
-      html+='<div class="card" style="margin-bottom:14px;"><h3>Финансовая оценка текущих остатков</h3><p style="font-size:12px;color:var(--text-light);">Расчёт по всем магазинам и складу хранения организации. Закупка — текущая закупочная цена карточки. Реализация — средняя фактическая цена за единицу по завершённым складским продажам этой карточки.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;"><div class="card"><div style="font-size:12px;color:var(--text-light);">Закупочная стоимость остатков</div><b style="font-size:22px;">'+(totals.purchaseKnownUnits?money(totals.purchase):'Нет данных')+'</b><div style="font-size:11px;color:var(--text-light);">Оценено единиц: '+totals.purchaseKnownUnits+' · без цены закупки: '+totals.purchaseUnknownUnits+'</div></div><div class="card"><div style="font-size:12px;color:var(--text-light);">Стоимость остатков при реализации</div><b style="font-size:22px;">'+(totals.saleKnownUnits?money(totals.saleEstimate):'Нет данных')+'</b><div style="font-size:11px;color:var(--text-light);">Оценено единиц: '+totals.saleKnownUnits+' · без истории продаж: '+totals.saleUnknownUnits+'</div></div><div class="card"><div style="font-size:12px;color:var(--text-light);">Товаров в остатках</div><b style="font-size:22px;">'+totals.units+'</b><div style="font-size:11px;color:var(--text-light);">Учитываются все места хранения</div></div></div></div>';
-      html+='<div class="card"><h3>Расчёт по карточкам</h3><div style="overflow-x:auto;"><table style="width:100%;min-width:700px;"><thead><tr><th>Товар</th><th>Остаток</th><th>Закупка за ед.</th><th>Закупочная сумма</th><th>Средняя цена продажи</th><th>Оценка реализации</th></tr></thead><tbody>';
-      rows.forEach(function(r){html+='<tr><td>'+esc(r.name)+'<div style="font-size:11px;color:var(--text-light);">'+esc(r.category)+'</div></td><td>'+r.units+'</td><td>'+(r.purchase===null?'Нет данных':money(r.purchase/r.units))+'</td><td>'+(r.purchase===null?'Нет данных':money(r.purchase))+'</td><td>'+(r.average===null?'Нет истории':money(r.average))+'</td><td>'+(r.estimate===null?'Нет истории':money(r.estimate))+'</td></tr>';});
-      if(!rows.length)html+='<tr><td colspan="6" style="color:var(--text-light);">Товарных остатков пока нет.</td></tr>';
-      html+='</tbody></table></div><p style="font-size:12px;color:var(--text-light);margin-top:10px;">Важно: старые продажи без привязки к карточке склада не позволяют определить среднюю цену конкретного товара и в эту оценку не включаются. Для товаров без истории продаж сумма реализации не подменяется нулём.</p></div>';
     }
     if(isAdmin() && adminTab==='history'){
       var recent=Object.keys(movements).map(function(k){return movements[k];}).filter(function(m){return m && m.org===org() && stockLocationIds().indexOf(String(m.storeId))!==-1;}).sort(function(a,b){return Number(b.createdAt||0)-Number(a.createdAt||0);}).slice(0,100);
@@ -786,9 +748,40 @@
       return {movement:movement,rollback:rollback};
     });
   }
+  function getFinancialSummary(averageMarkup){
+    if(!isAdmin())return null;
+    var active=allProducts().filter(function(p){return p.status==='active';}),salesByProduct={};
+    (window.sales||[]).forEach(function(sale){
+      if(!sale||!sale.stockProductId||!sale.stockStoreId||sale.returned)return;
+      if(sale.stockOrg&&String(sale.stockOrg)!==String(org()))return;
+      if(stockLocationIds().indexOf(String(sale.stockStoreId))===-1)return;
+      if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(sale.id))return;
+      if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(sale))return;
+      var pid=String(sale.stockProductId),seen={},resolved=pid;
+      while(products[resolved]&&products[resolved].mergedInto&&!seen[resolved]){seen[resolved]=true;resolved=String(products[resolved].mergedInto);}
+      var units=Number(sale.stockQuantity)||1,amount=Number(sale.price)||0;
+      if(!Number.isFinite(units)||units<=0||!Number.isFinite(amount)||amount<0)return;
+      if(!salesByProduct[resolved])salesByProduct[resolved]={units:0,revenue:0};
+      salesByProduct[resolved].units+=units;salesByProduct[resolved].revenue+=amount;
+    });
+    var markup=averageMarkup!==null&&averageMarkup!==undefined&&Number.isFinite(Number(averageMarkup))?Number(averageMarkup):null;
+    var result={units:0,purchase:0,purchaseKnownUnits:0,purchaseUnknownUnits:0,realization:0,realizationKnownUnits:0,realizationMarkupUnits:0,realizationUnknownUnits:0,markup:markup};
+    active.forEach(function(p){
+      var pid=String(p.id),units=stockLocationIds().reduce(function(sum,loc){return sum+qty(pid,loc);},0);
+      if(units<=0)return;
+      result.units+=units;
+      var hasCost=p.purchaseCost!==null&&p.purchaseCost!==undefined&&p.purchaseCost!==''&&Number.isFinite(Number(p.purchaseCost))&&Number(p.purchaseCost)>=0;
+      if(hasCost){result.purchase+=units*Number(p.purchaseCost);result.purchaseKnownUnits+=units;}else result.purchaseUnknownUnits+=units;
+      var history=salesByProduct[pid];
+      if(history&&history.units>0){result.realization+=units*(history.revenue/history.units);result.realizationKnownUnits+=units;}
+      else if(hasCost&&markup!==null&&markup>-100){result.realization+=units*Number(p.purchaseCost)*(1+markup/100);result.realizationMarkupUnits+=units;}
+      else result.realizationUnknownUnits+=units;
+    });
+    return result;
+  }
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;
+    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;
   }
   function start(){
     expose();load();initPage();
