@@ -322,7 +322,7 @@
   // Подготавливает фото товара перед отправкой: уменьшает размер и сжимает JPEG на устройстве.
   function prepareStockPhoto(file){
     return new Promise(function(resolve){
-      if(!file || !/^image\\//i.test(file.type||'')){resolve(file);return;}
+      if(!file || !/^image\//i.test(file.type||'')){resolve(file);return;}
       function compress(source,width,height){
         var maxSide=1600,scale=Math.min(1,maxSide/Math.max(width,height));
         var w=Math.max(1,Math.round(width*scale)),h=Math.max(1,Math.round(height*scale));
