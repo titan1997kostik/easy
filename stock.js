@@ -848,13 +848,13 @@
         });
         if(level>0&&endMs>cursor)availableDays+=(endMs-cursor)/86400000;
         availableDays=Math.min(periodDays,Math.max(0,availableDays));
-        var units=soldByKey[key2]||0,rate=availableDays>0?units/availableDays:0,coverage=rate>0?current/rate:null;
+        var units=soldByKey[key2]||0;if(units<=0&&current<=0)return;var rate=availableDays>0?units/availableDays:0,coverage=rate>0?current/rate:null;
         var recommended=rate>0?Math.max(0,Math.ceil(rate*target-current)):0;
         var reliable=known&&availableDays>=Math.min(3,periodDays);
         var salesRank=salesRankByKey[key2],isTopSeller=salesRank!==undefined&&salesRank!==null;
         var footwear=isFootwearProduct(product),urgentStockLimit=footwear?3:1;
         var priorityStatus=(isTopSeller&&current<=urgentStockLimit)||(coverage!==null&&coverage<=2)?'urgent':(current<=0||(coverage!==null&&coverage<=4)||(!reliable&&units>0)?'soon':'sufficient');
-        var reason= !known?'История остатков неполная — оценка спроса ненадёжна':availableDays<Math.min(3,periodDays)?'Недостаточно дней наличия для оценки спроса':units<=0?'Продаж за период нет':recommended>0?'Текущего остатка недостаточно для запаса на '+target+' дней':'Запаса достаточно';
+        var reason= !known?'История остатков неполная — статус предварительный':availableDays<Math.min(3,periodDays)?'Недостаточно дней наличия для оценки спроса':units<=0?'Продаж за период нет':recommended>0?'Текущего остатка недостаточно для запаса на '+target+' дней':'Запаса достаточно';
         rows.push({productId:pid,productName:String(product.name||'Без названия'),storeId:sid,storeName:stockLocationName(sid),currentStock:current,soldUnits:units,availableDays:availableDays,periodDays:periodDays,dailyDemand:rate,coverageDays:coverage,recommendedQty:reliable?recommended:0,known:reliable,reason:reason,purchaseCost:product.purchaseCost==null||product.purchaseCost===''?null:Number(product.purchaseCost),priorityStatus:priorityStatus,salesRank:salesRank,urgentStockLimit:urgentStockLimit,isFootwear:footwear});
       });
     });
