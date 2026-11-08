@@ -1286,6 +1286,18 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 
 <script>
 // ========== DATA STORES ==========
+// Capture startup/runtime errors that can stop later initialization (including MQTT startup).
+window.addEventListener('error', function(event) {
+    var message = event && event.message ? String(event.message) : 'Неизвестная ошибка JavaScript';
+    var locationText = event && event.filename ? (String(event.filename) + ':' + String(event.lineno || 0)) : '';
+    var error = event && event.error ? event.error : new Error(message);
+    setFirebaseSyncError('JavaScript' + (locationText ? ' (' + locationText + ')' : ''), error);
+});
+window.addEventListener('unhandledrejection', function(event) {
+    var reason = event && event.reason;
+    var error = reason instanceof Error ? reason : new Error(String(reason || 'Необработанная ошибка Promise'));
+    setFirebaseSyncError('JavaScript Promise', error);
+});
 var sales = [];
 var salePurchaseCosts = {}; // owner-only cost data, stored separately from sales records
 var salePurchaseCostsLoaded = false;
@@ -1718,6 +1730,7 @@ function renderPurchaseCosts() {
     if (missingSummary) missingSummary.textContent = 'Без себестоимости: ' + missingTotal + ' из ' + scopeTotal + ' продаж' + (estimateBaseline.markup !== null ? ' · средняя наценка для оценки: ' + estimateBaseline.markup.toLocaleString('ru-RU', {maximumFractionDigits:2}) + '%' + (estimateBaseline.fallback ? ' (по всем магазинам)' : '') : ' · добавьте закупочную цену хотя бы одной продажи для расчёта оценки');
     var ready = document.getElementById('saleCostSyncState');
     if (ready) ready.textContent = salePurchaseCostsLoaded ? 'Локальные данные загружены' : 'Загрузка локальных данных…';
+    tbody.innerHTML = '';
     if (!relevant.length) {
         var row = document.createElement('tr'), cell = document.createElement('td');
         cell.colSpan = 8; cell.textContent = 'Нет продаж по выбранным фильтрам.'; cell.style.cssText = 'text-align:center;color:var(--text-light);';
@@ -2065,6 +2078,7 @@ var deletionLedgersLoaded = false;
 var deletionLedgersFresh = false;
 var deletionLedgersVerifiedOnce = false;
 var syncConnectionKnown = false;
+var firebaseSyncError = '';
 var ledgerRefreshInProgress = false;
 var queuedSalesSnapshot = null;
 var queuedExpensesSnapshot = null;
@@ -2662,20 +2676,56 @@ function mergeDeletionLedgerSnapshots(snapshots) {
     saveAllToLocal();
 }
 
+function setFirebaseSyncError(path, error) {
+    var code = error && error.code ? String(error.code) : '';
+    var message = error && error.message ? String(error.message) : String(error || 'Неизвестная ошибка');
+    firebaseSyncError = String(path || 'Firebase') + (code ? ' [' + code + ']' : '') + ': ' + message.slice(0, 260);
+    window.easyAppSyncFirebaseError = firebaseSyncError;
+    var indicator = document.getElementById('syncIndicator');
+    var dot = indicator && indicator.querySelector('.sync-dot');
+    var label = document.getElementById('syncText');
+    if (indicator) indicator.className = 'sync-indicator connecting';
+    if (dot) dot.className = 'sync-dot connecting';
+    if (label) {
+        label.textContent = String(path || '').indexOf('JavaScript') === 0 ? 'Ошибка JavaScript приложения' : 'Firebase: ошибка синхронизации';
+        label.title = firebaseSyncError;
+    }
+    console.error('Ошибка синхронизации Easy в ' + path + ':', error);
+}
+
+function clearFirebaseSyncError() {
+    firebaseSyncError = '';
+    window.easyAppSyncFirebaseError = '';
+    var label = document.getElementById('syncText');
+    if (label) label.title = '';
+}
+
+function readFirebaseLedger(path) {
+    return db.ref(path).once('value').then(function(snapshot) {
+        return snapshot;
+    }, function(error) {
+        var wrapped = new Error(error && error.message ? error.message : 'Не удалось прочитать данные Firebase');
+        wrapped.code = error && error.code ? error.code : '';
+        wrapped.firebasePath = path;
+        throw wrapped;
+    });
+}
+
 function refreshDeletionLedgersFromServerAndFlush() {
     if (!syncConnected || ledgerRefreshInProgress || typeof db === 'undefined' || !db.ref) return;
     ledgerRefreshInProgress = true;
     Promise.all([
-        db.ref('deleted_stores_data').once('value'),
-        db.ref('store_reset_data').once('value'),
-        db.ref('deleted_sales_data').once('value'),
-        db.ref('deleted_expenses_data').once('value')
+        readFirebaseLedger('deleted_stores_data'),
+        readFirebaseLedger('store_reset_data'),
+        readFirebaseLedger('deleted_sales_data'),
+        readFirebaseLedger('deleted_expenses_data')
     ]).then(function(snapshots) {
         if (!syncConnected) {
             deletionLedgersFresh = false;
             return;
         }
         mergeDeletionLedgerSnapshots(snapshots);
+        clearFirebaseSyncError();
         if (queuedStoresSnapshot) { var ss = queuedStoresSnapshot; queuedStoresSnapshot = null; applyStoresSnapshot(ss); }
         if (queuedSalesSnapshot) { var sl = queuedSalesSnapshot; queuedSalesSnapshot = null; applySalesSnapshot(sl); }
         if (queuedExpensesSnapshot) { var ex = queuedExpensesSnapshot; queuedExpensesSnapshot = null; applyExpensesSnapshot(ex); }
@@ -2685,6 +2735,7 @@ function refreshDeletionLedgersFromServerAndFlush() {
         startIncrementalSalesExpensesListeners();
     }).catch(function(err) {
         deletionLedgersFresh = false;
+        setFirebaseSyncError(err && err.firebasePath ? err.firebasePath : 'журналы удалений/сбросов', err);
         console.warn('Не удалось обновить журнал удалений перед синхронизацией:', err);
     }).finally(function() { ledgerRefreshInProgress = false; });
 }
@@ -2883,7 +2934,7 @@ db.ref('deleted_stores_data').on('value', function(snapshot) {
     saveAllToLocal();
     refreshStoreDropdowns();
     if (currentUser) renderAll();
-});
+, function(error) { setFirebaseSyncError('deleted_stores_data', error); });
 
 db.ref('store_reset_data').on('value', function(snapshot) {
     var remote = snapshot.val() || {};
@@ -2897,7 +2948,7 @@ db.ref('store_reset_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-});
+, function(error) { setFirebaseSyncError('store_reset_data', error); });
 
 db.ref('deleted_sales_data').on('value', function(snapshot) {
     var remote = snapshot.val() || {};
@@ -2909,7 +2960,7 @@ db.ref('deleted_sales_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-});
+, function(error) { setFirebaseSyncError('deleted_sales_data', error); });
 
 db.ref('deleted_expenses_data').on('value', function(snapshot) {
     var remote = snapshot.val() || {};
@@ -2921,7 +2972,7 @@ db.ref('deleted_expenses_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-});
+, function(error) { setFirebaseSyncError('deleted_expenses_data', error); });
 
 function applySalesSnapshot(snapshot) {
     var data = snapshot.val() || {};
@@ -3400,6 +3451,11 @@ db.ref('.info/connected').on('value', function(snapshot) {
     }
     if (currentUser) renderAll();
     if (typeof updatePendingSalesNotice === 'function') updatePendingSalesNotice();
+, function(error) {
+    syncConnectionKnown = false;
+    syncConnected = false;
+    setFirebaseSyncError('.info/connected', error);
+    if (currentUser) renderAll();
 });
 
 // ========== AUDIT LOG ==========
@@ -3545,6 +3601,16 @@ function onDisconnect() {
         connectMQTT();
     }, 5000);
 }
+
+// Start MQTT before the rest of page startup. A later UI rendering exception must not
+// prevent the synchronization client from attempting its connection.
+setTimeout(function() {
+    try { connectMQTT(); }
+    catch (error) {
+        console.error('MQTT startup failed:', error);
+        setSyncStatus('offline', 'Ошибка запуска MQTT');
+    }
+}, 0);
 
 function broadcastData() {
     if (isRemoteChange) return;
@@ -6875,7 +6941,21 @@ function renderActiveWorkspace() {
         var syncTextNode = document.getElementById('syncText');
         if (syncInd) syncInd.className = 'sync-indicator connecting';
         if (syncDot) syncDot.className = 'sync-dot connecting';
-        if (syncTextNode) syncTextNode.textContent = (!syncConnectionKnown || syncConnected) ? 'Firebase: проверка данных...' : 'Firebase: подключите интернет для первичной проверки';
+        if (syncTextNode) {
+            if (firebaseSyncError) {
+                syncTextNode.textContent = firebaseSyncError.indexOf('JavaScript') === 0 ? 'Ошибка JavaScript приложения' : 'Firebase: ошибка синхронизации';
+                syncTextNode.title = firebaseSyncError;
+            } else if (!syncConnectionKnown) {
+                syncTextNode.textContent = 'Firebase: ожидаем ответ сервера';
+                syncTextNode.title = 'Firebase ещё не сообщил состояние .info/connected.';
+            } else if (syncConnected) {
+                syncTextNode.textContent = 'Firebase: проверка данных...';
+                syncTextNode.title = 'Соединение установлено, проверяем журналы удалений и сбросов.';
+            } else {
+                syncTextNode.textContent = 'Firebase: нет соединения';
+                syncTextNode.title = 'Проверьте подключение к интернету.';
+            }
+        }
         return;
     }
     try { refreshStoreDropdowns(); } catch(e) {}
@@ -9939,8 +10019,7 @@ if (typeof BroadcastChannel !== 'undefined') {
     };
 }
 
-// Connect MQTT (waits for library to load inside connectMQTT)
-connectMQTT();
+// MQTT startup is scheduled immediately after connectMQTT is defined above.
 </script>
 <script>
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
@@ -11309,7 +11388,7 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
 </style>
 
 <script src="backup-tools.js"></script>
-<script src="stock.js?v=48"></script>
+<script src="stock.js?v=49"></script>
 <script src="business-advisor.js?v=8"></script>
 </body>
 </html>
