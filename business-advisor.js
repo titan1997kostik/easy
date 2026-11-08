@@ -306,7 +306,7 @@
         ' против ' + financialPercent(expenseRatioPrevious * 100) + ' ранее.</p>');
       if (current.grossMargin !== null && previous.grossMargin !== null) {
         lines.push('<p>Валовая маржа: ' + financialPercent(current.grossMargin) + ' против ' + financialPercent(previous.grossMargin) +
-          ' (' + (current.grossMargin - previous.grossMargin > 0 ? '+' : '') + financialPercent(current.grossMargin - previous.grossMargin) + ' п.п.).</p>');
+          ' (' + (current.grossMargin - previous.grossMargin > 0 ? '+' : '') + percentagePoints(current.grossMargin - previous.grossMargin) + ').</p>');
       }
       change.innerHTML = lines.join('');
     } else {
@@ -380,14 +380,14 @@
       if (current.grossMargin !== null && previous.grossMargin !== null &&
           current.grossMargin - previous.grossMargin <= -3) {
         recommendations.push(recommendation('warning','％','Снизилась валовая маржа',
-          'Валовая маржа упала на ' + financialPercent(Math.abs(current.grossMargin - previous.grossMargin)) + ' п.п. Это может указывать на скидки, изменение товарного микса или подорожание закупки.',
+          'Валовая маржа упала на ' + percentagePoints(Math.abs(current.grossMargin - previous.grossMargin)) + '. Это может указывать на скидки, изменение товарного микса или подорожание закупки.',
           'Текущая маржа: ' + financialPercent(current.grossMargin) + '; предыдущая: ' + financialPercent(previous.grossMargin) + '.','costs'));
       }
       var currentExpenseShare = current.netRevenue > 0 ? current.allExpenses / current.netRevenue : 0;
       var previousExpenseShare = previous.netRevenue > 0 ? previous.allExpenses / previous.netRevenue : 0;
       if (currentExpenseShare - previousExpenseShare >= 0.05) {
         recommendations.push(recommendation('warning','₽','Расходы занимают большую долю выручки',
-          'Доля налогов, комиссий, зарплат и прочих расходов выросла на ' + financialPercent((currentExpenseShare-previousExpenseShare)*100) + ' п.п. Даже при стабильных продажах это уменьшает прибыль.',
+          'Доля налогов, комиссий, зарплат и прочих расходов выросла на ' + percentagePoints((currentExpenseShare-previousExpenseShare)*100) + '. Даже при стабильных продажах это уменьшает прибыль.',
           'Сейчас расходы составляют ' + financialPercent(currentExpenseShare*100) + ' выручки; ранее — ' + financialPercent(previousExpenseShare*100) + '.','expenses'));
       }
     }
