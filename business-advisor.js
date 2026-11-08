@@ -455,7 +455,7 @@
       recommendations.push(recommendation('warning','↩','Повышенная доля возвратов','Чеки с возвратом составляют ' + pct(returnReceiptRate) + ' от продаж за период. Проверьте причины возвратов, размеры, качество товара и работу с ожиданиями покупателей.','Чеков с возвратом: ' + returnedReceiptCount + '; сумма возвратных операций за период: ' + money(returnAmountForPeriod) + '.','sales'));
     }
     if (currentExpenses.count >= 2 && previousExpenses.count >= 2 && expenseChange !== null && expenseChange >= 0.2 && (currentExpenses.amount - previousExpenses.amount) >= 1000) {
-      recommendations.push(recommendation('warning','₽','Расходы растут быстрее обычного','Записанные расходы увеличились на ' + pct(expenseChange) + ' относительно предыдущего периода. Проверьте крупные статьи и повторяющиеся платежи до следующего планирования бюджета.','Текущий период: ' + money(currentExpenses.amount) + ' (' + currentExpenses.count + ' записей); предыдущий: ' + money(previousExpenses.amount) + ' (' + previousExpenses.count + ' записей).','expenses'));
+      recommendations.push(recommendation('warning','₽','Обычные записанные расходы растут','Прочие расходы, внесённые отдельными записями, увеличились на ' + pct(expenseChange) + '. Это не общий рост всех затрат: регулярные расходы, начисленная зарплата, налог и эквайринг анализируются отдельно в финансовом блоке.','Текущий период: ' + money(currentExpenses.amount) + ' (' + currentExpenses.count + ' записей); предыдущий: ' + money(previousExpenses.amount) + ' (' + previousExpenses.count + ' записей).','expenses'));
     }
     var financeStoreLookup = Object.create(null);
     financeStoreRows.forEach(function(item) { financeStoreLookup[String(item.id)] = item.summary; });
@@ -480,7 +480,7 @@
     if (productRows.length && currentSales.netRevenue > 0 && productRows[0].checks >= 5) {
       var productShare = productRows[0].revenue / currentSales.netRevenue;
       if (productShare >= 0.4) {
-        recommendations.push(recommendation('info','★','Продажи зависят от одного товара','Товар «' + productRows[0].name + '» формирует ' + pct(productShare) + ' чистой выручки. Проверьте запас этого товара и подумайте, какие похожие позиции могут дополнить ассортимент.','Продажи товара: ' + money(productRows[0].revenue) + '; чистая выручка: ' + money(currentSales.netRevenue) + '; продаж товара: ' + productRows[0].checks + '.','purchase'));
+        recommendations.push(recommendation('info','★','Продажи зависят от одного товара','По продажам, зарегистрированным в периоде, товар «' + productRows[0].name + '» формирует ' + pct(productShare) + ' оборота. Проверьте запас этой позиции и подумайте, какие похожие товары могут дополнить ассортимент.','Продажи товара: ' + money(productRows[0].revenue) + '; чистая выручка: ' + money(currentSales.netRevenue) + '; чеков с этим товаром: ' + productRows[0].checks + '. Частичные возвраты пока не распределяются по товарным карточкам в этом рейтинге.','purchase'));
       }
     }
     var stockResult = null;
