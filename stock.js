@@ -108,6 +108,8 @@
         loaded[name]=true;
         invalidateReplenishmentCache();
         render();
+        var analyticsPage=document.getElementById('workspacePage-analytics'),rankingPane=document.getElementById('analyticsProductRankingPane');
+        if(typeof window.renderPurchaseCardRanking==='function'&&analyticsPage&&analyticsPage.classList.contains('active')&&rankingPane&&rankingPane.style.display!=='none')window.renderPurchaseCardRanking();
         if(typeof window.drawChart==='function'&&document.getElementById('workspacePage-analytics')&&document.getElementById('workspacePage-analytics').classList.contains('active'))window.drawChart();
         if(typeof window.renderPurchaseRecommendations==='function'&&document.getElementById('workspacePage-purchase')&&document.getElementById('workspacePage-purchase').classList.contains('active'))window.renderPurchaseRecommendations();
         if(name==='directions'&&typeof window.renderStoresManagement==='function')window.renderStoresManagement();
@@ -1073,7 +1075,7 @@
       }
       if(Math.abs(verified-current)>0.001)known=false;
       availableDays=Math.min(periodDays,Math.max(0,availableDays));
-      var eligibilityDays=availableDays,todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+      var eligibilityDays=availableDays,nowDate=new Date(now),todayStart=new Date(nowDate.getFullYear(),nowDate.getMonth(),nowDate.getDate()).getTime();
       if(endMs>=todayStart&&current>0)eligibilityDays+=Math.max(0,1-(now-todayStart)/DAY);
       return {known:known,availableDays:availableDays,eligibilityDays:eligibilityDays,currentStock:current};
     }
