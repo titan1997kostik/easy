@@ -8897,7 +8897,8 @@ function drawChart() {
     var activeSalaryExpenses = analyticsScopeData.salaryExpenses;
 
     var purchaseCostMarkupBaseline = isPurchaseCostOwner() ? getPurchaseCostMarkupBaseline(targetStore, visibleKeys) : { markup:null, priceCostRatio:null, count:0, fallback:false };
-    renderStockFinancialAnalytics(purchaseCostMarkupBaseline.markup);
+    var stockMarkupBaseline = isPurchaseCostOwner() ? getPurchaseCostMarkupBaseline('all', visibleKeys) : { markup:null, priceCostRatio:null, count:0, fallback:false };
+    renderStockFinancialAnalytics(stockMarkupBaseline.markup);
     function getAnalyticalPurchaseCost(saleId) {
         var known = getPurchaseCostForSale(saleId);
         if (known !== null) return { cost:known, estimated:false };
