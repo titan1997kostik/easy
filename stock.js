@@ -893,7 +893,7 @@
     var now=Date.now(),salesRows=window.sales||[];
     var stores=visibleStoreIds().filter(function(id){return selectedStore==='all'||String(id)===String(selectedStore);});
     var storeSet={};stores.forEach(function(id){storeSet[String(id)]=true;});
-    var active=allProducts().filter(function(p){return p.status==='active';}),productById={};
+    var active=allProducts().filter(function(p){return p.status!=='pending';}),productById={};
     active.forEach(function(product){productById[String(product.id)]=product;});
     var validSales=[],earliest=Infinity;
     salesRows.forEach(function(sale){
@@ -905,7 +905,6 @@
       if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(sale.id))return;
       if(typeof isStoreDeleted==='function'&&isStoreDeleted(sid))return;
       if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(sale))return;
-      if(typeof isHistoricalAnalyticsOnlySale==='function'&&isHistoricalAnalyticsOnlySale(sale))return;
       var at=stockDateMs(sale.timestamp||sale.createdAt);
       if(!at)return;
       var pid=stockResolvedId(sale.stockProductId);
