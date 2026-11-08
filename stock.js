@@ -888,6 +888,79 @@
     var cacheKeys=Object.keys(replenishmentCache);if(cacheKeys.length>12)delete replenishmentCache[cacheKeys[0]];
     return result;
   }
+  function getCardSalesRanking(startDate,endDate,selectedStore,previousStartDate,previousEndDate){
+    if(!isAdmin()||!loaded.products||!loaded.balances)return {ready:false,rows:[],message:'Складские данные ещё загружаются.'};
+    var now=Date.now(),salesRows=window.sales||[];
+    var stores=visibleStoreIds().filter(function(id){return selectedStore==='all'||String(id)===String(selectedStore);});
+    var storeSet={};stores.forEach(function(id){storeSet[String(id)]=true;});
+    var active=allProducts().filter(function(p){return p.status==='active';}),productById={};
+    active.forEach(function(product){productById[String(product.id)]=product;});
+    var validSales=[],earliest=Infinity;
+    salesRows.forEach(function(sale){
+      if(!sale||!sale.stockProductId||!sale.id)return;
+      if(sale.stockOrg&&String(sale.stockOrg)!==String(org()))return;
+      var sid=String(sale.stockStoreId||sale.storeId||'');
+      if(!storeSet[sid])return;
+      if(sale.returned)return;
+      if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(sale.id))return;
+      if(typeof isStoreDeleted==='function'&&isStoreDeleted(sid))return;
+      if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(sale))return;
+      if(typeof isHistoricalAnalyticsOnlySale==='function'&&isHistoricalAnalyticsOnlySale(sale))return;
+      var at=stockDateMs(sale.timestamp||sale.createdAt);
+      if(!at)return;
+      var pid=stockResolvedId(sale.stockProductId);
+      if(!productById[pid])return;
+      validSales.push({sale:sale,at:at,pid:pid,sid:sid});
+      if(at<earliest)earliest=at;
+    });
+    if(!isFinite(earliest))return {ready:true,rows:[],periodDays:0,message:'За выбранный период нет продаж, связанных с карточками склада.'};
+    function dateFloor(ms){var d=new Date(ms);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();}
+    var startMs=startDate?stockLocalDateMs(startDate,false):dateFloor(earliest);
+    var endMs=endDate?stockLocalDateMs(endDate,true):now;
+    if(!startMs||!endMs||startMs>endMs)return {ready:true,rows:[],periodDays:0,message:'Проверьте выбранный период.'};
+    var periodDays=Math.max(1,Math.floor((dateFloor(endMs)-startMs)/86400000)+1);
+    var prevStartMs=previousStartDate?stockLocalDateMs(previousStartDate,false):0;
+    var prevEndMs=previousEndDate?stockLocalDateMs(previousEndDate,true):0;
+    var hasPrevious=!!(prevStartMs&&prevEndMs&&prevStartMs<=prevEndMs);
+    var totals={};
+    active.forEach(function(product){
+      var pid=String(product.id),stock=0;
+      stores.forEach(function(sid){stock+=qty(pid,sid);});
+      totals[pid]={product:product,sold:0,revenue:0,shops:{},previous:0,stock:stock};
+    });
+    validSales.forEach(function(item){
+      var sale=item.sale,record=totals[item.pid];
+      if(!record)return;
+      var units=Number(sale.stockQuantity)||1;
+      if(!isFinite(units)||units<=0)units=1;
+      if(item.at>=startMs&&item.at<=endMs){
+        record.sold+=units;
+        record.revenue+=Math.max(0,Number(sale.price)||0);
+        record.shops[item.sid]=true;
+      }else if(hasPrevious&&item.at>=prevStartMs&&item.at<=prevEndMs){
+        record.previous+=units;
+      }
+    });
+    var rows=[];
+    Object.keys(totals).forEach(function(pid){
+      var record=totals[pid];
+      if(record.sold<=0)return;
+      rows.push({
+        productId:pid,
+        productName:String(record.product.name||'Без названия'),
+        photoUrl:String(record.product.photoUrl||''),
+        soldUnits:record.sold,
+        averageDailySales:record.sold/periodDays,
+        storesWithSales:Object.keys(record.shops).length,
+        currentStock:record.stock,
+        revenue:record.revenue,
+        previousSoldUnits:hasPrevious?record.previous:null,
+        periodDays:periodDays
+      });
+    });
+    rows.sort(function(a,b){return b.soldUnits-a.soldUnits||b.averageDailySales-a.averageDailySales||a.productName.localeCompare(b.productName,'ru');});
+    return {ready:true,rows:rows,periodDays:periodDays,startDate:startDate||new Date(startMs).getFullYear()+'-'+String(new Date(startMs).getMonth()+1).padStart(2,'0')+'-'+String(new Date(startMs).getDate()).padStart(2,'0'),endDate:endDate||'',hasPrevious:hasPrevious};
+  }
   function getFinancialSummary(averageMarkup){
     if(!isAdmin())return null;
     var active=allProducts().filter(function(p){return p.status==='active';}),salesByProduct={};
@@ -921,7 +994,7 @@
   }
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;window.stockGetReplenishmentRecommendations=getReplenishmentRecommendations;window.stockInvalidateReplenishmentCache=invalidateReplenishmentCache;
+    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;window.stockGetReplenishmentRecommendations=getReplenishmentRecommendations;window.stockGetCardSalesRanking=getCardSalesRanking;window.stockInvalidateReplenishmentCache=invalidateReplenishmentCache;
   }
   function start(){
     expose();load();initPage();
