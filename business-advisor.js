@@ -60,6 +60,8 @@
     if (!page || el(rootId)) return;
     var section = document.createElement('section');
     section.id = rootId;
+    section.className = 'business-advisor-module';
+    section.style.marginTop = '18px';
     section.innerHTML =
       '<section class="card" style="padding:20px;">' +
         '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;">' +
@@ -190,7 +192,7 @@
         '</div></div></article>';
   }
   function render() {
-    var page = el('workspacePage-advisor');
+    var page = el('workspacePage-analytics');
     if (!page || !window.currentUser || window.currentUser.role !== 'admin') return;
     buildMarkup(page);
     var days = Number(el('businessAdvisorPeriod') && el('businessAdvisorPeriod').value) || 30;
