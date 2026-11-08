@@ -1296,7 +1296,8 @@ window.addEventListener('error', function(event) {
 window.addEventListener('unhandledrejection', function(event) {
     var reason = event && event.reason;
     var error = reason instanceof Error ? reason : new Error(String(reason || 'Необработанная ошибка Promise'));
-    setFirebaseSyncError('JavaScript Promise', error);
+    var isFirebaseError = !!(reason && (reason.code || reason.name === 'FirebaseError'));
+    setFirebaseSyncError(isFirebaseError ? 'Firebase Promise' : 'Promise', error);
 });
 var sales = [];
 var salePurchaseCosts = {}; // owner-only cost data, stored separately from sales records
@@ -2234,8 +2235,9 @@ function startIncrementalSalesExpensesListeners() {
         flushPendingLocalRecords();
         scheduleWorkspaceRender();
     }).catch(function(error) {
+        // Keep the already attached value listeners alive; report the incremental optimization failure
+        // without treating the underlying analytics sources as unavailable.
         console.warn('Не удалось переключить продажи и расходы на потоковую синхронизацию; оставляем полный слушатель:', error);
-        setFirebaseCoreDataError('sales_data / expenses_data', error);
     }).finally(function() { incrementalSalesExpensesStarting = false; });
 }
 
