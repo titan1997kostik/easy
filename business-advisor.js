@@ -212,6 +212,9 @@
   function financialPercent(value) {
     return num(value).toLocaleString('ru-RU', { maximumFractionDigits:1 }) + '%';
   }
+  function percentagePoints(value) {
+    return num(value).toLocaleString('ru-RU', { maximumFractionDigits:1 }) + ' п.п.';
+  }
   function financialChange(current, previous) {
     current = num(current); previous = num(previous);
     if (previous === 0) return current === 0 ? 0 : null;
@@ -261,7 +264,7 @@
       qualityText += 'Себестоимость продаж и возвратов в этом периоде подтверждена фактическими закупочными ценами.';
       quality.style.background = '#eef8f1'; quality.style.color = '#28764d';
     } else if (current.costCalculationAvailable) {
-      qualityText += 'В прибыль включена предварительная оценка себестоимости: ' + current.estimatedCostSalesCount + ' продаж и ' + current.estimatedCostReturnsCount + ' возвратных операций. Оценка построена по средней наценке из ' + (current.costMarkupSampleCount || 0) + ' продаж с фактической закупочной ценой' + (current.costEstimateFallback ? ' по всем доступным магазинам, поскольку по выбранному магазину пока нет своей базы' : ' выбранного магазина/периода') + '. Для точной цифры заполните недостающие закупочные цены.';
+      qualityText += 'В прибыль включена предварительная оценка себестоимости: ' + current.estimatedCostSalesCount + ' продаж и ' + current.estimatedCostReturnsCount + ' возвратных операций. Оценка построена по средней наценке из ' + (current.costMarkupSampleCount || 0) + ' продаж с фактической закупочной ценой' + (current.costEstimateFallback ? ' по всем доступным магазинам, поскольку по выбранному магазину пока нет своей базы' : ' доступных продаж выбранного магазина') + '. Для точной цифры заполните недостающие закупочные цены.';
       quality.style.background = '#fff7e8'; quality.style.color = '#7b5211';
     } else {
       qualityText += 'Часть операций не имеет даже расчётной себестоимости. Поэтому чистая прибыль скрыта, чтобы не показывать ложную точность.';
