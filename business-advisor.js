@@ -91,7 +91,7 @@
             '<div><h4 style="font-size:13px;margin:0 0 8px;">Из чего складывается результат</h4><div id="businessAdvisorFinanceBreakdown"></div></div>' +
             '<div><h4 style="font-size:13px;margin:0 0 8px;">Что изменило прибыль</h4><div id="businessAdvisorFinanceChange" style="font-size:12px;line-height:1.6;color:var(--text-light);"></div></div>' +
           '</div>' +
-          '<div style="margin-top:16px;"><h4 style="font-size:13px;margin:0 0 8px;">Прибыльность магазинов</h4><div id="businessAdvisorStoreFinance" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:8px;"></div></div>' +
+          '<div style="margin-top:16px;"><h4 style="font-size:13px;margin:0 0 8px;">Сравнение магазинов</h4><div id="businessAdvisorStoreFinance" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:8px;"></div></div>' +
         '</section>' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0;">' +
           '<h3 style="margin:0;border:0;padding:0;">Что требует внимания</h3><span id="businessAdvisorStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-light);"></span>' +
@@ -322,7 +322,7 @@
         if (aReady !== bReady) return aReady ? -1 : 1;
         return aReady ? num(b.summary.netProfit) - num(a.summary.netProfit) : String(a.name).localeCompare(String(b.name), 'ru');
       });
-      storeHost.innerHTML = storeRows.map(function(item) {
+      var storeCards = storeRows.map(function(item) {
         var summary = item.summary;
         var ready = summary && summary.costCalculationAvailable && summary.netProfit !== null && summary.netProfit !== undefined;
         var net = ready ? ((!summary.costDataComplete ? '≈ ' : '') + money(summary.netProfit)) : '—';
@@ -331,10 +331,11 @@
         return '<article style="border:1px solid var(--border);border-radius:10px;padding:10px;background:#fff;min-width:0;">' +
           '<strong style="display:block;font-size:12px;margin-bottom:7px;">' + esc(item.name) + '</strong>' +
           '<div style="font-size:17px;font-weight:800;line-height:1.3;">' + esc(net) + '</div>' +
-          '<div style="font-size:10px;color:var(--text-light);margin-top:3px;">Чистая прибыль · валовая маржа ' + esc(margin) + '</div>' +
-          '<div style="font-size:10px;color:var(--text-light);margin-top:5px;">Выручка ' + esc(summary ? money(summary.netRevenue) : '—') + ' · расходы ' + esc(summary ? money(summary.allExpenses) : '—') + '</div>' +
+          '<div style="font-size:10px;color:var(--text-light);margin-top:3px;">Результат до распределения общих расходов · валовая маржа ' + esc(margin) + '</div>' +
+          '<div style="font-size:10px;color:var(--text-light);margin-top:5px;">Выручка ' + esc(summary ? money(summary.netRevenue) : '—') + ' · расходы магазина ' + esc(summary ? money(summary.allExpenses) : '—') + '</div>' +
           '<div style="font-size:10px;margin-top:6px;color:' + (ready && summary.costDataComplete ? '#28764d' : '#9a6414') + ';">' + esc(state) + '</div></article>';
       }).join('');
+      storeHost.innerHTML = '<p style="grid-column:1/-1;font-size:11px;line-height:1.5;color:var(--text-light);margin:0 0 4px;">Показан результат по расходам, привязанным к каждому магазину. Общие расходы организации не распределяются автоматически, а оценка себестоимости по магазинам может отличаться от общей. Поэтому суммы карточек не обязаны складываться в консолидированную чистую прибыль.</p>' + storeCards;
     }
   }
   function appendFinancialRecommendations(recommendations, current, previous, storeRows) {
@@ -423,10 +424,14 @@
     var previousSales = aggregateSales(scope.sales || [], previousBounds);
     var currentExpenses = aggregateExpenses(scope.expenses || [], bounds);
     var previousExpenses = aggregateExpenses(scope.expenses || [], previousBounds);
-    var salesChange = changePercent(currentSales.netRevenue, previousSales.netRevenue);
-    var expenseChange = changePercent(currentExpenses.amount, previousExpenses.amount);
     var financialCurrent = getFinancialSummary(bounds.start, bounds.end, selectedStore);
     var financialPrevious = getFinancialSummary(bounds.previousStart, bounds.previousEnd, selectedStore);
+    // Keep the operating KPIs and growth alerts on the same return journal
+    // as the Financial Director. The legacy sale.returned flag misses partial returns.
+    if (financialCurrent) currentSales.netRevenue = num(financialCurrent.netRevenue);
+    if (financialPrevious) previousSales.netRevenue = num(financialPrevious.netRevenue);
+    var salesChange = changePercent(currentSales.netRevenue, previousSales.netRevenue);
+    var expenseChange = changePercent(currentExpenses.amount, previousExpenses.amount);
     var financeStoreIds = selectedStore === 'all' ? visibleKeys.slice() : [selectedStore];
     var financeStoreRows = financeStoreIds.map(function(id) {
       return { id:String(id), name:storeLabel(id), summary:getFinancialSummary(bounds.start, bounds.end, String(id)) };
@@ -441,14 +446,28 @@
     } else if (salesChange !== null && salesChange >= 0.15 && currentSales.checks >= 3 && previousSales.checks >= 3) {
       recommendations.push(recommendation('success','↗','Выручка растёт','Чистая выручка выросла на ' + pct(salesChange) + ' к предыдущему равному периоду. Сравните остатки и наличие лидирующих товаров, чтобы не потерять темп продаж.','Текущий период: ' + money(currentSales.netRevenue) + '; предыдущий: ' + money(previousSales.netRevenue) + '.','purchase'));
     }
-    if (currentSales.checks >= 10 && currentSales.returnRate >= 0.1) {
-      recommendations.push(recommendation('warning','↩','Повышенная доля возвратов','Возвраты составляют ' + pct(currentSales.returnRate) + ' от количества продаж. Проверьте причины возвратов, размеры, качество товара и работу с ожиданиями покупателей.','Возвращено ' + currentSales.returnedChecks + ' из ' + currentSales.checks + ' продаж на сумму ' + money(currentSales.returnedRevenue) + '.','sales'));
+    var returnedReceiptCount = financialCurrent ? num(financialCurrent.returnedSalesCount) : currentSales.returnedChecks;
+    var returnReceiptRate = financialCurrent && financialCurrent.salesCount > 0
+      ? returnedReceiptCount / financialCurrent.salesCount
+      : currentSales.returnRate;
+    var returnAmountForPeriod = financialCurrent ? num(financialCurrent.returns) : currentSales.returnedRevenue;
+    if ((financialCurrent ? financialCurrent.salesCount : currentSales.checks) >= 10 && returnReceiptRate >= 0.1) {
+      recommendations.push(recommendation('warning','↩','Повышенная доля возвратов','Чеки с возвратом составляют ' + pct(returnReceiptRate) + ' от продаж за период. Проверьте причины возвратов, размеры, качество товара и работу с ожиданиями покупателей.','Чеков с возвратом: ' + returnedReceiptCount + '; сумма возвратных операций за период: ' + money(returnAmountForPeriod) + '.','sales'));
     }
     if (currentExpenses.count >= 2 && previousExpenses.count >= 2 && expenseChange !== null && expenseChange >= 0.2 && (currentExpenses.amount - previousExpenses.amount) >= 1000) {
       recommendations.push(recommendation('warning','₽','Расходы растут быстрее обычного','Записанные расходы увеличились на ' + pct(expenseChange) + ' относительно предыдущего периода. Проверьте крупные статьи и повторяющиеся платежи до следующего планирования бюджета.','Текущий период: ' + money(currentExpenses.amount) + ' (' + currentExpenses.count + ' записей); предыдущий: ' + money(previousExpenses.amount) + ' (' + previousExpenses.count + ' записей).','expenses'));
     }
+    var financeStoreLookup = Object.create(null);
+    financeStoreRows.forEach(function(item) { financeStoreLookup[String(item.id)] = item.summary; });
     var storeRows = Object.keys(currentSales.stores).map(function (id) {
-      return { id:id, name:storeLabel(id), revenue:currentSales.stores[id].revenue, checks:currentSales.stores[id].checks };
+      var finance = financeStoreLookup[String(id)];
+      return {
+        id:id,
+        name:storeLabel(id),
+        revenue:finance ? num(finance.netRevenue) : currentSales.stores[id].revenue,
+        checks:currentSales.stores[id].checks,
+        summary:finance || null
+      };
     }).filter(function (item) { return item.checks >= 3; });
     if (selectedStore === 'all' && storeRows.length >= 2) {
       storeRows.sort(function (a,b) { return a.revenue - b.revenue; });
@@ -493,11 +512,15 @@
     }
     var metrics = el('businessAdvisorMetrics');
     if (metrics) {
-      metrics.innerHTML =
-        metricCard('Количество продаж', String(nonReturnedChecks), 'Возвраты исключены из количества') +
-        metricCard('Средний чек', money(currentSales.averageCheck), 'По продажам без возвратов') +
-        metricCard('Количество возвратов', String(currentSales.returnedChecks), 'Сумма: ' + money(currentSales.returnedRevenue)) +
-        metricCard('Доля возвратов', pct(currentSales.returnRate), 'От количества продаж за период');
+      metrics.innerHTML = financialCurrent
+        ? metricCard('Количество продаж', String(financialCurrent.salesCount), 'По дате продажи; возвраты учитываются отдельно') +
+          metricCard('Средний чек', money(financialCurrent.avgCheck), 'По чекам до вычета возвратов') +
+          metricCard('Чеки с возвратом', String(returnedReceiptCount), (financialCurrent.returnOperationsCount || returnedReceiptCount) + ' операций возврата') +
+          metricCard('Сумма возвратов', money(financialCurrent.returns), 'По датам фактических операций')
+        : metricCard('Количество продаж', String(nonReturnedChecks), 'Возвраты исключены из количества') +
+          metricCard('Средний чек', money(currentSales.averageCheck), 'По продажам без возвратов') +
+          metricCard('Количество возвратов', String(currentSales.returnedChecks), 'Сумма: ' + money(currentSales.returnedRevenue)) +
+          metricCard('Доля возвратов', pct(currentSales.returnRate), 'От количества продаж за период');
     }
     renderFinancialPanel(financialCurrent, financialPrevious, financeStoreRows, selectedStore);
     var periodLabel = el('businessAdvisorPeriodLabel');
