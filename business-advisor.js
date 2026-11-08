@@ -460,8 +460,8 @@
       var monthlyBreakEven = monthlyOperatingCosts / contributionRate;
       var dailyBreakEven = monthlyBreakEven / 30;
       var monthlyRevenue = cardRevenue * monthlyFactor;
-      var averageNetCheck = cardRevenue / cardSalesCount;
-      var requiredChecks = averageNetCheck > 0 ? Math.ceil(dailyBreakEven / averageNetCheck) : null;
+      var averageCheck = num(summary.avgCheck);
+      var requiredChecks = averageCheck > 0 ? Math.ceil(dailyBreakEven / averageCheck) : null;
       var gap = monthlyBreakEven - monthlyRevenue;
       function checkWord(value) {
         var n = Math.abs(value) % 100;
@@ -510,7 +510,7 @@
         '</div>' +
         '<div style="font-size:10px;line-height:1.45;color:var(--text-light);margin-top:9px;">' +
           esc(note) + ' ' + esc(scopeNote) + ' ' + esc(periodNote) +
-          ' Средний чек рассчитан по выручке после возвратов на одну продажу за период.' +
+          ' Средний чек рассчитан по сумме продаж до вычета возвратов; возвраты отдельно уменьшают фактическую выручку и учитываются в маржинальности.' +
         '</div>' +
       '</article>';
     }
