@@ -749,6 +749,100 @@
       return {movement:movement,rollback:rollback};
     });
   }
+  function stockDateMs(value){
+    if(value===undefined||value===null||value==='')return 0;
+    if(typeof value==='number'&&isFinite(value))return value<1000000000000?value*1000:value;
+    var raw=String(value);
+    if(/^\\d{10,13}$/.test(raw)){var n=Number(raw);return raw.length<=10?n*1000:n;}
+    var parsed=Date.parse(raw);return isFinite(parsed)?parsed:0;
+  }
+  function stockLocalDateMs(dateText,endOfDay){
+    var parts=String(dateText||'').split('-').map(Number);
+    if(parts.length!==3||!parts[0]||!parts[1]||!parts[2])return 0;
+    return new Date(parts[0],parts[1]-1,parts[2],endOfDay?23:0,endOfDay?59:0,endOfDay?59:0,endOfDay?999:0).getTime();
+  }
+  function stockResolvedId(id){
+    var current=String(id||''),seen={};
+    while(products[current]&&products[current].mergedInto&&!seen[current]){seen[current]=true;current=String(products[current].mergedInto);}
+    return current;
+  }
+  function getReplenishmentRecommendations(startDate,endDate,selectedStore,targetDays){
+    if(!isAdmin()||!Object.keys(loaded).every(function(k){return loaded[k];}))return {ready:false,rows:[],message:'Складские данные ещё загружаются.'};
+    var now=Date.now(),endMs=endDate?stockLocalDateMs(endDate,true):now;
+    if(!endMs||endMs>now)endMs=now;
+    var startMs=startDate?stockLocalDateMs(startDate,false):endMs-29*86400000;
+    if(!startMs||startMs>endMs)return {ready:true,rows:[],message:'Проверьте выбранный период.'};
+    var periodDays=Math.max(1,(endMs-startMs+1)/86400000),target=Math.max(1,Math.min(60,Number(targetDays)||14));
+    var stores=visibleStoreIds().filter(function(id){return selectedStore==='all'||String(id)===String(selectedStore);});
+    var active=allProducts().filter(function(p){return p.status==='active';}),rows=[],movementByKey={},saleMovementIds={};
+    Object.keys(movements).forEach(function(key){
+      var m=movements[key];if(!m||String(m.org||'')!==String(org())||!m.storeId)return;
+      var sid=String(m.storeId);if(stores.indexOf(sid)===-1)return;
+      var pid=stockResolvedId(m.productId);if(!pid)return;
+      var key2=pid+'|'+sid,at=stockDateMs(m.createdAt||m.timestamp);if(!at)return;
+      if(!movementByKey[key2])movementByKey[key2]=[];
+      movementByKey[key2].push({at:at,delta:Number(m.quantityDelta)||0,before:m.before==null?null:Number(m.before),after:m.after==null?null:Number(m.after),saleId:m.saleId?String(m.saleId):'',source:'movement'});
+      if(m.saleId)saleMovementIds[String(m.saleId)]=true;
+    });
+    (window.sales||[]).forEach(function(sale){
+      if(!sale||!sale.stockProductId||!sale.stockStoreId||!sale.id)return;
+      if(sale.stockOrg&&String(sale.stockOrg)!==String(org()))return;
+      var sid=String(sale.stockStoreId);if(stores.indexOf(sid)===-1)return;
+      if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(sale.id))return;
+      if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(sale))return;
+      if(saleMovementIds[String(sale.id)])return;
+      var at=stockDateMs(sale.timestamp||sale.createdAt);if(!at)return;
+      var pid=stockResolvedId(sale.stockProductId),key2=pid+'|'+sid;
+      if(!movementByKey[key2])movementByKey[key2]=[];
+      movementByKey[key2].push({at:at,delta:-(Number(sale.stockQuantity)||1),before:null,after:null,saleId:String(sale.id),source:'sale'});
+    });
+    var soldByKey={};
+    (window.sales||[]).forEach(function(sale){
+      if(!sale||!sale.stockProductId||!sale.stockStoreId||sale.returned)return;
+      if(sale.stockOrg&&String(sale.stockOrg)!==String(org()))return;
+      var sid=String(sale.stockStoreId);if(stores.indexOf(sid)===-1)return;
+      if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(sale.id))return;
+      if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(sale))return;
+      var at=stockDateMs(sale.timestamp||sale.createdAt);if(!at||at<startMs||at>endMs)return;
+      var pid=stockResolvedId(sale.stockProductId),key2=pid+'|'+sid;
+      if(!soldByKey[key2])soldByKey[key2]=0;
+      var units=Number(sale.stockQuantity)||1;if(isFinite(units)&&units>0)soldByKey[key2]+=units;
+    });
+    active.forEach(function(product){
+      var pid=String(product.id);
+      stores.forEach(function(sid){
+        var current=qty(pid,sid),key2=pid+'|'+sid,events=(movementByKey[key2]||[]).slice().sort(function(a,b){return a.at-b.at;});
+        var periodEvents=events.filter(function(e){return e.at>=startMs&&e.at<=endMs;});
+        var deltaAfterStart=events.filter(function(e){return e.at>=startMs&&e.at<=now;}).reduce(function(sum,e){return sum+e.delta;},0);
+        var opening=current-deltaAfterStart,availableDays=0,known=true;
+        if(periodEvents.length&&periodEvents[0].before!==null&&isFinite(periodEvents[0].before))opening=periodEvents[0].before;
+        else if(!periodEvents.length){
+          var balance=balances[sid]&&balances[sid][pid]||{},updated=stockDateMs(balance.updatedAt);
+          if(updated>startMs&&updated<=now)known=false;
+        }
+        if(opening<0){known=false;opening=0;}
+        var cursor=startMs,level=opening;
+        periodEvents.forEach(function(event){
+          var at=Math.max(startMs,Math.min(endMs,event.at));
+          if(level>0&&at>cursor)availableDays+=(at-cursor)/86400000;
+          if(event.before!==null&&isFinite(event.before)&&Math.abs(level-event.before)>0.001)known=false;
+          level+=event.delta;
+          if(event.after!==null&&isFinite(event.after)&&Math.abs(level-event.after)>0.001){known=false;level=event.after;}
+          if(level<0){known=false;level=0;}
+          cursor=at;
+        });
+        if(level>0&&endMs>cursor)availableDays+=(endMs-cursor)/86400000;
+        availableDays=Math.min(periodDays,Math.max(0,availableDays));
+        var units=soldByKey[key2]||0,rate=availableDays>0?units/availableDays:0,coverage=rate>0?current/rate:null;
+        var recommended=rate>0?Math.max(0,Math.ceil(rate*target-current)):0;
+        var reliable=known&&availableDays>=Math.min(3,periodDays);
+        var reason= !known?'История остатков неполная — оценка спроса ненадёжна':availableDays<Math.min(3,periodDays)?'Недостаточно дней наличия для оценки спроса':units<=0?'Продаж за период нет':recommended>0?'Текущего остатка недостаточно для запаса на '+target+' дней':'Запаса достаточно';
+        rows.push({productId:pid,productName:String(product.name||'Без названия'),storeId:sid,storeName:stockLocationName(sid),currentStock:current,soldUnits:units,availableDays:availableDays,periodDays:periodDays,dailyDemand:rate,coverageDays:coverage,recommendedQty:reliable?recommended:0,known:reliable,reason:reason,purchaseCost:product.purchaseCost==null||product.purchaseCost===''?null:Number(product.purchaseCost)});
+      });
+    });
+    rows.sort(function(a,b){return (b.recommendedQty-a.recommendedQty)||(a.coverageDays==null?1:b.coverageDays==null?-1:a.coverageDays-b.coverageDays)||a.productName.localeCompare(b.productName,'ru');});
+    return {ready:true,rows:rows,periodDays:periodDays,targetDays:target,startDate:startDate||'',endDate:endDate||'',currentAsOf:new Date(now).toISOString()};
+  }
   function getFinancialSummary(averageMarkup){
     if(!isAdmin())return null;
     var active=allProducts().filter(function(p){return p.status==='active';}),salesByProduct={};
@@ -782,7 +876,7 @@
   }
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;
+    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;window.stockGetReplenishmentRecommendations=getReplenishmentRecommendations;
   }
   function start(){
     expose();load();initPage();
