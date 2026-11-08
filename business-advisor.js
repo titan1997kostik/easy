@@ -80,6 +80,19 @@
         '</div>' +
         '<p id="businessAdvisorPeriodLabel" style="font-size:12px;color:var(--text-light);margin:10px 0 14px;"></p>' +
         '<div id="businessAdvisorMetrics" class="business-advisor-metrics" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;"></div>' +
+        '<section class="card" id="businessAdvisorFinanceCard" style="padding:18px;margin:0 0 18px;">' +
+          '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">' +
+            '<div><h3 style="margin:0;border:0;padding:0;">Финансовый директор</h3><p style="font-size:12px;color:var(--text-light);margin:4px 0 0;">Прибыль с учётом себестоимости, возвратов, расходов, зарплат, налогов и комиссий.</p></div>' +
+            '<span style="font-size:10px;font-weight:750;color:#28764d;background:#eef8f1;padding:5px 8px;border-radius:999px;">ЕДИНЫЙ РАСЧЁТ EASY</span>' +
+          '</div>' +
+          '<div id="businessAdvisorFinanceMetrics" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;"></div>' +
+          '<div id="businessAdvisorFinanceQuality" style="font-size:12px;line-height:1.55;margin:12px 0;padding:10px 12px;border-radius:10px;background:#f8f5f7;color:var(--text-light);"></div>' +
+          '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;margin-top:14px;">' +
+            '<div><h4 style="font-size:13px;margin:0 0 8px;">Из чего складывается результат</h4><div id="businessAdvisorFinanceBreakdown"></div></div>' +
+            '<div><h4 style="font-size:13px;margin:0 0 8px;">Что изменило прибыль</h4><div id="businessAdvisorFinanceChange" style="font-size:12px;line-height:1.6;color:var(--text-light);"></div></div>' +
+          '</div>' +
+          '<div style="margin-top:16px;"><h4 style="font-size:13px;margin:0 0 8px;">Прибыльность магазинов</h4><div id="businessAdvisorStoreFinance" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:8px;"></div></div>' +
+        '</section>' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0;">' +
           '<h3 style="margin:0;border:0;padding:0;">Что требует внимания</h3><span id="businessAdvisorStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-light);"></span>' +
         '</div>' +
@@ -191,6 +204,200 @@
           '<p style="font-size:11px;line-height:1.5;color:var(--text-light);margin:0;"><strong>Основание:</strong> ' + esc(item.reason) + '</p>' + action +
         '</div></div></article>';
   }
+  function getFinancialSummary(start, end, storeId) {
+    if (typeof window.getEasyFinancialSummary !== 'function') return null;
+    try { return window.getEasyFinancialSummary(start, end, storeId); }
+    catch (error) { console.warn('Easy financial summary unavailable:', error); return null; }
+  }
+  function financialPercent(value) {
+    return num(value).toLocaleString('ru-RU', { maximumFractionDigits:1 }) + '%';
+  }
+  function financialChange(current, previous) {
+    current = num(current); previous = num(previous);
+    if (previous === 0) return current === 0 ? 0 : null;
+    return (current - previous) / Math.abs(previous);
+  }
+  function financialRow(label, value, note, total, negative) {
+    var displayed = value === null || value === undefined ? '—' : money(Math.abs(num(value)));
+    if (value !== null && value !== undefined && (num(value) < 0 || (negative && num(value) > 0))) displayed = '−' + displayed;
+    return '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:8px 9px;border:1px solid var(--border);border-radius:9px;margin:5px 0;background:' + (total ? '#fbeaf1' : '#fff') + ';">' +
+      '<div style="min-width:0;font-size:12px;line-height:1.4;' + (total ? 'font-weight:800;' : '') + '">' + esc(label) +
+      (note ? '<div style="font-size:10px;color:var(--text-light);font-weight:400;margin-top:2px;">' + esc(note) + '</div>' : '') + '</div>' +
+      '<strong style="white-space:nowrap;font-size:12px;font-variant-numeric:tabular-nums;' + (negative && value !== null && num(value) > 0 ? 'color:#b42336;' : '') + '">' + esc(displayed) + '</strong></div>';
+  }
+  function renderFinancialPanel(current, previous, storeRows, selectedStore) {
+    var metrics = el('businessAdvisorFinanceMetrics');
+    var quality = el('businessAdvisorFinanceQuality');
+    var breakdown = el('businessAdvisorFinanceBreakdown');
+    var change = el('businessAdvisorFinanceChange');
+    var storeHost = el('businessAdvisorStoreFinance');
+    if (!metrics || !quality || !breakdown || !change || !storeHost) return;
+
+    if (!current) {
+      metrics.innerHTML =
+        metricCard('Выручка после возвратов', '—', 'Нет финансового среза') +
+        metricCard('Валовая прибыль', '—', 'Нет доступа к расчёту себестоимости') +
+        metricCard('Чистая прибыль', '—', 'Не показываем неподтверждённую прибыль') +
+        metricCard('Валовая маржа', '—', 'Недостаточно прав или данных');
+      quality.textContent = 'Полный расчёт прибыли доступен администраторам с доступом к закупочной себестоимости. Выручка и расходы не подменяют собой прибыль.';
+      breakdown.innerHTML = '<p style="font-size:12px;color:var(--text-light);">Финансовые показатели недоступны для этой учётной записи.</p>';
+      change.innerHTML = '<p>Сравнение не выполнено.</p>';
+      storeHost.innerHTML = '';
+      return;
+    }
+
+    var profitAvailable = current.costCalculationAvailable && current.netProfit !== null && current.netProfit !== undefined;
+    var grossAvailable = current.costCalculationAvailable && current.grossProfit !== null && current.grossProfit !== undefined;
+    var profitNote = !profitAvailable ? 'Не хватает подтверждённой себестоимости' : (current.costDataComplete ? 'Расчёт по фактической себестоимости' : 'Предварительно: часть себестоимости оценена');
+    metrics.innerHTML =
+      metricCard('Выручка после возвратов', money(current.netRevenue), money(current.returns) + ' возвратов за период') +
+      metricCard('Валовая прибыль', grossAvailable ? money(current.grossProfit) : '—', grossAvailable ? 'После себестоимости товара' : 'Неполная себестоимость') +
+      metricCard('Чистая прибыль', profitAvailable ? money(current.netProfit) : '—', profitNote) +
+      metricCard('Валовая маржа', grossAvailable && current.grossMargin !== null ? financialPercent(current.grossMargin) : '—', 'Валовая прибыль / выручка после возвратов');
+
+    var actualShare = current.salesCount > 0 ? current.costedSalesCount / current.salesCount : 1;
+    var qualityText = 'Фактическая себестоимость указана для ' + current.costedSalesCount + ' из ' + current.salesCount + ' продаж (' + financialPercent(actualShare * 100) + '). ';
+    if (current.costDataComplete) {
+      qualityText += 'Себестоимость продаж и возвратов в этом периоде подтверждена фактическими закупочными ценами.';
+      quality.style.background = '#eef8f1'; quality.style.color = '#28764d';
+    } else if (current.costCalculationAvailable) {
+      qualityText += 'В прибыль включена предварительная оценка себестоимости: ' + current.estimatedCostSalesCount + ' продаж и ' + current.estimatedCostReturnsCount + ' возвратных операций. Для точной цифры заполните недостающие закупочные цены.';
+      quality.style.background = '#fff7e8'; quality.style.color = '#7b5211';
+    } else {
+      qualityText += 'Часть операций не имеет даже расчётной себестоимости. Поэтому чистая прибыль скрыта, чтобы не показывать ложную точность.';
+      quality.style.background = '#fff0f1'; quality.style.color = '#9f2538';
+    }
+    quality.textContent = qualityText;
+
+    var ordinaryExpenses = Math.max(0, num(current.expenses) - num(current.recurringExpenses));
+    breakdown.innerHTML =
+      financialRow('Выручка от продаж', current.revenue) +
+      financialRow('Возвраты', current.returns, 'Возвраты учитываются по дате операции', false, true) +
+      financialRow('Выручка после возвратов', current.netRevenue, '', true) +
+      financialRow('Себестоимость проданных товаров', grossAvailable ? current.costOfGoods : null, current.costDataComplete ? 'Фактическая' : 'Содержит оценочные или неполные данные', false, true) +
+      financialRow('Валовая прибыль', grossAvailable ? current.grossProfit : null, '', true) +
+      financialRow('Обычные расходы', ordinaryExpenses, '', false, true) +
+      financialRow('Регулярные расходы', current.recurringExpenses, 'Начислены пропорционально дням периода', false, true) +
+      financialRow('Начисленная зарплата', current.salaryExpenses, 'Выплаты зарплаты отдельно не дублируются', false, true) +
+      financialRow('Налог', current.tax, '', false, true) +
+      financialRow('Эквайринг карт и СБП', num(current.cardFee) + num(current.sbpFee), '', false, true) +
+      financialRow('Все расходы', current.allExpenses, '', true, true) +
+      financialRow('Чистая прибыль', profitAvailable ? current.netProfit : null, profitNote, true, num(current.netProfit) < 0);
+
+    if (previous && current.costCalculationAvailable && previous.costCalculationAvailable &&
+        current.netProfit !== null && previous.netProfit !== null) {
+      var deltaRevenue = num(current.netRevenue) - num(previous.netRevenue);
+      var deltaCost = num(current.costOfGoods) - num(previous.costOfGoods);
+      var deltaExpenses = num(current.allExpenses) - num(previous.allExpenses);
+      var deltaProfit = num(current.netProfit) - num(previous.netProfit);
+      var expenseRatioCurrent = current.netRevenue > 0 ? current.allExpenses / current.netRevenue : 0;
+      var expenseRatioPrevious = previous.netRevenue > 0 ? previous.allExpenses / previous.netRevenue : 0;
+      var lines = [];
+      lines.push('<p><strong>Изменение чистой прибыли:</strong> ' + (deltaProfit > 0 ? '+' : '') + money(deltaProfit) + ' (' +
+        (financialChange(current.netProfit, previous.netProfit) === null ? 'нет базы для процента' : (financialChange(current.netProfit, previous.netProfit) >= 0 ? '+' : '') + financialPercent(financialChange(current.netProfit, previous.netProfit) * 100)) + ').</p>');
+      lines.push('<p>Влияние факторов: выручка после возвратов ' + (deltaRevenue > 0 ? '+' : '') + money(deltaRevenue) +
+        '; себестоимость ' + (deltaCost > 0 ? '−' : '+') + money(Math.abs(deltaCost)) +
+        '; все расходы ' + (deltaExpenses > 0 ? '−' : '+') + money(Math.abs(deltaExpenses)) + '.</p>');
+      lines.push('<p>Доля всех расходов в выручке: ' + financialPercent(expenseRatioCurrent * 100) +
+        ' против ' + financialPercent(expenseRatioPrevious * 100) + ' ранее.</p>');
+      if (current.grossMargin !== null && previous.grossMargin !== null) {
+        lines.push('<p>Валовая маржа: ' + financialPercent(current.grossMargin) + ' против ' + financialPercent(previous.grossMargin) +
+          ' (' + (current.grossMargin - previous.grossMargin > 0 ? '+' : '') + financialPercent(current.grossMargin - previous.grossMargin) + ' п.п.).</p>');
+      }
+      change.innerHTML = lines.join('');
+    } else {
+      change.innerHTML = '<p>Для сравнения чистой прибыли нужны расчёт себестоимости и данные за оба равных периода. Пока можно анализировать структуру текущего периода.</p>';
+    }
+
+    if (!storeRows || !storeRows.length) {
+      storeHost.innerHTML = '<p style="font-size:12px;color:var(--text-light);">Нет доступных магазинов для сравнения.</p>';
+    } else {
+      storeRows.sort(function(a,b) {
+        var aReady = a.summary && a.summary.netProfit !== null && a.summary.netProfit !== undefined && a.summary.costCalculationAvailable;
+        var bReady = b.summary && b.summary.netProfit !== null && b.summary.netProfit !== undefined && b.summary.costCalculationAvailable;
+        if (aReady !== bReady) return aReady ? -1 : 1;
+        return aReady ? num(b.summary.netProfit) - num(a.summary.netProfit) : String(a.name).localeCompare(String(b.name), 'ru');
+      });
+      storeHost.innerHTML = storeRows.map(function(item) {
+        var summary = item.summary;
+        var ready = summary && summary.costCalculationAvailable && summary.netProfit !== null && summary.netProfit !== undefined;
+        var net = ready ? money(summary.netProfit) : '—';
+        var margin = ready && summary.grossMargin !== null ? financialPercent(summary.grossMargin) : '—';
+        var state = !ready ? 'Себестоимость неполная' : summary.costDataComplete ? 'Фактические цены' : 'Есть оценка';
+        return '<article style="border:1px solid var(--border);border-radius:10px;padding:10px;background:#fff;min-width:0;">' +
+          '<strong style="display:block;font-size:12px;margin-bottom:7px;">' + esc(item.name) + '</strong>' +
+          '<div style="font-size:17px;font-weight:800;line-height:1.3;">' + esc(net) + '</div>' +
+          '<div style="font-size:10px;color:var(--text-light);margin-top:3px;">Чистая прибыль · валовая маржа ' + esc(margin) + '</div>' +
+          '<div style="font-size:10px;color:var(--text-light);margin-top:5px;">Выручка ' + esc(summary ? money(summary.netRevenue) : '—') + ' · расходы ' + esc(summary ? money(summary.allExpenses) : '—') + '</div>' +
+          '<div style="font-size:10px;margin-top:6px;color:' + (ready && summary.costDataComplete ? '#28764d' : '#9a6414') + ';">' + esc(state) + '</div></article>';
+      }).join('');
+    }
+  }
+  function appendFinancialRecommendations(recommendations, current, previous, storeRows) {
+    if (!current) return;
+    if (!current.costCalculationAvailable) {
+      recommendations.push(recommendation('danger','🧾','Нельзя подтвердить чистую прибыль',
+        'Для части продаж или возвратов не хватает себестоимости. Сумма выручки сама по себе не показывает, сколько бизнес заработал.',
+        'Отсутствуют закупочные цены для ' + current.costMissingCount + ' продаж и ' + current.costMissingReturnsCount + ' возвратных операций. Заполните стоимость в разделе себестоимости.','costs'));
+    } else if (!current.costDataComplete) {
+      recommendations.push(recommendation('warning','🧾','Прибыль пока оценочная',
+        'Расчёт выполнен, но часть себестоимости взята по средней наценке. Это ориентир, а не подтверждённая фактическая прибыль.',
+        'Оценено ' + current.estimatedCostSalesCount + ' продаж и ' + current.estimatedCostReturnsCount + ' возвратных операций.','costs'));
+    }
+    if (current.costCalculationAvailable && current.netProfit !== null && current.netProfit < 0) {
+      recommendations.push(recommendation('danger','↘','Период завершён с убытком',
+        'После себестоимости, зарплат, регулярных и прочих расходов, налогов и комиссий результат отрицательный: ' + money(current.netProfit) + '.',
+        'Выручка после возвратов ' + money(current.netRevenue) + '; себестоимость ' + money(current.costOfGoods) + '; все расходы ' + money(current.allExpenses) + '.','analytics'));
+    }
+    if (previous && current.costCalculationAvailable && previous.costCalculationAvailable &&
+        current.netProfit !== null && previous.netProfit !== null) {
+      var profitDelta = num(current.netProfit) - num(previous.netProfit);
+      var revenueDelta = num(current.netRevenue) - num(previous.netRevenue);
+      var costDelta = num(current.costOfGoods) - num(previous.costOfGoods);
+      var expenseDelta = num(current.allExpenses) - num(previous.allExpenses);
+      var significantDrop = profitDelta < -Math.max(5000, Math.abs(num(previous.netProfit)) * 0.1);
+      if (significantDrop) {
+        var impacts = [
+          {name:'снижение выручки после возвратов',value:revenueDelta},
+          {name:'рост себестоимости',value:-costDelta},
+          {name:'рост всех расходов',value:-expenseDelta}
+        ].filter(function(item){return item.value<0;}).sort(function(a,b){return a.value-b.value;});
+        var mainCause = impacts.length ? impacts[0].name : 'изменение структуры продаж и расходов';
+        recommendations.push(recommendation('danger','📉','Чистая прибыль заметно снизилась',
+          'Прибыль уменьшилась на ' + money(Math.abs(profitDelta)) + ' относительно предыдущего равного периода. Главный отрицательный вклад внесло ' + mainCause + '.',
+          'Изменение прибыли: ' + money(profitDelta) + '; выручка после возвратов: ' + money(revenueDelta) + '; себестоимость: ' + money(costDelta) + '; все расходы: ' + money(expenseDelta) + '.','analytics'));
+      } else if (revenueDelta > 0 && profitDelta < 0) {
+        recommendations.push(recommendation('warning','↔','Выручка растёт, а прибыль снижается',
+          'Дополнительные продажи не превращаются в дополнительную прибыль. Проверьте маржу проданных товаров и рост затрат.',
+          'Выручка после возвратов выросла на ' + money(revenueDelta) + ', а чистая прибыль изменилась на ' + money(profitDelta) + '.','analytics'));
+      }
+      if (current.grossMargin !== null && previous.grossMargin !== null &&
+          current.grossMargin - previous.grossMargin <= -3) {
+        recommendations.push(recommendation('warning','％','Снизилась валовая маржа',
+          'Валовая маржа упала на ' + financialPercent(Math.abs(current.grossMargin - previous.grossMargin)) + ' п.п. Это может указывать на скидки, изменение товарного микса или подорожание закупки.',
+          'Текущая маржа: ' + financialPercent(current.grossMargin) + '; предыдущая: ' + financialPercent(previous.grossMargin) + '.','costs'));
+      }
+      var currentExpenseShare = current.netRevenue > 0 ? current.allExpenses / current.netRevenue : 0;
+      var previousExpenseShare = previous.netRevenue > 0 ? previous.allExpenses / previous.netRevenue : 0;
+      if (currentExpenseShare - previousExpenseShare >= 0.05) {
+        recommendations.push(recommendation('warning','₽','Расходы занимают большую долю выручки',
+          'Доля налогов, комиссий, зарплат и прочих расходов выросла на ' + financialPercent((currentExpenseShare-previousExpenseShare)*100) + ' п.п. Даже при стабильных продажах это уменьшает прибыль.',
+          'Сейчас расходы составляют ' + financialPercent(currentExpenseShare*100) + ' выручки; ранее — ' + financialPercent(previousExpenseShare*100) + '.','expenses'));
+      }
+    }
+    if (storeRows && storeRows.length >= 2) {
+      var readyStores = storeRows.filter(function(item){return item.summary && item.summary.costCalculationAvailable && item.summary.netProfit !== null;});
+      if (readyStores.length >= 2) {
+        readyStores.sort(function(a,b){return num(a.summary.netProfit)-num(b.summary.netProfit);});
+        var weakest = readyStores[0], strongest = readyStores[readyStores.length-1];
+        if (num(strongest.summary.netProfit)>0 && num(weakest.summary.netProfit)<num(strongest.summary.netProfit)*0.35) {
+          recommendations.push(recommendation('warning','🏬','Магазины сильно различаются по прибыли',
+            '«' + weakest.name + '» приносит заметно меньше чистой прибыли, чем «' + strongest.name + '». Сравните структуру ассортимента, расходы, маржу и загрузку смен.',
+            weakest.name + ': ' + money(weakest.summary.netProfit) + '; ' + strongest.name + ': ' + money(strongest.summary.netProfit) + '.','analytics'));
+        }
+      }
+    }
+  }
   function render() {
     var page = el('workspacePage-analytics');
     if (!page || !window.currentUser || window.currentUser.role !== 'admin') return;
@@ -291,8 +498,7 @@
     if (sources) {
       sources.textContent = 'Учтено: ' + (scope.sales || []).length + ' доступных записей продаж в истории, ' +
         (scope.expenses || []).length + ' записей расходов, ' + visibleKeys.length + ' доступных магазинов. ' +
-        'Выводы рассчитываются локально из данных приложения; возвраты вычитаются из чистой выручки. ' +
-        'Периодические расходы и полная чистая прибыль пока не включены в этот первый этап.';
+        'Финансовый блок использует общий расчёт аналитики Easy: возвраты по дате операции, фактическую или явно помеченную оценочную себестоимость, обычные и регулярные расходы, начисленную зарплату, налог и эквайринг.';
     }
   }
 
