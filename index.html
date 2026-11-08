@@ -2128,7 +2128,7 @@ function scheduleWorkspaceRender() {
 function attachIncrementalCollectionListener(ref, collectionName) {
     var isSalesCollection = collectionName === 'sales';
     var getArray = function() { return isSalesCollection ? sales : expenses; };
-    var setArray = function(next) { if (isSalesCollection) sales = next; else expenses = next; };
+    var setArray = function(next) { if (isSalesCollection) { sales = next; if (typeof window.stockInvalidateReplenishmentCache === 'function') window.stockInvalidateReplenishmentCache(); } else expenses = next; };
     var isValid = function(item, key) {
         if (!item || (isSalesCollection ? isSaleRecordDeleted(key) : isExpenseRecordDeleted(key))) return false;
         return !isStoreDeleted(item.storeId) && !isRecordBeforeStoreReset(item);
@@ -2953,6 +2953,7 @@ function applySalesSnapshot(snapshot) {
         }
     });
     sales = arr;
+    if (typeof window.stockInvalidateReplenishmentCache === 'function') window.stockInvalidateReplenishmentCache();
     invalidateAnalyticsCache();
     scheduleLocalCacheSave();
     if (typeof updatePendingSalesNotice === 'function') updatePendingSalesNotice();
@@ -6760,7 +6761,7 @@ function renderActiveWorkspace() {
         try { renderStoreSalesPlans(false); } catch(e) {}
         try { renderProductCatalogSelect(); } catch(e) {}
         try { if (currentUser && currentUser.role === 'admin') renderProductCatalogManager(); } catch(e) {}
-        try { if (currentUser && currentUser.role === 'admin') renderPurchasePlan(); } catch(e) {}
+        try { if (currentUser && currentUser.role === 'admin') renderPurchaseRecommendations(); } catch(e) {}
         try { populateSellerFilter(); } catch(e) {}
         try { if (currentUser && isSuperAdmin(currentUser)) renderStoresManagement(); } catch(e) {}
         return;
@@ -9853,7 +9854,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(id==='orgs'&&typeof renderOrgsManagement==='function')renderOrgsManagement();
       if(id==='sales'&&typeof renderSalesTable==='function')renderSalesTable();
       if(id==='expenses'){if(typeof renderExpensesTable==='function')renderExpensesTable();if(typeof renderRecurringExpenseManager==='function')renderRecurringExpenseManager();}
-      if(id==='purchase'&&typeof renderPurchasePlan==='function')renderPurchasePlan();
+      if(id==='purchase'&&typeof renderPurchaseRecommendations==='function')renderPurchaseRecommendations();
       if(id==='costs'&&typeof renderPurchaseCosts==='function')renderPurchaseCosts();
       try{sessionStorage.setItem('easyAppSync_activePage',id);}catch(e){}
     }
