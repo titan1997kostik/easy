@@ -3574,7 +3574,11 @@ function connectMQTT() {
                 handleRemoteData(data);
             } catch(e) { console.error('Sync message parse error:', e); }
         });
-        mqttClient.on('error', function(err) { console.error('MQTT error:', err); });
+        mqttClient.on('error', function(err) {
+            console.error('MQTT error:', err);
+            var reason = err && err.message ? String(err.message) : 'ошибка соединения с брокером';
+            setSyncStatus('offline', 'Ошибка MQTT: ' + reason.slice(0, 55));
+        });
         mqttClient.on('close', function() { if (!connecting) onDisconnect(); });
         mqttClient.on('offline', function() { if (!connecting) onDisconnect(); });
         setTimeout(function() {
