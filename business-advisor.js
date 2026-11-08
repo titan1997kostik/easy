@@ -79,13 +79,13 @@
           '<button type="button" class="btn btn-secondary" id="businessAdvisorRefresh">↻ Пересчитать</button>' +
         '</div>' +
         '<p id="businessAdvisorPeriodLabel" style="font-size:12px;color:var(--text-light);margin:10px 0 14px;"></p>' +
-        '<div id="businessAdvisorMetrics" class="business-advisor-metrics" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;"></div>' +
+        '<div id="businessAdvisorMetrics" class="business-advisor-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:10px;margin-bottom:16px;"></div>' +
         '<section class="card" id="businessAdvisorFinanceCard" style="padding:18px;margin:0 0 18px;">' +
           '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">' +
             '<div><h3 style="margin:0;border:0;padding:0;">Финансовый директор</h3><p style="font-size:12px;color:var(--text-light);margin:4px 0 0;">Прибыль с учётом себестоимости, возвратов, расходов, зарплат, налогов и комиссий.</p></div>' +
             '<span style="font-size:10px;font-weight:750;color:#28764d;background:#eef8f1;padding:5px 8px;border-radius:999px;">ЕДИНЫЙ РАСЧЁТ EASY</span>' +
           '</div>' +
-          '<div id="businessAdvisorFinanceMetrics" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;"></div>' +
+          '<div id="businessAdvisorFinanceMetrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:9px;"></div>' +
           '<div id="businessAdvisorFinanceQuality" style="font-size:12px;line-height:1.55;margin:12px 0;padding:10px 12px;border-radius:10px;background:#f8f5f7;color:var(--text-light);"></div>' +
           '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;margin-top:14px;">' +
             '<div><h4 style="font-size:13px;margin:0 0 8px;">Из чего складывается результат</h4><div id="businessAdvisorFinanceBreakdown"></div></div>' +
@@ -435,8 +435,6 @@
       recommendations.push(recommendation('danger','↘','Выручка снизилась','Чистая выручка за выбранный период уменьшилась на ' + pct(Math.abs(salesChange)) + ' по сравнению с предыдущим равным периодом. Проверьте, в каких магазинах и товарных группах падение сильнее всего.','Текущий период: ' + money(currentSales.netRevenue) + '; предыдущий: ' + money(previousSales.netRevenue) + '; сравнение по ' + currentSales.checks + ' и ' + previousSales.checks + ' продажам.','analytics'));
     } else if (salesChange !== null && salesChange >= 0.15 && currentSales.checks >= 3 && previousSales.checks >= 3) {
       recommendations.push(recommendation('success','↗','Выручка растёт','Чистая выручка выросла на ' + pct(salesChange) + ' к предыдущему равному периоду. Сравните остатки и наличие лидирующих товаров, чтобы не потерять темп продаж.','Текущий период: ' + money(currentSales.netRevenue) + '; предыдущий: ' + money(previousSales.netRevenue) + '.','purchase'));
-    } else {
-      recommendations.push(recommendation('info','◷','Выручка без резких изменений','По сравнению с предыдущим равным периодом изменение чистой выручки не достигло порога ±15%. Следите за динамикой и средним чеком.','Текущий период: ' + money(currentSales.netRevenue) + '; предыдущий: ' + money(previousSales.netRevenue) + '; изменение: ' + (salesChange === null ? 'нет базы для сравнения' : pct(salesChange)) + '.','analytics'));
     }
     if (currentSales.checks >= 10 && currentSales.returnRate >= 0.1) {
       recommendations.push(recommendation('warning','↩','Повышенная доля возвратов','Возвраты составляют ' + pct(currentSales.returnRate) + ' от количества продаж. Проверьте причины возвратов, размеры, качество товара и работу с ожиданиями покупателей.','Возвращено ' + currentSales.returnedChecks + ' из ' + currentSales.checks + ' продаж на сумму ' + money(currentSales.returnedRevenue) + '.','sales'));
@@ -491,10 +489,10 @@
     var metrics = el('businessAdvisorMetrics');
     if (metrics) {
       metrics.innerHTML =
-        metricCard('Чистая выручка', money(currentSales.netRevenue), (salesChange === null ? 'нет базы для сравнения' : (salesChange >= 0 ? '+' : '') + pct(salesChange) + ' к прошлому периоду')) +
-        metricCard('Продажи', String(nonReturnedChecks), 'Средний чек: ' + money(currentSales.averageCheck)) +
-        metricCard('Возвраты', String(currentSales.returnedChecks), 'Доля от продаж: ' + pct(currentSales.returnRate)) +
-        metricCard('Записанные расходы', money(currentExpenses.amount), currentExpenses.count + ' записей за период');
+        metricCard('Количество продаж', String(nonReturnedChecks), 'Возвраты исключены из количества') +
+        metricCard('Средний чек', money(currentSales.averageCheck), 'По продажам без возвратов') +
+        metricCard('Количество возвратов', String(currentSales.returnedChecks), 'Сумма: ' + money(currentSales.returnedRevenue)) +
+        metricCard('Доля возвратов', pct(currentSales.returnRate), 'От количества продаж за период');
     }
     renderFinancialPanel(financialCurrent, financialPrevious, financeStoreRows, selectedStore);
     var periodLabel = el('businessAdvisorPeriodLabel');
