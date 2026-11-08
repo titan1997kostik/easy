@@ -351,7 +351,7 @@
     var ordinary = Math.max(0, num(details.ordinaryTotal));
     var recurring = Math.max(0, num(details.recurringTotal));
     var salary = Math.max(0, num(current.salaryExpenses));
-    var taxAndFees = Math.max(0, num(current.tax) + num(current.cardFee) + num(current.sbpFee));
+    var taxAndFees = num(current.tax) + num(current.cardFee) + num(current.sbpFee);
     var total = Math.max(0, num(current.allExpenses));
     var parts = [
       {label:'Обычные записанные расходы', value:ordinary, note:'Разовые записи по причине расхода'},
