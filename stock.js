@@ -769,11 +769,8 @@
   }
   function getReplenishmentRecommendations(startDate,endDate,selectedStore,targetDays){
     if(!isAdmin()||!Object.keys(loaded).every(function(k){return loaded[k];}))return {ready:false,rows:[],message:'Складские данные ещё загружаются.'};
-    var now=Date.now(),endMs=endDate?stockLocalDateMs(endDate,true):now;
-    if(!endMs||endMs>now)endMs=now;
-    var startMs=startDate?stockLocalDateMs(startDate,false):endMs-29*86400000;
-    if(!startMs||startMs>endMs)return {ready:true,rows:[],message:'Проверьте выбранный период.'};
-    var periodDays=Math.max(1,(endMs-startMs+1)/86400000),target=Math.max(1,Math.min(60,Number(targetDays)||14));
+    var now=Date.now(),endMs=now,startMs=Infinity;
+    var target=Math.max(1,Math.min(60,Number(targetDays)||14));
     var stores=visibleStoreIds().filter(function(id){return selectedStore==='all'||String(id)===String(selectedStore);});
     var storeSet={},active=allProducts().filter(function(p){return p.status==='active';}),rows=[],movementByKey={},saleMovementIds={};
     stores.forEach(function(id){storeSet[String(id)]=true;});
@@ -800,16 +797,19 @@
         if(!movementByKey[key2])movementByKey[key2]=[];
         movementByKey[key2].push({at:at,delta:-(Number(sale.stockQuantity)||1),before:null,after:null,saleId:String(sale.id),source:'sale'});
       }
-      if(!sale.returned&&at&&at>=startMs&&at<=endMs){
+      if(!sale.returned&&at&&at<=endMs){
         if(!soldByKey[key2])soldByKey[key2]=0;
         var units=Number(sale.stockQuantity)||1;
         if(isFinite(units)&&units>0)soldByKey[key2]+=units;
       }
     });
-    // Sort each product/store movement history once; rows below reuse this ordered array.
+    // Use the earliest available movement/sale as the start of the full-history period.
     Object.keys(movementByKey).forEach(function(key){
       movementByKey[key].sort(function(a,b){return a.at-b.at;});
+      if(movementByKey[key].length)startMs=Math.min(startMs,movementByKey[key][0].at);
     });
+    if(!isFinite(startMs))startMs=endMs-29*86400000;
+    var periodDays=Math.max(1,(endMs-startMs+1)/86400000);
     var salesRankByKey={};
     stores.forEach(function(sid){
       var selling=[];
