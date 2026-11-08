@@ -477,10 +477,11 @@
       }
     }
     var productRows = Object.keys(currentSales.products).map(function (key) { return currentSales.products[key]; }).sort(function (a,b) { return b.revenue - a.revenue; });
-    if (productRows.length && currentSales.netRevenue > 0 && productRows[0].checks >= 5) {
-      var productShare = productRows[0].revenue / currentSales.netRevenue;
+    var productRevenueTotal = productRows.reduce(function(total, item) { return total + num(item.revenue); }, 0);
+    if (productRows.length && productRevenueTotal > 0 && productRows[0].checks >= 5) {
+      var productShare = productRows[0].revenue / productRevenueTotal;
       if (productShare >= 0.4) {
-        recommendations.push(recommendation('info','★','Продажи зависят от одного товара','По продажам, зарегистрированным в периоде, товар «' + productRows[0].name + '» формирует ' + pct(productShare) + ' оборота. Проверьте запас этой позиции и подумайте, какие похожие товары могут дополнить ассортимент.','Продажи товара: ' + money(productRows[0].revenue) + '; чистая выручка: ' + money(currentSales.netRevenue) + '; чеков с этим товаром: ' + productRows[0].checks + '. Частичные возвраты пока не распределяются по товарным карточкам в этом рейтинге.','purchase'));
+        recommendations.push(recommendation('info','★','Продажи зависят от одного товара','По продажам, зарегистрированным в периоде, товар «' + productRows[0].name + '» формирует ' + pct(productShare) + ' оборота. Проверьте запас этой позиции и подумайте, какие похожие товары могут дополнить ассортимент.','Продажи товара: ' + money(productRows[0].revenue) + '; оборот по товарам: ' + money(productRevenueTotal) + '; чеков с этим товаром: ' + productRows[0].checks + '. Доля рассчитана по продажам без полностью возвращённых чеков; частичные возвраты пока не распределяются по товарным карточкам.','purchase'));
       }
     }
     var stockResult = null;
