@@ -340,7 +340,7 @@
     }
   }
 
-  function renderExpenseAnalysis(current, storeRows, selectedStore) {
+  function renderExpenseAnalysis(current, storeRows, selectedStore, periodDays) {
     var host = el('businessAdvisorExpenseAnalysis');
     if (!host) return;
     var details = current && current.expenseDetails;
