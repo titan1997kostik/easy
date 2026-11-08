@@ -383,7 +383,18 @@
   function save(skipPhoto){
     if(!isAdmin()&&!isSeller()){alert('Нет доступа к созданию карточек.');return;}
     if(isSeller()&&editingId){alert('Продавцы не могут редактировать существующие карточки.');return;}
-    if(!canUse()) {alert('Нет подтверждённого подключения к Firebase.');return;}
+    if(!canUse()) {
+      var syncDiagnostic=String(window.easyAppSyncFirebaseError||'').trim();
+      var message='Карточка не сохранена: '+(syncDiagnostic
+        ? syncDiagnostic
+        : (!navigator.onLine
+          ? 'нет подключения к интернету.'
+          : 'Firebase ещё не завершил проверку актуальности данных.'));
+      var diagnosticBox=document.getElementById('stockSaveError');
+      if(diagnosticBox) diagnosticBox.textContent=message;
+      alert(message);
+      return;
+    }
     var name=(document.getElementById('stockName').value||'').trim(); if(!name){alert('Введите название товара, бренд или модель.');return;}
     var old=editingId?products[editingId]:null, id=editingId||uid('sp');
     var record=Object.assign({},old||{},{id:id,org:old?old.org:org(),name:name,
