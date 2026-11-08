@@ -778,7 +778,7 @@
     var salesRows=window.sales||[];
     var stores=visibleStoreIds().filter(function(id){return selectedStore==='all'||String(id)===String(selectedStore);});
     var day=new Date(now),dayKey=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(day.getDate()).padStart(2,'0');
-    var cacheKey=[org(),String(selectedStore||'all'),stores.join(','),target,String(startDate||''),String(endDate||''),dayKey,replenishmentCacheRevision,replenishmentCacheRevision,salesRows.length].join('|');
+    var cacheKey=[org(),String(selectedStore||'all'),stores.join(','),target,String(startDate||''),String(endDate||''),dayKey,replenishmentCacheRevision,salesRows.length].join('|');
     var cached=replenishmentCache[cacheKey];
     if(cached&&cached.salesRef===salesRows&&cached.salesLength===salesRows.length)return cached.result;
     var storeSet={},active=allProducts().filter(function(p){return p.status==='active';}),rows=[],movementByKey={},saleMovementIds={};
