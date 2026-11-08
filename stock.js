@@ -319,6 +319,59 @@
     galleryInput.addEventListener('change',function(){showChosenPhoto(galleryInput,cameraInput);});
   }
   function closeForm(){var el=document.getElementById('stockModal');if(el)el.remove();}
+  // Подготавливает фото товара перед отправкой: уменьшает размер и сжимает JPEG на устройстве.
+  function prepareStockPhoto(file){
+    return new Promise(function(resolve){
+      if(!file || !/^image\\//i.test(file.type||'')){resolve(file);return;}
+      function compress(source,width,height){
+        var maxSide=1600,scale=Math.min(1,maxSide/Math.max(width,height));
+        var w=Math.max(1,Math.round(width*scale)),h=Math.max(1,Math.round(height*scale));
+        var canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+        if(!ctx){resolve(file);return;}
+        canvas.width=w;canvas.height=h;
+        ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);
+        ctx.drawImage(source,0,0,w,h);
+        function encode(){
+          var qualities=[0.82,0.76,0.70],index=0;
+          function attempt(){
+            canvas.toBlob(function(blob){
+              if(!blob){resolve(file);return;}
+              if(blob.size<=450*1024 || index>=qualities.length-1 || Math.max(canvas.width,canvas.height)<=1000){
+                if(blob.size>450*1024 && Math.max(canvas.width,canvas.height)>1000){
+                  var nw=Math.max(1,Math.round(canvas.width*0.85)),nh=Math.max(1,Math.round(canvas.height*0.85));
+                  var smaller=document.createElement('canvas'),sctx=smaller.getContext('2d');
+                  if(!sctx){finish(blob);return;}
+                  smaller.width=nw;smaller.height=nh;sctx.fillStyle='#fff';sctx.fillRect(0,0,nw,nh);sctx.drawImage(canvas,0,0,nw,nh);
+                  canvas=smaller;index=0;attempt();return;
+                }
+                finish(blob);return;
+              }
+              index++;attempt();
+            },'image/jpeg',qualities[index]);
+          }
+          function finish(blob){
+            if(blob.size>=file.size){resolve(file);return;}
+            var name=(file.name||'photo').replace(/\\.[^.]+$/,'')+'.jpg';
+            try{resolve(new File([blob],name,{type:'image/jpeg',lastModified:Date.now()}));}
+            catch(e){blob.name=name;resolve(blob);}
+          }
+          attempt();
+        }
+        encode();
+      }
+      if(typeof createImageBitmap==='function'){
+        createImageBitmap(file).then(function(bitmap){
+          try{compress(bitmap,bitmap.width,bitmap.height);}finally{if(bitmap.close)bitmap.close();}
+        }).catch(function(){resolve(file);});
+        return;
+      }
+      var objectUrl=URL.createObjectURL(file),img=new Image();
+      img.onload=function(){try{compress(img,img.naturalWidth||img.width,img.naturalHeight||img.height);}catch(e){resolve(file);}finally{URL.revokeObjectURL(objectUrl);}};
+      img.onerror=function(){URL.revokeObjectURL(objectUrl);resolve(file);};
+      img.src=objectUrl;
+    });
+  }
+
   function save(skipPhoto){
     if(!isAdmin()&&!isSeller()){alert('Нет доступа к созданию карточек.');return;}
     if(isSeller()&&editingId){alert('Продавцы не могут редактировать существующие карточки.');return;}
@@ -360,7 +413,6 @@
       var safeOrg=String(record.org||'org').replace(/[^a-zA-Z0-9_-]/g,'_');
       upload=new Promise(function(resolve,reject){
         var xhr=new XMLHttpRequest(), formData=new FormData();
-        formData.append('file',file);
         formData.append('upload_preset',uploadPreset);
         formData.append('folder','stock-products/'+safeOrg);
         xhr.open('POST',cloudinaryUrl,true);
@@ -386,7 +438,11 @@
         xhr.onerror=function(){reject(new Error('Не удалось связаться с Cloudinary. Проверьте интернет.'));};
         xhr.ontimeout=function(){reject(new Error('Загрузка фото не завершилась за 45 секунд. Проверьте интернет.'));};
         xhr.onabort=function(){reject(new Error('Загрузка фотографии отменена.'));};
-        try{xhr.send(formData);}catch(e){reject(e);}
+        if(saveButton)saveButton.textContent='Подготавливаем фото…';
+        prepareStockPhoto(file).then(function(preparedFile){
+          formData.append('file',preparedFile,preparedFile.name||file.name||'product-photo.jpg');
+          try{xhr.send(formData);}catch(e){reject(e);}
+        }).catch(reject);
       });
     }
     var initialStore='';if(!old&&isAdmin()&&formSizes.length){var initialStoreEl=document.getElementById('stockInitialStore');initialStore=initialStoreEl?String(initialStoreEl.value||''):'';if(!initialStore||stockLocationIds().indexOf(initialStore)<0){showError('Выберите магазин для начального остатка.');return;}}
