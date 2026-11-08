@@ -734,13 +734,13 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
         </div>
         <div id="customRateEditor" class="hidden" style="margin-top: 15px; padding: 15px; border: 1px solid var(--border); border-radius: 8px; background: var(--card);">
             <h4 style="margin-top:0;">Особые ставки для: <span id="customRateUserName"></span></h4>
-            <p style="font-size:13px;color:var(--text-light);margin-bottom:10px;">Добавьте ключевое слово и ставку для конкретных товаров. Если название продажи содержит это слово, начисляется указанная ставка вместо стандартной.</p>
+            <p style="font-size:13px;color:var(--text-light);margin-bottom:10px;">Укажите полное название карточки склада или товара и ставку. Совпадение проверяется по полному названию, без поиска по категории и частичному совпадению. При переименовании карточки старое правило перестанет применяться.</p>
             <table id="customRateTable" style="margin-bottom:10px;">
-                <thead><tr><th>Ключевое слово</th><th>Ставка (руб)</th><th>Действие</th></tr></thead>
+                <thead><tr><th>Название карточки / товара</th><th>Ставка (руб)</th><th>Действие</th></tr></thead>
                 <tbody id="customRateBody"></tbody>
             </table>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <input type="text" id="newRateKeyword" placeholder="Например: носки" style="flex:1; min-width:120px;">
+                <input type="text" id="newRateKeyword" placeholder="Полное название карточки или товара" style="flex:1; min-width:120px;">
                 <input type="number" id="newRateAmount" placeholder="Ставка" style="width:100px;">
                 <button class="btn btn-success" onclick="addCustomRate()">Добавить</button>
                 <button class="btn btn-secondary" onclick="closeCustomRateEditor()">Закрыть</button>
@@ -5735,10 +5735,22 @@ var editingCustomRateUserId = null;
 
 function getSaleBonus(s, perSale, customRates, salaryByPayment) {
     if (s && s.isPromotion === true) return Math.max(0, Number(s.promotionBonus) || 0);
-    var saleName = (s.name || '').toLowerCase();
+    // Special rates are tied to the complete displayed product/card name, never to a category or partial keyword.
+    function normalizeRateName(value) {
+        return String(value || '').replace(/\\s*·\\s*размер\\s+.+$/i, '').trim().replace(/\\s+/g, ' ').toLocaleLowerCase('ru');
+    }
+    var saleNames = [];
+    if (s) {
+        saleNames.push(s.stockProductName);
+        saleNames.push(s.productName);
+        saleNames.push(s.catalogProductName);
+        saleNames.push(s.name);
+    }
+    var normalizedSaleNames = saleNames.map(normalizeRateName).filter(Boolean);
     if (customRates && customRates.length > 0) {
         for (var i = 0; i < customRates.length; i++) {
-            if (saleName.indexOf(customRates[i].keyword.toLowerCase()) !== -1) {
+            var exactRateName = normalizeRateName(customRates[i] && customRates[i].keyword);
+            if (exactRateName && normalizedSaleNames.indexOf(exactRateName) !== -1) {
                 return parseFloat(customRates[i].rate) || 0;
             }
         }
