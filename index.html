@@ -993,11 +993,11 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <div class="analytics-kpi analytics-kpi-primary"><div class="analytics-kpi-label">Выручка</div><div class="analytics-kpi-value" id="analyticsKpiRevenue">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiRevenueChange">К предыдущему периоду: —</div></div>
                 <div class="analytics-kpi"><div class="analytics-kpi-label">Количество продаж</div><div class="analytics-kpi-value" id="analyticsKpiSalesCount">0</div><div class="analytics-kpi-note" id="analyticsKpiSalesChange">К предыдущему периоду: —</div></div>
                 <div class="analytics-kpi"><div class="analytics-kpi-label">Средний чек</div><div class="analytics-kpi-value" id="analyticsKpiAvgCheck">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiAvgChange">К предыдущему периоду: —</div></div>
-                <div class="analytics-kpi analytics-hide-card"><div class="analytics-kpi-label">Налоги</div><div class="analytics-kpi-value" id="analyticsKpiTaxes">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiTaxesChange">Расчёт по ставке 8%</div></div>
+                
                 <div class="analytics-kpi"><div class="analytics-kpi-label">Расходы на ЗП</div><div class="analytics-kpi-value" id="analyticsKpiSalaryExpenses">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiSalaryExpensesChange">Фактически выплаченная зарплата</div></div>
                 <div class="analytics-kpi"><div class="analytics-kpi-label">Возвраты</div><div class="analytics-kpi-value" id="analyticsKpiReturns">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiReturnsChange">К предыдущему периоду: —</div></div>
                 <div class="analytics-kpi analytics-kpi-primary analytics-calculation-trigger" id="analyticsAllExpensesKpiCard" role="button" tabindex="0" aria-label="Открыть подробный расчёт всех расходов" title="Нажмите для подробного расчёта" onclick="showAnalyticsCalculation('expenses')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showAnalyticsCalculation('expenses')}"><div class="analytics-kpi-label">Все расходы</div><div class="analytics-kpi-value" id="analyticsKpiAllExpenses">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiAllExpensesChange">Нажмите для подробного расчёта</div></div>
-                <div class="analytics-kpi analytics-kpi-primary analytics-calculation-trigger" id="analyticsNetProfitKpiCard" role="button" tabindex="0" aria-label="Открыть подробный расчёт чистой прибыли" title="Нажмите для подробного расчёта" onclick="showAnalyticsCalculation('profit')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showAnalyticsCalculation('profit')}" style="display:none;"><div class="analytics-kpi-label">Чистая прибыль</div><div class="analytics-kpi-value" id="analyticsKpiNetProfit">—</div><div class="analytics-kpi-note" id="analyticsKpiNetProfitNote">Нажмите для подробного расчёта</div></div>
+                
                 <div class="analytics-kpi" id="analyticsMarkupKpiCard" style="display:none;"><div class="analytics-kpi-label">Средняя наценка</div><div class="analytics-kpi-value" id="analyticsKpiMarkup">—</div><div class="analytics-kpi-note">По фактическим закупкам; используется для оценки незаполненных продаж</div></div>
                 <div class="analytics-kpi" id="analyticsCostCoverageKpiCard" style="display:none;"><div class="analytics-kpi-label">Заполнение себестоимости</div><div class="analytics-kpi-value" id="analyticsKpiCostCoverage">—</div><div class="analytics-kpi-note" id="analyticsKpiCostCoverageNote">—</div></div>
             </div>
@@ -1065,7 +1065,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 
         <section class="analytics-detail-card best-selling-panel" id="analyticsBestSellingPanel" style="margin-top:14px;display:none;">
             <div class="analytics-section-heading">
-                <h4>Что продаётся лучше</h4>
+                <h4>Продажи по товарному каталогу</h4>
                 <span id="analyticsBestSellingPeriod">За выбранный период</span>
             </div>
             <p class="analytics-help" id="analyticsBestSellingHelp">Рейтинг позиций из каталога товаров. Возвращённые продажи не учитываются.</p>
@@ -9055,7 +9055,7 @@ function drawChart() {
     if (adminSummary) adminSummary.style.display = isSeller ? 'none' : 'block';
     if (sellerSummary) sellerSummary.style.display = isSeller ? 'grid' : 'none';
     if (paymentCard) paymentCard.style.display = isSeller ? 'none' : 'block';
-    if (taxCard) taxCard.style.display = isSeller ? 'none' : 'block';
+    if (taxCard) taxCard.style.display = (isSeller || isPurchaseCostOwner()) ? 'none' : 'block';
     if (compareBlock) compareBlock.style.display = isSeller ? 'none' : 'block';
     if (metricSelect) {
         if (isSeller) { metricSelect.value = 'revenue'; metricSelect.style.display = 'none'; }
@@ -9405,14 +9405,15 @@ function drawChart() {
     kpi('analyticsKpiRevenue', money(currentStats.revenue));
     kpi('analyticsKpiSalesCount', currentStats.salesCount.toLocaleString('ru-RU') + ' шт.');
     kpi('analyticsKpiAvgCheck', money(currentStats.avgCheck));
-    kpi('analyticsKpiTaxes', money(currentStats.tax));
     kpi('analyticsKpiSalaryExpenses', money(currentStats.salaryExpenses));
     kpi('analyticsKpiReturns', money(currentStats.returns));
     kpi('analyticsKpiAllExpenses', money(currentStats.allExpenses));
     var costProfitPanel = document.getElementById('analyticsCostProfitPanel');
     var showCostProfit = !isSeller && isPurchaseCostOwner();
     if (costProfitPanel) costProfitPanel.style.display = showCostProfit ? 'block' : 'none';
-    ['analyticsNetProfitKpiCard','analyticsMarkupKpiCard','analyticsCostCoverageKpiCard'].forEach(function(id) {
+    var allExpensesCard = document.getElementById('analyticsAllExpensesKpiCard');
+    if (allExpensesCard) allExpensesCard.style.display = showCostProfit ? 'none' : '';
+    ['analyticsMarkupKpiCard','analyticsCostCoverageKpiCard'].forEach(function(id) {
         var card = document.getElementById(id);
         if (card) card.style.display = showCostProfit ? '' : 'none';
     });
@@ -9433,7 +9434,6 @@ function drawChart() {
             }
         }
         kpi('analyticsKpiGrossProfit', currentStats.grossProfit !== null ? money(currentStats.grossProfit) : '—');
-        kpi('analyticsKpiNetProfit', currentStats.netProfit !== null ? money(currentStats.netProfit) : '—');
         kpi('analyticsKpiMarkup', currentStats.averageMarkup !== null ? currentStats.averageMarkup.toLocaleString('ru-RU', {maximumFractionDigits:2}) + '%' : '—');
         kpi('analyticsKpiMargin', currentStats.grossMargin !== null ? currentStats.grossMargin.toLocaleString('ru-RU', {maximumFractionDigits:2}) + '%' : '—');
         var coverage = currentStats.salesCount > 0 ? Math.round(currentStats.costedSalesCount / currentStats.salesCount * 100) : 100;
@@ -9441,29 +9441,27 @@ function drawChart() {
         kpi('analyticsKpiCostCoverageNote', currentStats.costedSalesCount + ' из ' + currentStats.salesCount + ' продаж с фактической закупочной ценой');
         var costWarning = document.getElementById('analyticsCostProfitWarning');
         var grossNote = document.getElementById('analyticsKpiGrossProfitNote');
-        var netNote = document.getElementById('analyticsKpiNetProfitNote');
         var unknownCostCount = Math.max(0, currentStats.costMissingCount + currentStats.costMissingReturnsCount);
         if (!costComplete && currentStats.costCalculationAvailable) {
             var estimateMarkupText = currentStats.averageMarkup === null ? '' : ' Использована средняя наценка ' + currentStats.averageMarkup.toLocaleString('ru-RU', {maximumFractionDigits:2}) + '%';
             var fallbackText = purchaseCostMarkupBaseline.fallback ? ' Для выбранного магазина взят общий ориентир по магазинам организации.' : '';
             if (costWarning) costWarning.textContent = 'Предварительная оценка: для ' + currentStats.estimatedCostSalesCount + ' продаж и ' + currentStats.estimatedCostReturnsCount + ' операций возврата использована средняя наценка из ' + purchaseCostMarkupBaseline.count + ' продаж с известной себестоимостью.' + estimateMarkupText + '.' + fallbackText + ' Укажите фактическую закупочную цену в блоке «Себестоимость товаров», чтобы заменить оценку.';
             if (grossNote) grossNote.textContent = 'Предварительно: часть себестоимости оценена по средней наценке';
-            if (netNote) netNote.textContent = 'Предварительно: часть себестоимости оценена по средней наценке';
+           
         } else if (!currentStats.costCalculationAvailable) {
             if (costWarning) costWarning.textContent = 'Пока нет фактических закупочных цен, по которым можно оценить все продажи. Укажите закупочную стоимость хотя бы для одной продажи, затем заполните остальные цены для точного результата.';
             if (grossNote) grossNote.textContent = 'Недостаточно данных для оценки себестоимости';
-            if (netNote) netNote.textContent = 'Недостаточно данных для предварительного расчёта';
+           
         } else {
             if (costWarning) costWarning.textContent = 'Расчёт основан на фактических закупочных ценах. Учитываются возвраты по датам операций, зарплаты, записанные и регулярные расходы, налоги и комиссии.';
             if (grossNote) grossNote.textContent = 'Выручка после возвратов минус себестоимость';
-            if (netNote) netNote.textContent = 'После расходов, зарплат, налогов и комиссий';
+           
         }
     }
     kpi('analyticsRecurringExpensePeriodSummary', 'Регулярные расходы, начисленные за период: ' + money(currentStats.recurringExpenses));
     changeText('analyticsKpiRevenueChange', currentStats.revenue, pastStats.revenue, false);
     changeText('analyticsKpiSalesChange', currentStats.salesCount, pastStats.salesCount, false);
     changeText('analyticsKpiAvgChange', currentStats.avgCheck, pastStats.avgCheck, false);
-    changeText('analyticsKpiTaxesChange', currentStats.tax, pastStats.tax, true);
     changeText('analyticsKpiSalaryExpensesChange', currentStats.salaryExpenses, pastStats.salaryExpenses, true);
     changeText('analyticsKpiReturnsChange', currentStats.returns, pastStats.returns, true);
     changeText('analyticsKpiAllExpensesChange', currentStats.allExpenses, pastStats.allExpenses, true);
@@ -10052,13 +10050,13 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       dashboard.appendChild(sellerBreakContainer);
     }
     move(original[7],analyticsPage); // chart
-    analyticsPage.insertAdjacentHTML('beforeend', '<section class="card analytics-product-insights" id="analyticsProductInsights" style="margin-top:18px;"><div style="margin-bottom:12px;"><h3 style="margin:0 0 5px;">Аналитика товаров</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Сравнение продаж и популярности товарных карточек.</p></div><div class="analytics-product-tabs" role="tablist" aria-label="Аналитика товаров" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"><button type="button" class="btn btn-success" id="analyticsProductBestTab" role="tab" aria-selected="true" onclick="switchAnalyticsProductSection(\'best\')">Что продаётся лучше</button><button type="button" class="btn btn-secondary" id="analyticsProductRankingTab" role="tab" aria-selected="false" onclick="switchAnalyticsProductSection(\'ranking\')">Рейтинг карточек</button></div><div id="analyticsProductBestPane" role="tabpanel"></div><div id="analyticsProductRankingPane" role="tabpanel" style="display:none;"></div></section>');
+    analyticsPage.insertAdjacentHTML('beforeend', '<section class="card analytics-product-insights" id="analyticsProductInsights" style="margin-top:18px;"><div style="margin-bottom:12px;"><h3 style="margin:0 0 5px;">Аналитика товаров</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Два разных среза: продажи по товарному каталогу и динамика продаж по карточкам складского учёта.</p></div><div class="analytics-product-tabs" role="tablist" aria-label="Аналитика товаров" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"><button type="button" class="btn btn-success" id="analyticsProductBestTab" role="tab" aria-selected="true" onclick="switchAnalyticsProductSection(\'best\')">Продажи по каталогу</button><button type="button" class="btn btn-secondary" id="analyticsProductRankingTab" role="tab" aria-selected="false" onclick="switchAnalyticsProductSection(\'ranking\')">Карточки склада</button></div><div id="analyticsProductBestPane" role="tabpanel"></div><div id="analyticsProductRankingPane" role="tabpanel" style="display:none;"></div></section>');
     var analyticsBestPane=document.getElementById('analyticsProductBestPane');
     var analyticsBestPanel=document.getElementById('analyticsBestSellingPanel');
     if(analyticsBestPane&&analyticsBestPanel){analyticsBestPane.appendChild(analyticsBestPanel);analyticsBestPanel.style.marginTop='0';}
     var analyticsProductInsights=document.getElementById('analyticsProductInsights');
     if(analyticsProductInsights&&currentUser&&currentUser.role!=='admin')analyticsProductInsights.style.display='none';
-    document.getElementById('analyticsProductRankingPane').insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseCardRankingCard"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">Рейтинг карточек по продажам</h3><p id="purchaseRankingDescription" style="font-size:13px;color:var(--text-light);margin:0;">Рейтинг по количеству проданных единиц. Учитываются продажи, привязанные к карточкам склада; возвраты исключаются.</p><div role="group" aria-label="Режим рейтинга карточек" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn btn-success" id="purchaseRankingLeadersMode" aria-pressed="true" onclick="switchPurchaseCardRankingMode(&quot;leaders&quot;)">Лидеры продаж</button><button type="button" class="btn btn-secondary" id="purchaseRankingAntiMode" aria-pressed="false" onclick="switchPurchaseCardRankingMode(&quot;anti&quot;)">Антирейтинг</button></div></div><button type="button" class="btn btn-secondary" onclick="renderPurchaseCardRanking()">Обновить рейтинг</button></div><div class="purchase-plan-filters" style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingPeriod">Период</label><select id="purchaseRankingPeriod" onchange="renderPurchaseCardRanking()"><option value="7">Последние 7 дней</option><option value="30" selected>Последние 30 дней</option><option value="90">Последние 90 дней</option><option value="all">Всё время</option><option value="custom">Выбрать даты</option></select></div><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingStore">Магазин</label><select id="purchaseRankingStore" onchange="renderPurchaseCardRanking()"><option value="all">Все магазины</option></select></div></div><div id="purchaseRankingCustomDates" style="display:none;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingStartDate">С даты</label><input type="date" id="purchaseRankingStartDate" onchange="renderPurchaseCardRanking()"></div><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingEndDate">По дату</label><input type="date" id="purchaseRankingEndDate" onchange="renderPurchaseCardRanking()"></div></div><div id="purchaseRankingStatus" style="font-size:13px;color:var(--text-light);margin:12px 0;">Загружаем рейтинг…</div><div id="purchaseCardRankingList" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRankingMore" style="margin-top:10px;"></div></section>');
+    document.getElementById('analyticsProductRankingPane').insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseCardRankingCard"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">Продажи по карточкам склада</h3><p id="purchaseRankingDescription" style="font-size:13px;color:var(--text-light);margin:0;">Рейтинг по количеству проданных единиц. Учитываются продажи, привязанные к карточкам склада; возвраты исключаются.</p><div role="group" aria-label="Режим рейтинга карточек" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn btn-success" id="purchaseRankingLeadersMode" aria-pressed="true" onclick="switchPurchaseCardRankingMode(&quot;leaders&quot;)">Лидеры продаж</button><button type="button" class="btn btn-secondary" id="purchaseRankingAntiMode" aria-pressed="false" onclick="switchPurchaseCardRankingMode(&quot;anti&quot;)">Антирейтинг</button></div></div><button type="button" class="btn btn-secondary" onclick="renderPurchaseCardRanking()">Обновить рейтинг</button></div><div class="purchase-plan-filters" style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingPeriod">Период</label><select id="purchaseRankingPeriod" onchange="renderPurchaseCardRanking()"><option value="7">Последние 7 дней</option><option value="30" selected>Последние 30 дней</option><option value="90">Последние 90 дней</option><option value="all">Всё время</option><option value="custom">Выбрать даты</option></select></div><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingStore">Магазин</label><select id="purchaseRankingStore" onchange="renderPurchaseCardRanking()"><option value="all">Все магазины</option></select></div></div><div id="purchaseRankingCustomDates" style="display:none;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingStartDate">С даты</label><input type="date" id="purchaseRankingStartDate" onchange="renderPurchaseCardRanking()"></div><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingEndDate">По дату</label><input type="date" id="purchaseRankingEndDate" onchange="renderPurchaseCardRanking()"></div></div><div id="purchaseRankingStatus" style="font-size:13px;color:var(--text-light);margin:12px 0;">Загружаем рейтинг…</div><div id="purchaseCardRankingList" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRankingMore" style="margin-top:10px;"></div></section>');
      analyticsPage.insertAdjacentHTML('beforeend', '<div class="card" id="analyticsForceRefreshCard" style="margin-top:18px;text-align:center;"><button type="button" class="btn btn-secondary" onclick="forceRefreshAnalytics()" style="min-width:220px;">↻ Пересчитать аналитику</button><p id="analyticsForceRefreshStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-light);margin:9px 0 0;">Сбросить локальный кэш и пересчитать показатели по уже загруженным данным</p></div>');
     move(original[8],salesPage); // legacy tab strip (kept for compatibility, visually hidden)
     move(original[9],salesPage);move(original[10],expensePage);move(original[11],cashPage);move(original[12],breaksPage);move(original[13],auditPage);
@@ -11326,6 +11324,6 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
 
 <script src="backup-tools.js"></script>
 <script src="stock.js?v=48"></script>
-<script src="business-advisor.js?v=6"></script>
+<script src="business-advisor.js?v=7"></script>
 </body>
 </html>
