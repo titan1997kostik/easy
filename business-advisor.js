@@ -631,7 +631,7 @@
         : num(currentSales.returnedChecks);
       metrics.innerHTML =
         metricCard('Чеки с возвратом', String(returnedReceiptCount),
-          returnOperations + ' операций возврата за период') +
+          'Операций возврата за период: ' + returnOperations) +
         metricCard('Доля чеков с возвратом', pct(returnReceiptRate),
           'От общего количества продаж за выбранный период');
     }
