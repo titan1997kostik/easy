@@ -9239,6 +9239,8 @@ function drawChart() {
             // Это базовая средневзвешенная наценка только по фактическим закупочным ценам.
             // Оценочные строки не участвуют в её вычислении, поэтому не создают круговой расчёт.
             result.averageMarkup = purchaseCostMarkupBaseline.markup;
+            result.costEstimateFallback = !!purchaseCostMarkupBaseline.fallback;
+            result.costMarkupSampleCount = Number(purchaseCostMarkupBaseline.count) || 0;
             result.grossMargin = result.netRevenue !== 0 ? roundMoney((result.grossProfit / result.netRevenue) * 100) : null;
         }
         analyticsSummaryCache[summaryCacheKey] = Object.assign({}, result);
