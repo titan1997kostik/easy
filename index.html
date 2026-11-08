@@ -8946,7 +8946,6 @@ function renderBestSellingProducts(startDate, endDate, targetStore, isSeller) {
     rows.sort(function(a,b) { return b[metric] - a[metric] || b.units - a.units || a.name.localeCompare(b.name, 'ru'); });
     var top = rows.slice(0, 10);
     chart.innerHTML = '';
-    tbody.innerHTML = '';
     if (!rows.length) {
         chart.innerHTML = '<div class="best-selling-empty">За выбранный период нет продаж товаров, сопоставленных со справочником.</div>';
         if (statusEl) statusEl.textContent = unmatched ? ('Не удалось сопоставить со справочником записей продаж: ' + unmatched + '.') : 'После выбора периода здесь появятся наиболее продаваемые позиции.';
