@@ -4616,7 +4616,7 @@ function renderPurchaseCardRanking() {
         endDate=endInput?endInput.value:'';
         var customStart=parseDate(startDate),customEnd=parseDate(endDate);
         if(!customStart||!customEnd||customStart>customEnd||customEnd>today){list.innerHTML='<div style="padding:16px;color:var(--text-light);">Укажите корректный период: дата начала должна быть не позже даты окончания, а дата окончания не может быть в будущем.</div>';if(status)status.textContent='Проверьте даты периода.';return;}
-        var rangeDays=Math.floor((customEnd.getTime()-customStart.getTime())/86400000)+1;
+        var rangeDays=Math.round((Date.UTC(customEnd.getFullYear(),customEnd.getMonth(),customEnd.getDate())-Date.UTC(customStart.getFullYear(),customStart.getMonth(),customStart.getDate()))/86400000)+1;
         var priorEnd=addDays(customStart,-1),priorStart=addDays(priorEnd,-rangeDays+1);
         previousStart=dateText(priorStart);previousEnd=dateText(priorEnd);
         periodLabel=customStart.toLocaleDateString('ru-RU')+' — '+customEnd.toLocaleDateString('ru-RU');
