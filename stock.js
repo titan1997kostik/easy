@@ -104,6 +104,7 @@
         else storeDirections=v;
         loaded[name]=true;
         render();
+        if(typeof window.drawChart==='function'&&document.getElementById('workspacePage-analytics')&&document.getElementById('workspacePage-analytics').classList.contains('active'))window.drawChart();
         if(name==='directions'&&typeof window.renderStoresManagement==='function')window.renderStoresManagement();
         if(window.refreshStockSaleProducts && document.getElementById('stockSaleEnabled') && document.getElementById('stockSaleEnabled').checked) window.refreshStockSaleProducts();
       },function(err){ console.error('Stock sync '+name,err); loaded[name]=true; render(); });
