@@ -494,7 +494,7 @@
           '</div>' +
           '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:9px;padding:10px;min-width:0;">' +
             '<div style="font-size:18px;font-weight:800;overflow-wrap:anywhere;">' + esc(checksValue) + '</div>' +
-            '<div style="font-size:10px;color:var(--text-light);margin-top:3px;">В день при среднем чеке ' + esc(money(averageNetCheck)) + '</div>' +
+            '<div style="font-size:10px;color:var(--text-light);margin-top:3px;">В день при среднем чеке ' + esc(money(averageCheck)) + '</div>' +
           '</div>' +
         '</div>' +
         '<div style="border-top:1px solid var(--border);margin-top:13px;padding-top:11px;">' +
