@@ -775,45 +775,49 @@
     if(!startMs||startMs>endMs)return {ready:true,rows:[],message:'Проверьте выбранный период.'};
     var periodDays=Math.max(1,(endMs-startMs+1)/86400000),target=Math.max(1,Math.min(60,Number(targetDays)||14));
     var stores=visibleStoreIds().filter(function(id){return selectedStore==='all'||String(id)===String(selectedStore);});
-    var active=allProducts().filter(function(p){return p.status==='active';}),rows=[],movementByKey={},saleMovementIds={};
+    var storeSet={},active=allProducts().filter(function(p){return p.status==='active';}),rows=[],movementByKey={},saleMovementIds={};
+    stores.forEach(function(id){storeSet[String(id)]=true;});
     Object.keys(movements).forEach(function(key){
       var m=movements[key];if(!m||String(m.org||'')!==String(org())||!m.storeId)return;
-      var sid=String(m.storeId);if(stores.indexOf(sid)===-1)return;
+      var sid=String(m.storeId);if(!storeSet[sid])return;
       var pid=stockResolvedId(m.productId);if(!pid)return;
-      var key2=pid+'|'+sid,at=stockDateMs(m.createdAt||m.timestamp);if(!at)return;
+      var at=stockDateMs(m.createdAt||m.timestamp);if(!at)return;
+      var key2=pid+'|'+sid;
       if(!movementByKey[key2])movementByKey[key2]=[];
       movementByKey[key2].push({at:at,delta:Number(m.quantityDelta)||0,before:m.before==null?null:Number(m.before),after:m.after==null?null:Number(m.after),saleId:m.saleId?String(m.saleId):'',source:'movement'});
       if(m.saleId)saleMovementIds[String(m.saleId)]=true;
     });
+    var soldByKey={};
     (window.sales||[]).forEach(function(sale){
       if(!sale||!sale.stockProductId||!sale.stockStoreId||!sale.id)return;
       if(sale.stockOrg&&String(sale.stockOrg)!==String(org()))return;
-      var sid=String(sale.stockStoreId);if(stores.indexOf(sid)===-1)return;
+      var sid=String(sale.stockStoreId);if(!storeSet[sid])return;
       if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(sale.id))return;
       if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(sale))return;
-      if(saleMovementIds[String(sale.id)])return;
-      var at=stockDateMs(sale.timestamp||sale.createdAt);if(!at)return;
+      var at=stockDateMs(sale.timestamp||sale.createdAt);
       var pid=stockResolvedId(sale.stockProductId),key2=pid+'|'+sid;
-      if(!movementByKey[key2])movementByKey[key2]=[];
-      movementByKey[key2].push({at:at,delta:-(Number(sale.stockQuantity)||1),before:null,after:null,saleId:String(sale.id),source:'sale'});
+      if(!saleMovementIds[String(sale.id)]&&at){
+        if(!movementByKey[key2])movementByKey[key2]=[];
+        movementByKey[key2].push({at:at,delta:-(Number(sale.stockQuantity)||1),before:null,after:null,saleId:String(sale.id),source:'sale'});
+      }
+      if(!sale.returned&&at&&at>=startMs&&at<=endMs){
+        if(!soldByKey[key2])soldByKey[key2]=0;
+        var units=Number(sale.stockQuantity)||1;
+        if(isFinite(units)&&units>0)soldByKey[key2]+=units;
+      }
     });
-    var soldByKey={};
-    (window.sales||[]).forEach(function(sale){
-      if(!sale||!sale.stockProductId||!sale.stockStoreId||sale.returned)return;
-      if(sale.stockOrg&&String(sale.stockOrg)!==String(org()))return;
-      var sid=String(sale.stockStoreId);if(stores.indexOf(sid)===-1)return;
-      if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(sale.id))return;
-      if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(sale))return;
-      var at=stockDateMs(sale.timestamp||sale.createdAt);if(!at||at<startMs||at>endMs)return;
-      var pid=stockResolvedId(sale.stockProductId),key2=pid+'|'+sid;
-      if(!soldByKey[key2])soldByKey[key2]=0;
-      var units=Number(sale.stockQuantity)||1;if(isFinite(units)&&units>0)soldByKey[key2]+=units;
+    // Sort each product/store movement history once; rows below reuse this ordered array.
+    Object.keys(movementByKey).forEach(function(key){
+      movementByKey[key].sort(function(a,b){return a.at-b.at;});
     });
     var salesRankByKey={};
     stores.forEach(function(sid){
-      var selling=active.map(function(product){return {productId:String(product.id),name:String(product.name||''),units:Number(soldByKey[String(product.id)+'|'+String(sid)]||0)};})
-        .filter(function(item){return item.units>0;})
-        .sort(function(a,b){return b.units-a.units||a.name.localeCompare(b.name,'ru');});
+      var selling=[];
+      active.forEach(function(product){
+        var key=String(product.id)+'|'+String(sid),units=Number(soldByKey[key]||0);
+        if(units>0)selling.push({productId:String(product.id),name:String(product.name||''),units:units});
+      });
+      selling.sort(function(a,b){return b.units-a.units||a.name.localeCompare(b.name,'ru');});
       var topCount=selling.length?Math.max(1,Math.ceil(selling.length*0.25)):0;
       selling.forEach(function(item,index){salesRankByKey[item.productId+'|'+String(sid)]=index<topCount?index+1:null;});
     });
@@ -824,11 +828,16 @@
     active.forEach(function(product){
       var pid=String(product.id);
       stores.forEach(function(sid){
-        var current=qty(pid,sid),key2=pid+'|'+sid,events=(movementByKey[key2]||[]).slice().sort(function(a,b){return a.at-b.at;});
-        var periodEvents=events.filter(function(e){return e.at>=startMs&&e.at<=endMs;});
-        var deltaAfterStart=events.filter(function(e){return e.at>=startMs&&e.at<=now;}).reduce(function(sum,e){return sum+e.delta;},0);
-        var opening=current-deltaAfterStart,availableDays=0,known=true;
-        var firstAfterStart=events.filter(function(e){return e.at>=startMs&&e.at<=now;})[0];
+        var current=qty(pid,sid),key2=pid+'|'+sid,events=movementByKey[key2]||[];
+        var openingDelta=0,firstAfterStart=null;
+        for(var i=0;i<events.length;i++){
+          var event=events[i];
+          if(event.at<startMs)continue;
+          if(event.at>now)break;
+          openingDelta+=event.delta;
+          if(!firstAfterStart)firstAfterStart=event;
+        }
+        var opening=current-openingDelta,availableDays=0,known=true;
         if(firstAfterStart&&firstAfterStart.before!==null&&isFinite(firstAfterStart.before))opening=firstAfterStart.before;
         else if(!firstAfterStart){
           var balance=balances[sid]&&balances[sid][pid]||{},updated=stockDateMs(balance.updatedAt);
@@ -837,18 +846,23 @@
         }else known=false;
         if(opening<0){known=false;opening=0;}
         var cursor=startMs,level=opening;
-        periodEvents.forEach(function(event){
-          var at=Math.max(startMs,Math.min(endMs,event.at));
+        for(var j=0;j<events.length;j++){
+          var periodEvent=events[j];
+          if(periodEvent.at<startMs)continue;
+          if(periodEvent.at>endMs)break;
+          var at=periodEvent.at;
           if(level>0&&at>cursor)availableDays+=(at-cursor)/86400000;
-          if(event.before!==null&&isFinite(event.before)&&Math.abs(level-event.before)>0.001)known=false;
-          level+=event.delta;
-          if(event.after!==null&&isFinite(event.after)&&Math.abs(level-event.after)>0.001){known=false;level=event.after;}
+          if(periodEvent.before!==null&&isFinite(periodEvent.before)&&Math.abs(level-periodEvent.before)>0.001)known=false;
+          level+=periodEvent.delta;
+          if(periodEvent.after!==null&&isFinite(periodEvent.after)&&Math.abs(level-periodEvent.after)>0.001){known=false;level=periodEvent.after;}
           if(level<0){known=false;level=0;}
           cursor=at;
-        });
+        }
         if(level>0&&endMs>cursor)availableDays+=(endMs-cursor)/86400000;
         availableDays=Math.min(periodDays,Math.max(0,availableDays));
-        var units=soldByKey[key2]||0;if(units<=0&&current<=0)return;var rate=availableDays>0?units/availableDays:0,coverage=rate>0?current/rate:null;
+        var units=soldByKey[key2]||0;
+        if(units<=0&&current<=0)return;
+        var rate=availableDays>0?units/availableDays:0,coverage=rate>0?current/rate:null;
         var recommended=rate>0?Math.max(0,Math.ceil(rate*target-current)):0;
         var reliable=known&&availableDays>=Math.min(3,periodDays);
         var salesRank=salesRankByKey[key2],isTopSeller=salesRank!==undefined&&salesRank!==null;
