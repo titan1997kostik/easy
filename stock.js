@@ -918,7 +918,8 @@
     var startMs=startDate?stockLocalDateMs(startDate,false):dateFloor(earliest);
     var endMs=endDate?stockLocalDateMs(endDate,true):now;
     if(!startMs||!endMs||startMs>endMs)return {ready:true,rows:[],periodDays:0,message:'Проверьте выбранный период.'};
-    var periodDays=Math.max(1,Math.floor((dateFloor(endMs)-startMs)/86400000)+1);
+    var periodStartDate=new Date(startMs),periodEndDate=new Date(endMs);
+    var periodDays=Math.max(1,Math.round((Date.UTC(periodEndDate.getFullYear(),periodEndDate.getMonth(),periodEndDate.getDate())-Date.UTC(periodStartDate.getFullYear(),periodStartDate.getMonth(),periodStartDate.getDate()))/86400000)+1);
     var prevStartMs=previousStartDate?stockLocalDateMs(previousStartDate,false):0;
     var prevEndMs=previousEndDate?stockLocalDateMs(previousEndDate,true):0;
     var hasPrevious=!!(prevStartMs&&prevEndMs&&prevStartMs<=prevEndMs);
