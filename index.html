@@ -4679,8 +4679,8 @@ function renderPurchaseCardAntiRanking(result,periodLabel,storeIsAll,selectedSto
             var availabilityPercent=row.expectedStoreDays>0?row.availableDays/row.expectedStoreDays*100:0;
             var soldValue=row.soldUnits<=0?'<span style="color:#b42318;">0 шт. · нет продаж</span>':n(row.soldUnits,0)+' шт.';
             var metrics=metric('Продано',soldValue)+
-                metric('Средние продажи',n(row.averageDailySales,2)+' шт./день наличия')+
-                metric('Наличие',n(row.availableDays,1)+' дн. · '+n(availabilityPercent,0)+'%')+
+                metric('Средние продажи',n(row.averageDailySales,2)+(storeIsAll?' шт./магазино-день':' шт./день наличия'))+
+                metric('Наличие',n(row.availableDays,1)+' из '+n(row.expectedStoreDays,1)+' магазин-дней · '+n(availabilityPercent,0)+'%')+
                 metric('Остаток '+(storeIsAll?'по магазинам с данными':'в магазине'),n(row.currentStock,0)+' шт.')+
                 metric('Выручка',n(row.revenue,0)+' ₽')+
                 metric('Магазинов с данными',row.storesWithData+' из '+row.storesTotal);
@@ -4696,7 +4696,7 @@ function renderPurchaseCardAntiRanking(result,periodLabel,storeIsAll,selectedSto
             function metric(label,value){return '<div style="min-width:0;padding:8px 10px;border-radius:8px;background:var(--surface,#f7f7f7);"><div style="font-size:11px;color:var(--text-light);margin-bottom:3px;">'+label+'</div><div style="font-size:14px;font-weight:700;overflow-wrap:anywhere;">'+value+'</div></div>';}
             var availabilityPercent=row.expectedStoreDays>0?row.availableDays/row.expectedStoreDays*100:0;
             var metrics=metric('Продано',n(row.soldUnits,0)+' шт.')+
-                metric('Подтверждённое наличие',n(row.availableDays,1)+' дн. · '+n(availabilityPercent,0)+'%')+
+                metric('Подтверждённое наличие',n(row.availableDays,1)+' из '+n(row.expectedStoreDays,1)+' магазин-дней · '+n(availabilityPercent,0)+'%')+
                 metric('Остаток сейчас',n(row.currentStock,0)+' шт.')+
                 metric('Выручка',n(row.revenue,0)+' ₽')+
                 metric('Магазинов с данными',row.storesWithData+' из '+row.storesTotal)+
