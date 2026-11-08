@@ -3,8 +3,8 @@
  * Firebase API/database responses are deliberately NOT cached; only the app shell and static assets are.
  */
 'use strict';
-var APP_CACHE = 'easy-app-sync-shell-v43';
-var RUNTIME_CACHE = 'easy-app-sync-static-v43';
+var APP_CACHE = 'easy-app-sync-shell-v45';
+var RUNTIME_CACHE = 'easy-app-sync-static-v45';
 var IMAGE_CACHE = 'easy-app-sync-product-images-v1';
 
 self.addEventListener('install', function(event) {
@@ -140,7 +140,13 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // Product thumbnails from Cloudinary use a dedicated bounded cache; Firebase data is untouched.\n  if (isProductImage(request, url)) {\n    event.respondWith(handleProductImage(request, event));\n    return;\n  }\n\n  // Static scripts (Firebase SDK, MQTT library) are cached after being fetched online.
+  // Product thumbnails from Cloudinary use a dedicated bounded cache; Firebase data is untouched.
+  if (isProductImage(request, url)) {
+    event.respondWith(handleProductImage(request, event));
+    return;
+  }
+
+  // Static scripts (Firebase SDK, MQTT library) are cached after being fetched online.
   // This intentionally excludes firebaseio/database API requests and all dynamic writes.
   if (isCacheableStatic(request, url)) {
     event.respondWith(
