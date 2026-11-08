@@ -4584,6 +4584,77 @@ function renderPurchaseRecommendations() {
     if(foot)foot.textContent='«Срочно»: карточка входит в верхние 25% по продажам в своём магазине и остаток не больше 1 шт. (для обуви — не больше 3 шт.) ИЛИ запаса хватит не более чем на 2 дня. «Скоро»: остатка хватит не более чем на 4 дня или история наличия требует проверки. «Запас достаточный»: остатка хватит более чем на 4 дня. Данные пересчитываются по текущим остаткам; размерный ряд отдельно не анализируется.';
 }
 
+
+function renderPurchaseCardRanking() {
+    if (!isWorkspacePageActive('purchase')) return;
+    var list=document.getElementById('purchaseCardRankingList');
+    var status=document.getElementById('purchaseRankingStatus');
+    var periodSelect=document.getElementById('purchaseRankingPeriod');
+    var storeSelect=document.getElementById('purchaseRankingStore');
+    var customWrap=document.getElementById('purchaseRankingCustomDates');
+    if(!list||!periodSelect||!storeSelect||!currentUser||currentUser.role!=='admin')return;
+    function h(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
+    function n(value,digits){return Number(value||0).toLocaleString('ru-RU',{maximumFractionDigits:digits==null?1:digits});}
+    function dateText(date){return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');}
+    function parseDate(value){var p=String(value||'').split('-').map(Number);if(p.length!==3||!p[0]||!p[1]||!p[2])return null;var d=new Date(p[0],p[1]-1,p[2]);return isFinite(d.getTime())?d:null;}
+    function addDays(date,count){var d=new Date(date.getFullYear(),date.getMonth(),date.getDate());d.setDate(d.getDate()+count);return d;}
+    var previousStore=storeSelect.value||'all';
+    var storeKeys=typeof getVisibleStoreKeys==='function'?getVisibleStoreKeys():Object.keys(STORES||{});
+    storeSelect.innerHTML='<option value="all">Все магазины</option>';
+    storeKeys.forEach(function(key){var option=document.createElement('option');option.value=String(key);option.textContent=String(STORES[key]||key);storeSelect.appendChild(option);});
+    if(storeKeys.some(function(key){return String(key)===previousStore;}))storeSelect.value=previousStore;else storeSelect.value='all';
+    var period=periodSelect.value||'30',today=new Date();today=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+    var startDate='',endDate='',previousStart='',previousEnd='',periodLabel='Всё время';
+    if(period==='custom'){
+        if(customWrap)customWrap.style.display='flex';
+        var startInput=document.getElementById('purchaseRankingStartDate'),endInput=document.getElementById('purchaseRankingEndDate');
+        if(startInput&&!startInput.value)startInput.value=dateText(addDays(today,-29));
+        if(endInput&&!endInput.value)endInput.value=dateText(today);
+        startDate=startInput?startInput.value:'';
+        endDate=endInput?endInput.value:'';
+        var customStart=parseDate(startDate),customEnd=parseDate(endDate);
+        if(!customStart||!customEnd||customStart>customEnd){list.innerHTML='<div style="padding:16px;color:var(--text-light);">Укажите корректный период: дата начала не должна быть позже даты окончания.</div>';if(status)status.textContent='Проверьте даты периода.';return;}
+        var rangeDays=Math.floor((customEnd.getTime()-customStart.getTime())/86400000)+1;
+        var priorEnd=addDays(customStart,-1),priorStart=addDays(priorEnd,-rangeDays+1);
+        previousStart=dateText(priorStart);previousEnd=dateText(priorEnd);
+        periodLabel=customStart.toLocaleDateString('ru-RU')+' — '+customEnd.toLocaleDateString('ru-RU');
+    }else{
+        if(customWrap)customWrap.style.display='none';
+        if(period!=='all'){
+            var days=Math.max(1,Number(period)||30),currentStart=addDays(today,-days+1),currentEnd=today;
+            startDate=dateText(currentStart);endDate=dateText(currentEnd);
+            var prevEnd=addDays(currentStart,-1),prevStart=addDays(prevEnd,-days+1);
+            previousStart=dateText(prevStart);previousEnd=dateText(prevEnd);
+            periodLabel='Последние '+days+' дней';
+        }
+    }
+    if(typeof window.stockGetCardSalesRanking!=='function'){list.innerHTML='<div style="padding:16px;color:var(--text-light);">Модуль складской аналитики ещё загружается.</div>';if(status)status.textContent='Ожидаем загрузку складского модуля.';return;}
+    var result=window.stockGetCardSalesRanking(startDate,endDate,storeSelect.value||'all',previousStart,previousEnd);
+    if(!result||!result.ready){list.innerHTML='<div style="padding:16px;color:var(--text-light);">Загрузка данных…</div>';if(status)status.textContent=result&&result.message||'Загрузка…';return;}
+    var rows=result.rows||[];
+    var storeIsAll=(storeSelect.value||'all')==='all';
+    if(status)status.textContent=periodLabel+' · '+(storeIsAll?'все магазины':String(STORES[storeSelect.value]||storeSelect.value))+' · карточек в рейтинге: '+rows.length;
+    if(!rows.length){list.innerHTML='<div style="padding:16px;color:var(--text-light);">За выбранный период нет продаж, привязанных к карточкам склада.</div>';return;}
+    list.innerHTML=rows.map(function(row,index){
+        var photoUrl=String(row.photoUrl||'');
+        var photo=/^https?:\/\//i.test(photoUrl)?'<img src="'+h(photoUrl)+'" alt="" loading="lazy" decoding="async" style="width:58px;height:58px;object-fit:cover;border-radius:9px;background:var(--surface,#f3f4f6);flex:0 0 58px;">':'<span style="width:58px;height:58px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--surface,#f3f4f6);font-size:24px;flex:0 0 58px;">📦</span>';
+        var trend='—';
+        if(row.previousSoldUnits!==null&&row.previousSoldUnits!==undefined){
+            if(row.previousSoldUnits<=0)trend='Новые продажи';
+            else{var change=(row.soldUnits-row.previousSoldUnits)/row.previousSoldUnits*100;trend=(change>0?'+':'')+n(change,1)+'%';}
+        }
+        var trendColor=trend.indexOf('+')===0?'#16803c':trend.indexOf('-')===0?'#b42318':'var(--text-light)';
+        function metric(label,value){return '<div style="min-width:0;padding:8px 10px;border-radius:8px;background:var(--surface,#f7f7f7);"><div style="font-size:11px;color:var(--text-light);margin-bottom:3px;">'+label+'</div><div style="font-size:14px;font-weight:700;overflow-wrap:anywhere;">'+value+'</div></div>';}
+        var metrics=metric('Продано',n(row.soldUnits,0)+' шт.')+
+            metric('Средние продажи',n(row.averageDailySales,2)+' шт./день')+
+            (storeIsAll?metric('Магазинов с продажами',n(row.storesWithSales,0)):'')+
+            metric('Остаток '+(storeIsAll?'по сети':'в магазине'),n(row.currentStock,0)+' шт.')+
+            metric('Выручка',n(row.revenue,0)+' ₽')+
+            metric('Изменение к прошлому периоду','<span style="color:'+trendColor+';">'+h(trend)+'</span>');
+        return '<article style="border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:12px;min-width:0;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--surface,#f3f4f6);font-size:12px;font-weight:800;flex:0 0 28px;">'+(index+1)+'</div>'+photo+'<div style="font-size:14px;font-weight:700;min-width:0;overflow-wrap:anywhere;">'+h(row.productName)+'</div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:7px;">'+metrics+'</div></article>';
+    }).join('');
+}
+
 function updatePendingSalesNotice() {
     var notice = document.getElementById('saleSyncNotice');
     if (!notice) return;
