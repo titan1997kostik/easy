@@ -92,6 +92,7 @@
             '<div><h4 style="font-size:13px;margin:0 0 8px;">Что изменило прибыль</h4><div id="businessAdvisorFinanceChange" style="font-size:12px;line-height:1.6;color:var(--text-light);"></div></div>' +
           '</div>' +
           '<div style="margin-top:16px;"><h4 style="font-size:13px;margin:0 0 8px;">Сравнение магазинов</h4><div id="businessAdvisorStoreFinance" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:8px;"></div></div>' +
+          '<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);"><h4 style="font-size:13px;margin:0 0 8px;">Структура расходов и безубыточность</h4><div id="businessAdvisorExpenseAnalysis"></div></div>' +
         '</section>' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0;">' +
           '<h3 style="margin:0;border:0;padding:0;">Что требует внимания</h3><span id="businessAdvisorStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-light);"></span>' +
@@ -338,6 +339,115 @@
       storeHost.innerHTML = '<p style="grid-column:1/-1;font-size:11px;line-height:1.5;color:var(--text-light);margin:0 0 4px;">Показан результат по расходам, привязанным к каждому магазину. Общие расходы организации не распределяются автоматически, а оценка себестоимости по магазинам может отличаться от общей. Поэтому суммы карточек не обязаны складываться в консолидированную чистую прибыль.</p>' + storeCards;
     }
   }
+
+  function renderExpenseAnalysis(current, storeRows, selectedStore) {
+    var host = el('businessAdvisorExpenseAnalysis');
+    if (!host) return;
+    var details = current && current.expenseDetails;
+    if (!details) {
+      host.innerHTML = '<p style="font-size:12px;color:var(--text-light);">Детализация расходов недоступна для выбранного среза.</p>';
+      return;
+    }
+    var ordinary = Math.max(0, num(details.ordinaryTotal));
+    var recurring = Math.max(0, num(details.recurringTotal));
+    var salary = Math.max(0, num(current.salaryExpenses));
+    var taxAndFees = Math.max(0, num(current.tax) + num(current.cardFee) + num(current.sbpFee));
+    var total = Math.max(0, num(current.allExpenses));
+    var parts = [
+      {label:'Обычные записанные расходы', value:ordinary, note:'Разовые записи по причине расхода'},
+      {label:'Регулярные расходы', value:recurring, note:'Начисление по дням действия ежемесячных записей'},
+      {label:'Начисленная зарплата', value:salary, note:'По начислениям смен; выплаты отдельно не дублируются' + (num(details.salaryUnattributedTotal) > 0 ? '; старые начисления без отдельной записи: ' + money(details.salaryUnattributedTotal) : '')},
+      {label:'Налог и эквайринг', value:taxAndFees, note:'Расчётные суммы по ставкам и оплатам'}
+    ];
+    function pctOfTotal(value) { return total > 0 ? pct(value / total) : '0%'; }
+    function bar(value) {
+      var width = total > 0 ? Math.max(0, Math.min(100, value / total * 100)) : 0;
+      return '<div style="height:6px;border-radius:99px;background:#f1e8ed;overflow:hidden;margin-top:6px;"><div style="height:100%;width:' + width.toFixed(1) + '%;background:#c45d87;border-radius:99px;"></div></div>';
+    }
+    var partsHtml = parts.map(function(item) {
+      return '<div style="padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;min-width:0;">' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><div style="min-width:0;"><strong style="font-size:11px;">' + esc(item.label) + '</strong><div style="font-size:10px;color:var(--text-light);margin-top:3px;">' + esc(item.note) + '</div></div>' +
+        '<strong style="font-size:12px;white-space:nowrap;">' + esc(money(item.value)) + '</strong></div>' + bar(item.value) +
+        '<div style="font-size:10px;color:var(--text-light);margin-top:4px;">' + esc(pctOfTotal(item.value)) + ' всех расходов</div></div>';
+    }).join('');
+    var recurringRows = (details.recurring || []).slice().sort(function(a,b) { return num(b.amount) - num(a.amount); });
+    var ordinaryGroups = Object.create(null);
+    (details.ordinary || []).forEach(function(item) {
+      var label = String(item.title || 'Расход без описания').trim() || 'Расход без описания';
+      var key = label.toLocaleLowerCase('ru');
+      if (!ordinaryGroups[key]) ordinaryGroups[key] = {title:label,amount:0,count:0,stores:Object.create(null)};
+      ordinaryGroups[key].amount += num(item.amount);
+      ordinaryGroups[key].count++;
+      ordinaryGroups[key].stores[String(item.storeName || item.storeId || '')] = true;
+    });
+    var ordinaryTop = Object.keys(ordinaryGroups).map(function(key) { return ordinaryGroups[key]; })
+      .sort(function(a,b) { return b.amount-a.amount; }).slice(0,5);
+    var recurringHtml = recurringRows.length
+      ? recurringRows.slice(0,7).map(function(item) {
+          var location = item.shared ? 'Общий расход организации' : (item.storeName || storeLabel(item.storeId));
+          return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);">' +
+            '<div style="min-width:0;"><strong style="font-size:11px;">' + esc(item.title) + '</strong><div style="font-size:10px;color:var(--text-light);margin-top:2px;">' + esc(location) + (item.shared ? ' · не распределён по магазинам' : '') + '</div></div>' +
+            '<strong style="font-size:11px;white-space:nowrap;">' + esc(money(item.amount)) + '</strong></div>';
+        }).join('')
+      : '<p style="font-size:11px;color:var(--text-light);">Регулярных начислений в этом периоде нет.</p>';
+    var ordinaryHtml = ordinaryTop.length
+      ? ordinaryTop.map(function(item) {
+          var stores = Object.keys(item.stores).filter(Boolean);
+          return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);">' +
+            '<div style="min-width:0;"><strong style="font-size:11px;">' + esc(item.title) + '</strong><div style="font-size:10px;color:var(--text-light);margin-top:2px;">' + item.count + ' записей' + (stores.length ? ' · ' + esc(stores.slice(0,2).join(', ')) : '') + '</div></div>' +
+            '<strong style="font-size:11px;white-space:nowrap;">' + esc(money(item.amount)) + '</strong></div>';
+        }).join('')
+      : '<p style="font-size:11px;color:var(--text-light);">Обычных записей расходов в периоде нет.</p>';
+    var sharedNote = selectedStore === 'all'
+      ? '<p style="font-size:10px;line-height:1.45;color:var(--text-light);margin:8px 0 0;">В том числе общие регулярные расходы организации: <strong>' + esc(money(details.sharedRecurringTotal)) + '</strong>. Они включены в общий финансовый результат, но не распределяются между магазинами.</p>'
+      : '<p style="font-size:10px;line-height:1.45;color:var(--text-light);margin:8px 0 0;">В срезе одного магазина общие расходы организации не включены. Они остаются в консолидированном результате и не распределяются автоматически.</p>';
+    var storeExpenseRows = (storeRows || []).filter(function(item) { return item && item.summary && item.summary.expenseDetails; });
+    var storeExpenseHtml = storeExpenseRows.length > 1
+      ? '<div style="margin-top:13px;"><strong style="font-size:11px;">Расходы по магазинам без общих расходов организации</strong>' +
+        storeExpenseRows.map(function(item) {
+          var st = item.summary, d = st.expenseDetails;
+          var storeTotal = num(st.allExpenses);
+          return '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;"><span style="min-width:0;">' + esc(item.name) + '<span style="display:block;color:var(--text-light);font-size:10px;">Регулярные ' + esc(money(d.recurringTotal)) + ' · разовые ' + esc(money(d.ordinaryTotal)) + ' · зарплата ' + esc(money(st.salaryExpenses)) + '</span></span><strong style="white-space:nowrap;">' + esc(money(storeTotal)) + '</strong></div>';
+        }).join('') + '</div>'
+      : '';
+    var breakEvenHtml = '';
+    var canEstimateBreakEven = current.costCalculationAvailable && current.netRevenue > 0 &&
+      current.costOfGoods !== null && current.costOfGoods !== undefined;
+    if (canEstimateBreakEven) {
+      var contribution = current.netRevenue - num(current.costOfGoods) - taxAndFees;
+      var contributionRate = contribution / current.netRevenue;
+      var operatingCostBase = ordinary + recurring + salary;
+      if (contributionRate > 0 && operatingCostBase >= 0) {
+        var breakEven = operatingCostBase / contributionRate;
+        var gap = breakEven - current.netRevenue;
+        var approximate = !current.costDataComplete;
+        var costQuality = approximate ? 'Оценка: часть себестоимости рассчитана по средней наценке.' : 'Себестоимость подтверждена фактическими закупочными ценами.';
+        breakEvenHtml = '<div style="margin-top:13px;padding:12px;border:1px solid var(--border);border-radius:11px;background:#fff;">' +
+          '<div style="font-size:11px;color:var(--text-light);font-weight:700;">ТОЧКА БЕЗУБЫТОЧНОСТИ ЗА ВЫБРАННЫЙ ПЕРИОД</div>' +
+          '<div style="font-size:22px;font-weight:850;margin:4px 0;">' + (approximate ? '≈ ' : '') + esc(money(breakEven)) + '</div>' +
+          '<div style="font-size:11px;line-height:1.45;color:var(--text-light);">Маржинальный доход после себестоимости, налога и эквайринга: ' + esc(pct(contributionRate)) + '. Текущая выручка после возвратов: ' + esc(money(current.netRevenue)) + '.</div>' +
+          '<div style="font-size:12px;font-weight:750;margin-top:7px;color:' + (gap > 0 ? '#a16615' : '#28764d') + ';">' +
+          (gap > 0 ? 'До безубыточности не хватает ' + esc(money(gap)) : 'Выше точки безубыточности на ' + esc(money(Math.abs(gap)))) + '</div>' +
+          '<div style="font-size:10px;line-height:1.45;color:var(--text-light);margin-top:6px;">' + esc(costQuality) + ' Оценка предполагает, что обычные, регулярные расходы и начисленная зарплата сохранятся в рублях, а валовая маржа, налоговая нагрузка и эквайринг останутся на уровне периода. Это сценарный ориентир, не прогноз.</div>' +
+          '</div>';
+      } else {
+        breakEvenHtml = '<p style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--text-light);">Точку безубыточности нельзя надёжно оценить: после себестоимости, налога и эквайринга не остаётся положительного маржинального дохода.</p>';
+      }
+    } else {
+      breakEvenHtml = '<p style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--text-light);">Точка безубыточности не рассчитана: для неё нужна себестоимость всех продаж и положительная выручка периода.</p>';
+    }
+    var saving = recurring * 0.1;
+    var savingHtml = recurring > 0
+      ? '<p style="font-size:11px;line-height:1.45;margin:9px 0 0;color:var(--text-light);">Сценарий: сокращение регулярных расходов на 10% сэкономило бы около <strong>' + esc(money(saving)) + '</strong> за период при сохранении остальных условий. Это не заложено в фактическую прибыль.</p>'
+      : '';
+    host.innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,185px),1fr));gap:8px;">' + partsHtml + '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px;margin-top:13px;">' +
+        '<div><strong style="font-size:11px;">Регулярные начисления</strong>' + recurringHtml + '</div>' +
+        '<div><strong style="font-size:11px;">Крупнейшие обычные расходы</strong>' + ordinaryHtml + '</div>' +
+      '</div>' + sharedNote + storeExpenseHtml + breakEvenHtml + savingHtml;
+  }
+
   function appendFinancialRecommendations(recommendations, current, previous, storeRows) {
     if (!current) return;
     if (!current.costCalculationAvailable) {
@@ -524,6 +634,7 @@
           metricCard('Доля возвратов', pct(currentSales.returnRate), 'От количества продаж за период');
     }
     renderFinancialPanel(financialCurrent, financialPrevious, financeStoreRows, selectedStore);
+    renderExpenseAnalysis(financialCurrent, financeStoreRows, selectedStore);
     var periodLabel = el('businessAdvisorPeriodLabel');
     if (periodLabel) periodLabel.textContent = bounds.start.split('-').reverse().join('.') + ' — ' + bounds.end.split('-').reverse().join('.') + ' · сравнение с предыдущими ' + days + ' днями · ' + (selectedStore === 'all' ? 'все доступные магазины' : storeLabel(selectedStore));
     var recHost = el('businessAdvisorRecommendations');
