@@ -2776,7 +2776,7 @@ function switchOrg(orgKey) {
     refreshOrgSwitcher();
     if (typeof renderProductCatalogSelect === 'function') renderProductCatalogSelect();
     if (typeof renderProductCatalogManager === 'function') renderProductCatalogManager();
-    if (typeof renderPurchasePlan === 'function') renderPurchasePlan();
+    if (typeof renderPurchaseRecommendations === 'function') renderPurchaseRecommendations();
     if (typeof renderPurchaseCosts === 'function') renderPurchaseCosts();
     drawChart();
 }
@@ -3020,7 +3020,7 @@ db.ref('products_catalog_data').on('value', function(snapshot) {
     try { localStorage.setItem('easyAppSync_productCatalog', JSON.stringify(productCatalog)); } catch (e) {}
     if (typeof renderProductCatalogSelect === 'function') renderProductCatalogSelect();
     if (typeof renderProductCatalogManager === 'function') renderProductCatalogManager();
-    if (currentUser && currentUser.role === 'admin' && isWorkspacePageActive('purchase') && typeof renderPurchasePlan === 'function') renderPurchasePlan();
+    if (currentUser && currentUser.role === 'admin' && isWorkspacePageActive('purchase') && typeof renderPurchaseRecommendations === 'function') renderPurchaseRecommendations();
     if (currentUser && isWorkspacePageActive('analytics') && typeof drawChart === 'function') drawChart();
 }, function(error) {
     console.error('Не удалось загрузить каталог товаров:', error);
@@ -3952,7 +3952,7 @@ function enterApp() {
     if (productAdminControls) productAdminControls.classList.toggle('hidden', currentUser.role !== 'admin');
     if (typeof renderProductCatalogSelect === 'function') renderProductCatalogSelect();
     if (typeof renderProductCatalogManager === 'function') renderProductCatalogManager();
-    if (typeof renderPurchasePlan === 'function') renderPurchasePlan();
+    if (typeof renderPurchaseRecommendations === 'function') renderPurchaseRecommendations();
     populateSellerFilter();
     renderAll();
     renderUserManageTable();
@@ -4484,7 +4484,7 @@ function addCatalogProduct() {
         productCatalog = (productCatalog || []).filter(function(p){return String(p.id) !== id;}); productCatalog.push(item);
         try { localStorage.setItem('easyAppSync_productCatalog', JSON.stringify(productCatalog)); } catch(e) {}
         if (input) input.value = '';
-        renderProductCatalogSelect(); renderProductCatalogManager(); renderPurchasePlan();
+        renderProductCatalogSelect(); renderProductCatalogManager(); renderPurchaseRecommendations();
         addAudit('product_catalog_add', 'Добавлен товар в каталог: ' + name);
     }).catch(function(error){console.error('Ошибка добавления товара:', error);alert('Не удалось сохранить товар. Проверьте права Firebase и соединение.');});
 }
@@ -4504,7 +4504,7 @@ function renameCatalogProduct(productId) {
     var updates = {name:name, aliases:aliases, updatedAt:Date.now(), updatedById:String(currentUser.id || '')};
     db.ref('products_catalog_data/' + String(productId)).update(updates).then(function(){
         Object.assign(item, updates); try { localStorage.setItem('easyAppSync_productCatalog', JSON.stringify(productCatalog)); } catch(e) {}
-        renderProductCatalogSelect(); renderProductCatalogManager(); renderPurchasePlan();
+        renderProductCatalogSelect(); renderProductCatalogManager(); renderPurchaseRecommendations();
         addAudit('product_catalog_rename', 'Переименован товар: ' + name);
     }).catch(function(error){console.error('Ошибка переименования товара:',error);alert('Не удалось переименовать товар.');});
 }
@@ -4517,7 +4517,7 @@ function setCatalogProductActive(productId, active) {
     db.ref('products_catalog_data/' + String(productId)).update({active:!!active, updatedAt:Date.now(), updatedById:String(currentUser.id || '')}).then(function(){
         item.active = !!active; item.updatedAt = Date.now(); item.updatedById = String(currentUser.id || '');
         try { localStorage.setItem('easyAppSync_productCatalog', JSON.stringify(productCatalog)); } catch(e) {}
-        renderProductCatalogSelect(); renderProductCatalogManager(); renderPurchasePlan();
+        renderProductCatalogSelect(); renderProductCatalogManager(); renderPurchaseRecommendations();
         addAudit(active ? 'product_catalog_restore' : 'product_catalog_archive', (active ? 'Восстановлена' : 'Архивирована') + ' товарная позиция: ' + String(item.name || ''));
     }).catch(function(error){console.error('Ошибка изменения статуса товара:',error);alert('Не удалось изменить статус товара.');});
 }
@@ -4583,91 +4583,7 @@ function renderPurchaseRecommendations() {
     }).join('');
     if(foot)foot.textContent='«Срочно»: карточка входит в верхние 25% по продажам в своём магазине и остаток не больше 1 шт. (для обуви — не больше 3 шт.) ИЛИ запаса хватит не более чем на 2 дня. «Скоро»: остатка хватит не более чем на 4 дня или история наличия требует проверки. «Запас достаточный»: остатка хватит более чем на 4 дня. Данные пересчитываются по текущим остаткам; размерный ряд отдельно не анализируется.';
 }
-function renderPurchasePlan() {
-    if (!isWorkspacePageActive('purchase')) return;
 
-    var tbody = document.getElementById('purchasePlanTable');
-    var head = document.getElementById('purchasePlanHead');
-    var status = document.getElementById('purchasePlanStatus');
-    if (!tbody || !currentUser || currentUser.role !== 'admin') return;
-    populatePurchaseStoreOptions();
-    var selectedStore = document.getElementById('purchaseStoreSelect') ? document.getElementById('purchaseStoreSelect').value : 'all';
-    var startDate = document.getElementById('purchaseStartDate') ? document.getElementById('purchaseStartDate').value : '';
-    var endDate = document.getElementById('purchaseEndDate') ? document.getElementById('purchaseEndDate').value : '';
-    tbody.innerHTML = '';
-    if (startDate && endDate && startDate > endDate) {
-        if (status) status.textContent = 'Дата начала периода не может быть позже даты окончания.';
-        if (head) head.innerHTML = '<tr><th>Позиция для закупки</th><th>Мужские (М)</th><th>Женские (Ж)</th><th>Всего</th>' + (selectedStore === 'all' ? '<th>Разбивка по магазинам</th>' : '') + '</tr>';
-        return;
-    }
-    if (head) head.innerHTML = '<tr><th>Позиция для закупки</th><th>Мужские (М)</th><th>Женские (Ж)</th><th>Всего</th>' + (selectedStore === 'all' ? '<th>Разбивка по магазинам</th>' : '') + '</tr>';
-    var keys = (typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys() : Object.keys(STORES || {})).map(String);
-    var products = getVisibleProductCatalog(true).filter(function(item){return item && String(item.name || '').trim();});
-    var productsById = {};
-    var counts = {};
-    function emptyCount() { return {total:0, male:0, female:0, stores:{}}; }
-    products.forEach(function(item){productsById[String(item.id)] = item; counts[String(item.id)] = emptyCount();});
-    var salesInRange = (sales || []).filter(function(sale){
-        if (!sale || isSaleRecordDeleted(sale.id) || isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale) || sale.returned) return false;
-        var store = String(sale.storeId || '');
-        if (keys.indexOf(store) === -1) return false;
-        if (selectedStore !== 'all' && store !== String(selectedStore)) return false;
-        var date = getRecordDateString(sale.timestamp || sale.createdAt);
-        if (startDate && (!date || date < startDate)) return false;
-        if (endDate && (!date || date > endDate)) return false;
-        return true;
-    });
-    var unmatched = 0;
-    var genderValues = ['M','MALE','М','МУЖСКАЯ','МУЖСКОЙ','F','FEMALE','Ж','ЖЕНСКАЯ','ЖЕНСКИЙ'];
-    var unclassifiedGenderSales = salesInRange.filter(function(sale) {
-        var raw = String(sale && (sale.gender || sale.itemGender || sale.productGender) || '').trim().toUpperCase();
-        return genderValues.indexOf(raw) === -1;
-    }).length;
-    salesInRange.forEach(function(sale){
-        var product = resolveSaleProduct(sale, productsById, products);
-        if (!product) { unmatched++; return; }
-        var id = String(product.id);
-        if (!counts[id]) counts[id] = emptyCount();
-        var quantity = Number(sale.quantity);
-        if (!isFinite(quantity) || quantity <= 0) quantity = 1; // one saved sale row is one unit in the current sale form
-        var rawGender = String(sale.gender || sale.itemGender || sale.productGender || '').trim().toUpperCase();
-        var bucket = (rawGender === 'M' || rawGender === 'MALE' || rawGender === 'М' || rawGender === 'МУЖСКАЯ' || rawGender === 'МУЖСКОЙ') ? 'male'
-            : (rawGender === 'F' || rawGender === 'FEMALE' || rawGender === 'Ж' || rawGender === 'ЖЕНСКАЯ' || rawGender === 'ЖЕНСКИЙ') ? 'female' : null;
-        var storeId = String(sale.storeId || '');
-        var count = counts[id];
-        count.total += quantity;
-        if (bucket) count[bucket] += quantity;
-        if (!count.stores[storeId]) count.stores[storeId] = {total:0,male:0,female:0};
-        count.stores[storeId].total += quantity;
-        if (bucket) count.stores[storeId][bucket] += quantity;
-    });
-    products.sort(function(a,b){return String(a.name).localeCompare(String(b.name),'ru');});
-    var totalUnits = 0, totalMale = 0, totalFemale = 0, withMovement = 0;
-    products.forEach(function(item){
-        var count = counts[String(item.id)] || emptyCount();
-        totalUnits += count.total; totalMale += count.male; totalFemale += count.female;
-        if (count.total > 0) withMovement++;
-        if (item.active === false && count.total === 0) return;
-        var tr = document.createElement('tr');
-        var nameCell = document.createElement('td'); nameCell.textContent = String(item.name) + (item.active === false ? ' (архив)' : ''); tr.appendChild(nameCell);
-        function addQty(value, bold) { var td = document.createElement('td'); td.textContent = Number(value || 0).toLocaleString('ru-RU'); if (bold) td.style.fontWeight = '700'; tr.appendChild(td); }
-        addQty(count.male, true); addQty(count.female, true); addQty(count.total, true);
-        if (selectedStore === 'all') {
-            var breakdownCell = document.createElement('td'); breakdownCell.className = 'purchase-store-breakdown';
-            var entries = Object.keys(count.stores).filter(function(k){return keys.indexOf(String(k)) !== -1;}).sort(function(a,b){return String(STORES[a]||a).localeCompare(String(STORES[b]||b),'ru');});
-            breakdownCell.textContent = entries.length ? entries.map(function(k){var c=count.stores[k]; return (STORES[k] || ('Магазин ' + k)) + ': М ' + Number(c.male).toLocaleString('ru-RU') + ' / Ж ' + Number(c.female).toLocaleString('ru-RU');}).join(' · ') : 'Пока нет продаж';
-            tr.appendChild(breakdownCell);
-        }
-        tbody.appendChild(tr);
-    });
-    if (!tbody.children.length) {
-        var trEmpty = document.createElement('tr'); var tdEmpty = document.createElement('td'); tdEmpty.colSpan = selectedStore === 'all' ? 5 : 4; tdEmpty.textContent = products.length ? 'Нет товарных позиций для выбранного периода.' : 'Каталог товаров пока пуст. Добавьте позиции в блоке «Записать продажу».'; tdEmpty.style.cssText = 'padding:18px;color:var(--text-light);'; trEmpty.appendChild(tdEmpty); tbody.appendChild(trEmpty);
-    }
-    var periodText = startDate || endDate ? (' · период: ' + (startDate || 'начало истории') + ' — ' + (endDate || 'сегодня')) : ' · весь период';
-    var storeText = selectedStore === 'all' ? 'Все магазины' : (STORES[selectedStore] || selectedStore);
-    if (status) status.textContent = storeText + periodText + ' · всего продано единиц: ' + totalUnits.toLocaleString('ru-RU') + ' (М: ' + totalMale.toLocaleString('ru-RU') + ', Ж: ' + totalFemale.toLocaleString('ru-RU') + ') · позиций с продажами: ' + withMovement + (unmatched ? ' · старых продаж без сопоставленной позиции: ' + unmatched : '') + (unclassifiedGenderSales ? ' · ' + unclassifiedGenderSales + ' старых записей не содержат выбор М/Ж; они учтены в общем количестве, но не распределены по полу.' : '');
-    renderPurchaseRecommendations();
-}
 function updatePendingSalesNotice() {
     var notice = document.getElementById('saleSyncNotice');
     if (!notice) return;
@@ -4900,7 +4816,7 @@ function saveSale() {
         renderAll();
         if (window.stockRefresh) window.stockRefresh();
         if (typeof drawChart === 'function') drawChart();
-        if (typeof renderPurchasePlan === 'function' && currentUser && currentUser.role === 'admin') renderPurchasePlan();
+        if (typeof renderPurchaseRecommendations === 'function' && currentUser && currentUser.role === 'admin') renderPurchaseRecommendations();
         saleSaveInProgress = false;
         if (saveSaleButton) { saveSaleButton.disabled = false; saveSaleButton.removeAttribute('aria-busy'); }
         updatePendingSalesNotice();
@@ -6802,7 +6718,7 @@ function renderActiveWorkspace() {
         try { renderSalaryManagement(); } catch(e) {}
         try { renderStoreSalesPlans(false); } catch(e) {}
     } else if (page === 'purchase') {
-        try { if (currentUser && currentUser.role === 'admin') renderPurchasePlan(); } catch(e) {}
+        try { if (currentUser && currentUser.role === 'admin') renderPurchaseRecommendations(); } catch(e) {}
     } else if (page === 'costs') {
         try { if (isPurchaseCostOwner()) renderPurchaseCosts(); } catch(e) {}
     } else if (page === 'orgs') {
