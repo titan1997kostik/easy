@@ -5752,17 +5752,21 @@ function getSaleBonus(s, perSale, customRates, salaryByPayment) {
     }
     var saleNames = [];
     if (s) {
-        if (s.stockSale === true) {
-            // For stock sales use the stock card title, not the linked catalog/category label.
-            saleNames.push(s.stockProductName);
-            saleNames.push(s.name);
-            saleNames.push(s.itemDetails);
-        } else {
-            saleNames.push(s.productName);
-            saleNames.push(s.catalogProductName);
-            saleNames.push(s.itemDetails);
-            saleNames.push(s.name);
+        // Match the full name shown in sales history, including the linked catalog item
+        // and the specific stock card/details. This keeps custom rates working for stock sales too.
+        if (typeof getSaleHistoryDisplayName === 'function') {
+            saleNames.push(getSaleHistoryDisplayName(s));
         }
+        [
+            s.stockProductName,
+            s.stockCardName,
+            s.productName,
+            s.catalogProductName,
+            s.itemDetails,
+            s.name
+        ].forEach(function(name) {
+            saleNames.push(name);
+        });
     }
     var normalizedSaleNames = saleNames.map(normalizeRateName).filter(Boolean);
     if (customRates && customRates.length > 0) {
