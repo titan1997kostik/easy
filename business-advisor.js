@@ -71,7 +71,7 @@
               '<div><h3 style="margin:0;border:0;padding:0;">Умные рекомендации по бизнесу</h3><p style="font-size:13px;color:var(--text-light);margin:3px 0 0;">Анализ данных Easy и конкретные действия для управления магазинами.</p></div>' +
             '</div>' +
           '</div>' +
-          '<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#f4f4f5;color:#575569;font-size:11px;font-weight:700;">АНАЛИТИКА EASY · ИИ СЛЕДУЮЩИМ ЭТАПОМ</span>' +
+          '<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#f4f4f5;color:#575569;font-size:11px;font-weight:700;">РАСЧЁТЫ ВНУТРИ EASY · БЕЗ API</span>' +
         '</div>' +
         '<div class="business-advisor-filters" style="display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-top:18px;">' +
           '<div class="form-group" style="margin:0;flex:1;min-width:150px;"><label for="businessAdvisorPeriod">Период анализа</label><select id="businessAdvisorPeriod"><option value="7">Последние 7 дней</option><option value="30" selected>Последние 30 дней</option><option value="90">Последние 90 дней</option></select></div>' +
@@ -87,8 +87,8 @@
         '<div id="businessAdvisorSources" style="margin-top:13px;padding-top:11px;border-top:1px solid var(--border);font-size:11px;color:var(--text-light);line-height:1.55;"></div>' +
       '</section>' +
       '<section class="card" style="padding:18px;">' +
-        '<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px;"><span aria-hidden="true" style="font-size:22px;">💬</span><h3 style="margin:0;border:0;padding:0;">Диалог с ИИ</h3><span style="margin-left:auto;padding:4px 8px;border-radius:999px;background:#fff3df;color:#94651e;font-size:10px;font-weight:700;">ЕЩЁ НЕ ПОДКЛЮЧЁН</span></div>' +
-        '<p style="font-size:13px;color:var(--text-light);line-height:1.6;margin:0;">Здесь появится чат с DeepSeek. После настройки API помощник сможет объяснять эти рекомендации, отвечать на вопросы о продажах, прибыли, закупках и работе магазинов на основании расчётов Easy. Пока раздел показывает только выводы, которые приложение может подтвердить собственными данными.</p>' +
+        '<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px;"><span aria-hidden="true" style="font-size:22px;">✓</span><h3 style="margin:0;border:0;padding:0;">Как работает помощник</h3><span style="margin-left:auto;padding:4px 8px;border-radius:999px;background:#eef8f1;color:#28764d;font-size:10px;font-weight:700;">БЕЗ ПЛАТНЫХ API</span></div>' +
+        '<p style="font-size:13px;color:var(--text-light);line-height:1.6;margin:0;">Рекомендации выше рассчитываются самим приложением Easy по вашим продажам, возвратам, расходам и складским данным. Подключать внешний ИИ, вводить API-ключ или оплачивать запросы не нужно. Диалог с ИИ можно добавить отдельно позднее, но для работы этого блока он не требуется.</p>' +
       '</section>';
     page.appendChild(section);
     if (!initialized) {
