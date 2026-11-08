@@ -340,7 +340,7 @@
     }
   }
 
-  function renderExpenseAnalysis(current, storeRows, selectedStore) {
+  function renderExpenseAnalysis(current, storeRows, selectedStore, periodDays) {
     var host = el('businessAdvisorExpenseAnalysis');
     if (!host) return;
     var details = current && current.expenseDetails;
@@ -410,32 +410,126 @@
           return '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;"><span style="min-width:0;">' + esc(item.name) + '<span style="display:block;color:var(--text-light);font-size:10px;">Регулярные ' + esc(money(d.recurringTotal)) + ' · разовые ' + esc(money(d.ordinaryTotal)) + ' · зарплата ' + esc(money(st.salaryExpenses)) + '</span></span><strong style="white-space:nowrap;">' + esc(money(storeTotal)) + '</strong></div>';
         }).join('') + '</div>'
       : '';
-    var breakEvenHtml = '';
-    var canEstimateBreakEven = current.costCalculationAvailable && current.netRevenue > 0 &&
-      current.costOfGoods !== null && current.costOfGoods !== undefined;
-    if (canEstimateBreakEven) {
-      var contribution = current.netRevenue - num(current.costOfGoods) - taxAndFees;
-      var contributionRate = contribution / current.netRevenue;
-      var operatingCostBase = ordinary + recurring + salary;
-      if (contributionRate > 0 && operatingCostBase >= 0) {
-        var breakEven = operatingCostBase / contributionRate;
-        var gap = breakEven - current.netRevenue;
-        var approximate = !current.costDataComplete;
-        var costQuality = approximate ? 'Оценка: часть себестоимости рассчитана по средней наценке.' : 'Себестоимость подтверждена фактическими закупочными ценами.';
-        breakEvenHtml = '<div style="margin-top:13px;padding:12px;border:1px solid var(--border);border-radius:11px;background:#fff;">' +
-          '<div style="font-size:11px;color:var(--text-light);font-weight:700;">ТОЧКА БЕЗУБЫТОЧНОСТИ ЗА ВЫБРАННЫЙ ПЕРИОД</div>' +
-          '<div style="font-size:22px;font-weight:850;margin:4px 0;">' + (approximate ? '≈ ' : '') + esc(money(breakEven)) + '</div>' +
-          '<div style="font-size:11px;line-height:1.45;color:var(--text-light);">Маржинальный доход после себестоимости, налога и эквайринга: ' + esc(pct(contributionRate)) + '. Текущая выручка после возвратов: ' + esc(money(current.netRevenue)) + '.</div>' +
-          '<div style="font-size:12px;font-weight:750;margin-top:7px;color:' + (gap > 0 ? '#a16615' : '#28764d') + ';">' +
-          (gap > 0 ? 'До безубыточности не хватает ' + esc(money(gap)) : 'Выше точки безубыточности на ' + esc(money(Math.abs(gap)))) + '</div>' +
-          '<div style="font-size:10px;line-height:1.45;color:var(--text-light);margin-top:6px;">' + esc(costQuality) + ' Оценка предполагает, что обычные, регулярные расходы и начисленная зарплата сохранятся в рублях, а валовая маржа, налоговая нагрузка и эквайринг останутся на уровне периода. Это сценарный ориентир, не прогноз.</div>' +
-          '</div>';
-      } else {
-        breakEvenHtml = '<p style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--text-light);">Точку безубыточности нельзя надёжно оценить: после себестоимости, налога и эквайринга не остаётся положительного маржинального дохода.</p>';
+    function renderBreakEvenCard(summary, title, isNetwork) {
+      var cardDetails = summary && summary.expenseDetails ? summary.expenseDetails : {};
+      var cardRevenue = num(summary && summary.netRevenue);
+      var cardSalesCount = num(summary && summary.salesCount);
+      var cardOrdinary = cardDetails.ordinaryTotal !== undefined
+        ? Math.max(0, num(cardDetails.ordinaryTotal))
+        : Math.max(0, num(summary && summary.expenses) - num(summary && summary.recurringExpenses));
+      var cardRecurring = cardDetails.recurringTotal !== undefined
+        ? Math.max(0, num(cardDetails.recurringTotal))
+        : Math.max(0, num(summary && summary.recurringExpenses));
+      var cardSalary = Math.max(0, num(summary && summary.salaryExpenses));
+      var fixedCostsForPeriod = cardOrdinary + cardRecurring + cardSalary;
+      var cardTaxAndFees = num(summary && summary.tax) + num(summary && summary.cardFee) + num(summary && summary.sbpFee);
+      var canCalculate = !!(summary && summary.costCalculationAvailable &&
+        summary.costOfGoods !== null && summary.costOfGoods !== undefined &&
+        cardRevenue > 0 && cardSalesCount > 0 && periodDays > 0);
+      var approximate = !!(summary && !summary.costDataComplete);
+      var prefix = approximate ? '≈ ' : '';
+      var note = approximate
+        ? 'Расчёт приблизительный: часть себестоимости оценена по исторической наценке.'
+        : 'Себестоимость подтверждена фактическими закупочными ценами.';
+      var scopeNote = isNetwork
+        ? 'Включены общие расходы организации.'
+        : 'Общие расходы организации в расчёт магазина не включены.';
+      var cardStyle = 'border:1px solid var(--border);border-radius:12px;padding:13px;background:#fff;min-width:0;';
+      if (!canCalculate) {
+        var reason = !summary || !summary.costCalculationAvailable
+          ? 'Не хватает данных о себестоимости всех продаж и возвратов.'
+          : cardRevenue <= 0 || cardSalesCount <= 0
+            ? 'За период недостаточно продаж, чтобы определить маржинальность и средний чек.'
+            : 'Недостаточно данных для расчёта.';
+        return '<article style="' + cardStyle + '">' +
+          '<strong style="display:block;font-size:13px;margin-bottom:8px;">' + esc(title) + '</strong>' +
+          '<div style="font-size:12px;color:var(--text-light);line-height:1.5;">Точка безубыточности пока не рассчитана. ' + esc(reason) + '</div>' +
+          '<div style="font-size:10px;color:var(--text-light);margin-top:7px;">' + esc(scopeNote) + '</div></article>';
       }
-    } else {
-      breakEvenHtml = '<p style="margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--text-light);">Точка безубыточности не рассчитана: для неё нужна себестоимость всех продаж и положительная выручка периода.</p>';
+      var contribution = cardRevenue - num(summary.costOfGoods) - cardTaxAndFees;
+      var contributionRate = contribution / cardRevenue;
+      if (!(contributionRate > 0)) {
+        return '<article style="' + cardStyle + '">' +
+          '<strong style="display:block;font-size:13px;margin-bottom:8px;">' + esc(title) + '</strong>' +
+          '<div style="font-size:12px;color:var(--text-light);line-height:1.5;">Точку безубыточности нельзя определить: после себестоимости, налога и эквайринга маржинальный доход не положительный.</div>' +
+          '<div style="font-size:10px;color:var(--text-light);margin-top:7px;">' + esc(scopeNote) + '</div></article>';
+      }
+      var normalizedDays = Math.max(1, Number(periodDays) || 30);
+      var monthlyFactor = 30 / normalizedDays;
+      var monthlyOperatingCosts = fixedCostsForPeriod * monthlyFactor;
+      var monthlyBreakEven = monthlyOperatingCosts / contributionRate;
+      var dailyBreakEven = monthlyBreakEven / 30;
+      var monthlyRevenue = cardRevenue * monthlyFactor;
+      var averageCheck = num(summary.avgCheck);
+      var requiredChecks = averageCheck > 0 ? Math.ceil(dailyBreakEven / averageCheck) : null;
+      var gap = monthlyBreakEven - monthlyRevenue;
+      function checkWord(value) {
+        var n = Math.abs(value) % 100;
+        if (n >= 11 && n <= 14) return 'чеков';
+        switch (n % 10) {
+          case 1: return 'чек';
+          case 2: case 3: case 4: return 'чека';
+          default: return 'чеков';
+        }
+      }
+      var actualLabel = normalizedDays === 30
+        ? 'Фактическая выручка за 30 дней'
+        : 'Фактическая выручка в пересчёте на месяц';
+      var gapHtml = gap > 0.5
+        ? '<span style="color:#a16615;">Не хватает ' + esc(money(gap)) + '</span>'
+        : '<span style="color:#28764d;">Выше точки безубыточности на ' + esc(money(Math.max(0, -gap))) + '</span>';
+      var dayLabel = 'В день';
+      var checksValue = requiredChecks === null ? '—' : prefix + requiredChecks + ' ' + checkWord(requiredChecks);
+      var periodNote = normalizedDays === 30
+        ? 'Расчёт по последним 30 дням.'
+        : 'Показатели последних ' + normalizedDays + ' дней приведены к 30-дневному эквиваленту.';
+      return '<article style="' + cardStyle + '">' +
+        '<div style="font-size:13px;font-weight:750;margin-bottom:8px;">' + esc(title) + '</div>' +
+        '<div style="font-size:clamp(25px,3vw,32px);font-weight:850;line-height:1.2;overflow-wrap:anywhere;">' + prefix + esc(money(monthlyBreakEven)) + '</div>' +
+        '<div style="font-size:11px;color:var(--text-light);margin-top:3px;">Необходимая выручка за месяц</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:13px;">' +
+          '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:9px;padding:10px;min-width:0;">' +
+            '<div style="font-size:18px;font-weight:800;overflow-wrap:anywhere;">' + prefix + esc(money(dailyBreakEven)) + '</div>' +
+            '<div style="font-size:10px;color:var(--text-light);margin-top:3px;">' + dayLabel + '</div>' +
+          '</div>' +
+          '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:9px;padding:10px;min-width:0;">' +
+            '<div style="font-size:18px;font-weight:800;overflow-wrap:anywhere;">' + esc(checksValue) + '</div>' +
+            '<div style="font-size:10px;color:var(--text-light);margin-top:3px;">В день при среднем чеке ' + esc(money(averageCheck)) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="border-top:1px solid var(--border);margin-top:13px;padding-top:11px;">' +
+          '<div style="font-size:11px;font-weight:750;margin-bottom:7px;">Фактическая ситуация</div>' +
+          '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap;">' +
+            '<span style="font-size:11px;color:var(--text-light);">' + actualLabel + '</span>' +
+            '<strong style="font-size:14px;">' + esc(money(monthlyRevenue)) + '</strong>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap;margin-top:7px;">' +
+            '<span style="font-size:11px;color:var(--text-light);">' + (gap > 0.5 ? 'Не хватает' : 'Выше точки безубыточности') + '</span>' +
+            '<strong style="font-size:13px;">' + gapHtml + '</strong>' +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size:10px;line-height:1.45;color:var(--text-light);margin-top:9px;">' +
+          esc(note) + ' ' + esc(scopeNote) + ' ' + esc(periodNote) +
+          ' Средний чек рассчитан по сумме продаж до вычета возвратов; возвраты отдельно уменьшают фактическую выручку и учитываются в маржинальности.' +
+        '</div>' +
+      '</article>';
     }
+
+    var breakEvenCards = [];
+    if (selectedStore === 'all') {
+      breakEvenCards.push(renderBreakEvenCard(current, 'Вся сеть', true));
+      (storeRows || []).forEach(function(item) {
+        if (item && item.summary) breakEvenCards.push(renderBreakEvenCard(item.summary, item.name, false));
+      });
+    } else if (storeRows && storeRows.length) {
+      storeRows.forEach(function(item) {
+        if (item && item.summary) breakEvenCards.push(renderBreakEvenCard(item.summary, item.name, false));
+      });
+    } else {
+      breakEvenCards.push(renderBreakEvenCard(current, storeLabel(selectedStore), false));
+    }
+    var breakEvenHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:10px;margin-top:13px;">' +
+      breakEvenCards.join('') + '</div>';
     var saving = recurring * 0.1;
     var savingHtml = recurring > 0
       ? '<p style="font-size:11px;line-height:1.45;margin:9px 0 0;color:var(--text-light);">Сценарий: сокращение регулярных расходов на 10% сэкономило бы около <strong>' + esc(money(saving)) + '</strong> за период при сохранении остальных условий. Это не заложено в фактическую прибыль.</p>'
@@ -634,7 +728,7 @@
           metricCard('Доля возвратов', pct(currentSales.returnRate), 'От количества продаж за период');
     }
     renderFinancialPanel(financialCurrent, financialPrevious, financeStoreRows, selectedStore);
-    renderExpenseAnalysis(financialCurrent, financeStoreRows, selectedStore);
+    renderExpenseAnalysis(financialCurrent, financeStoreRows, selectedStore, bounds.days);
     var periodLabel = el('businessAdvisorPeriodLabel');
     if (periodLabel) periodLabel.textContent = bounds.start.split('-').reverse().join('.') + ' — ' + bounds.end.split('-').reverse().join('.') + ' · сравнение с предыдущими ' + days + ' днями · ' + (selectedStore === 'all' ? 'все доступные магазины' : storeLabel(selectedStore));
     var recHost = el('businessAdvisorRecommendations');
