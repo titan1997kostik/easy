@@ -904,7 +904,8 @@
       if(sale.returned)return;
       if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(sale.id))return;
       if(typeof isStoreDeleted==='function'&&isStoreDeleted(sid))return;
-      if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(sale))return;
+      var resetCheckRecord=sale.storeId?sale:Object.assign({},sale,{storeId:sid});
+      if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(resetCheckRecord))return;
       var at=stockDateMs(sale.timestamp||sale.createdAt);
       if(!at)return;
       var pid=stockResolvedId(sale.stockProductId);
