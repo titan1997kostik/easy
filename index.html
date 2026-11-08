@@ -1068,7 +1068,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <h4>Что продаётся лучше</h4>
                 <span id="analyticsBestSellingPeriod">За выбранный период</span>
             </div>
-            <p class="analytics-help" id="analyticsBestSellingHelp">Рейтинг позиций из каталога товаров. Возвращённые продажи не учитываются.</p>
+            <p class="analytics-help" id="analyticsBestSellingHelp">Топ‑10 товарных позиций по выбранному показателю. Возвращённые продажи не учитываются.</p>
             <div class="analytics-controls" style="margin:10px 0 14px;">
                 <label for="analyticsBestSellingMetric" style="margin:0;white-space:nowrap;font-size:12px;">Сортировать</label>
                 <select id="analyticsBestSellingMetric" onchange="renderBestSellingProductsCurrent()" aria-label="Сортировка лучших продаж">
@@ -1077,13 +1077,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 </select>
             </div>
             <div id="analyticsBestSellingChart" class="best-selling-chart" aria-label="График наиболее продаваемых товаров"></div>
-            <div style="overflow-x:auto;max-width:100%;margin-top:16px;">
-                <table class="best-selling-table">
-                    <thead><tr><th>Место</th><th>Позиция из каталога</th><th>Продано, шт.</th><th>Мужские</th><th>Женские</th><th>Выручка</th></tr></thead>
-                    <tbody id="analyticsBestSellingTable"><tr><td colspan="7" style="color:var(--text-light);">Данные загружаются…</td></tr></tbody>
-                </table>
-            </div>
-            <p id="analyticsBestSellingStatus" class="analytics-help" style="margin-top:9px;"></p>
+<p id="analyticsBestSellingStatus" class="analytics-help" style="margin-top:9px;"></p>
         </section>
     </div>
 
@@ -1724,7 +1718,6 @@ function renderPurchaseCosts() {
     if (missingSummary) missingSummary.textContent = 'Без себестоимости: ' + missingTotal + ' из ' + scopeTotal + ' продаж' + (estimateBaseline.markup !== null ? ' · средняя наценка для оценки: ' + estimateBaseline.markup.toLocaleString('ru-RU', {maximumFractionDigits:2}) + '%' + (estimateBaseline.fallback ? ' (по всем магазинам)' : '') : ' · добавьте закупочную цену хотя бы одной продажи для расчёта оценки');
     var ready = document.getElementById('saleCostSyncState');
     if (ready) ready.textContent = salePurchaseCostsLoaded ? 'Локальные данные загружены' : 'Загрузка локальных данных…';
-    tbody.innerHTML = '';
     if (!relevant.length) {
         var row = document.createElement('tr'), cell = document.createElement('td');
         cell.colSpan = 8; cell.textContent = 'Нет продаж по выбранным фильтрам.'; cell.style.cssText = 'text-align:center;color:var(--text-light);';
@@ -8768,12 +8761,11 @@ function renderBestSellingProducts(startDate, endDate, targetStore, isSeller) {
     panel.style.display = 'block';
     bestSellingLastRange = {startDate:String(startDate || ''), endDate:String(endDate || ''), targetStore:String(targetStore || 'all'), isSeller:!!isSeller};
     var chart = document.getElementById('analyticsBestSellingChart');
-    var tbody = document.getElementById('analyticsBestSellingTable');
     var periodEl = document.getElementById('analyticsBestSellingPeriod');
     var helpEl = document.getElementById('analyticsBestSellingHelp');
     var statusEl = document.getElementById('analyticsBestSellingStatus');
     var metricEl = document.getElementById('analyticsBestSellingMetric');
-    if (!chart || !tbody) return;
+    if (!chart) return;
     var selectedStore = isSeller ? String(currentUser.store || '') : String(targetStore || 'all');
     var storeName = selectedStore === 'all' ? 'Все доступные магазины' : (STORES[selectedStore] || ('Магазин ' + selectedStore));
     if (periodEl) periodEl.textContent = String(startDate).split('-').reverse().join('.') + ' — ' + String(endDate).split('-').reverse().join('.') + ' · ' + storeName;
@@ -8843,7 +8835,6 @@ function renderBestSellingProducts(startDate, endDate, targetStore, isSeller) {
     tbody.innerHTML = '';
     if (!rows.length) {
         chart.innerHTML = '<div class="best-selling-empty">За выбранный период нет продаж товаров, сопоставленных со справочником.</div>';
-        tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-light);text-align:center;">Нет данных за выбранный период.</td></tr>';
         if (statusEl) statusEl.textContent = unmatched ? ('Не удалось сопоставить со справочником записей продаж: ' + unmatched + '.') : 'После выбора периода здесь появятся наиболее продаваемые позиции.';
         return;
     }
@@ -8858,17 +8849,10 @@ function renderBestSellingProducts(startDate, endDate, targetStore, isSeller) {
         var value = document.createElement('div'); value.className = 'best-selling-chart-value'; value.textContent = metric === 'revenue' ? formatMoney(row.revenue) : (formatUnits(row.units) + ' шт.');
         line.appendChild(name); line.appendChild(track); line.appendChild(value); chart.appendChild(line);
     });
-    rows.slice(0, 30).forEach(function(row, index) {
-        var tr = document.createElement('tr');
-        [String(index + 1), row.name + (row.archived ? ' (архив)' : ''), formatUnits(row.units), formatUnits(row.male), formatUnits(row.female), formatMoney(row.revenue)].forEach(function(value) {
-            var td = document.createElement('td'); td.textContent = value; tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-    });
     var totalUnits = rows.reduce(function(sum,row) { return sum + row.units; }, 0);
     var totalRevenue = rows.reduce(function(sum,row) { return sum + row.revenue; }, 0);
     var legacyWithoutGender = sourceSales.filter(function(sale) { if (!sale || sale.returned || isSaleRecordDeleted(sale.id)) return false; var g = String(sale.gender || sale.itemGender || sale.productGender || '').trim().toUpperCase(); return ['M','MALE','М','МУЖСКАЯ','МУЖСКОЙ','F','FEMALE','Ж','ЖЕНСКАЯ','ЖЕНСКИЙ'].indexOf(g) === -1; }).length;
-    if (statusEl) statusEl.textContent = 'Сопоставлено позиций: ' + rows.length + ' · продано единиц: ' + formatUnits(totalUnits) + ' · выручка: ' + formatMoney(totalRevenue) + (rows.length > 30 ? ' · показаны первые 30 позиций в таблице' : '') + (unmatched ? ' · не сопоставлено записей: ' + unmatched : '') + (legacyWithoutGender ? ' · в старых продажах без сохранённого выбора М/Ж: ' + legacyWithoutGender + ' записей; они включены в общий итог, но не распределены по полу.' : '');
+    if (statusEl) statusEl.textContent = 'Сопоставлено позиций: ' + rows.length + ' · продано единиц: ' + formatUnits(totalUnits) + ' · выручка: ' + formatMoney(totalRevenue) + (unmatched ? ' · не сопоставлено записей: ' + unmatched : '') + (legacyWithoutGender ? ' · в старых продажах без сохранённого выбора М/Ж: ' + legacyWithoutGender + ' записей; они включены в общий итог, но не распределены по полу.' : '');
 }
 
 function showAnalyticsCalculation(kind) {
