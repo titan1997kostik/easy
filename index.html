@@ -9447,15 +9447,15 @@ function drawChart() {
             var fallbackText = purchaseCostMarkupBaseline.fallback ? ' Для выбранного магазина взят общий ориентир по магазинам организации.' : '';
             if (costWarning) costWarning.textContent = 'Предварительная оценка: для ' + currentStats.estimatedCostSalesCount + ' продаж и ' + currentStats.estimatedCostReturnsCount + ' операций возврата использована средняя наценка из ' + purchaseCostMarkupBaseline.count + ' продаж с известной себестоимостью.' + estimateMarkupText + '.' + fallbackText + ' Укажите фактическую закупочную цену в блоке «Себестоимость товаров», чтобы заменить оценку.';
             if (grossNote) grossNote.textContent = 'Предварительно: часть себестоимости оценена по средней наценке';
-            if (netNote) netNote.textContent = 'Предварительно: часть себестоимости оценена по средней наценке';
+           
         } else if (!currentStats.costCalculationAvailable) {
             if (costWarning) costWarning.textContent = 'Пока нет фактических закупочных цен, по которым можно оценить все продажи. Укажите закупочную стоимость хотя бы для одной продажи, затем заполните остальные цены для точного результата.';
             if (grossNote) grossNote.textContent = 'Недостаточно данных для оценки себестоимости';
-            if (netNote) netNote.textContent = 'Недостаточно данных для предварительного расчёта';
+           
         } else {
             if (costWarning) costWarning.textContent = 'Расчёт основан на фактических закупочных ценах. Учитываются возвраты по датам операций, зарплаты, записанные и регулярные расходы, налоги и комиссии.';
             if (grossNote) grossNote.textContent = 'Выручка после возвратов минус себестоимость';
-            if (netNote) netNote.textContent = 'После расходов, зарплат, налогов и комиссий';
+           
         }
     }
     kpi('analyticsRecurringExpensePeriodSummary', 'Регулярные расходы, начисленные за период: ' + money(currentStats.recurringExpenses));
