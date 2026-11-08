@@ -9093,7 +9093,7 @@ function drawChart() {
     }
     function blankSummary() {
         return { revenue:0, salesCount:0, avgCheck:0, cash:0, cashCheck:0, cashNoCheck:0, transfer:0, card:0, sbp:0, other:0,
-            expenses:0, recurringExpenses:0, salaryExpenses:0, allExpenses:0, returns:0, taxableBase:0, cardAcquiringBase:0, sbpAcquiringBase:0,
+            expenses:0, recurringExpenses:0, salaryExpenses:0, allExpenses:0, returns:0, returnedSalesCount:0, returnOperationsCount:0, taxableBase:0, cardAcquiringBase:0, sbpAcquiringBase:0,
             costOfGoods:0, estimatedCostOfGoods:0, costedSalesCount:0, estimatedCostSalesCount:0, costMissingCount:0, costMissingReturnsCount:0, estimatedCostReturnsCount:0, costDataComplete:true, costCalculationAvailable:true, netRevenue:0, grossProfit:null, netProfit:null, averageMarkup:null, grossMargin:null };
     }
     function sumRange(startDate, endDate) {
@@ -9116,6 +9116,26 @@ function drawChart() {
             var date = getRecordDateString(event.timestamp || event.createdAt);
             return date >= startDate && date <= endDate && ['return','cancel_return'].indexOf(String(event.eventType)) !== -1;
         });
+        // Count distinct receipts touched by a net return in this period.
+        // Several partial returns for one receipt still count as one returned receipt.
+        var returnAmountBySaleId = Object.create(null), unlinkedReturnOperations = 0;
+        legacyReturnedSales.forEach(function(sale) {
+            returnAmountBySaleId[String(sale.id)] = Math.max(0, Number(sale.price) || 0);
+        });
+        returnEventsInRange.forEach(function(event) {
+            if (String(event.eventType) !== 'return' && String(event.eventType) !== 'cancel_return') return;
+            var payment = event.paymentBreakdown || getSalePaymentBreakdown({price:event.amount, payment:event.payment});
+            var amount = Number(payment.total) || Number(event.amount) || 0;
+            var sign = String(event.eventType) === 'return' ? 1 : -1;
+            if (event.saleId == null || String(event.saleId) === '') {
+                if (sign > 0) unlinkedReturnOperations++;
+                return;
+            }
+            var saleId = String(event.saleId);
+            returnAmountBySaleId[saleId] = (Number(returnAmountBySaleId[saleId]) || 0) + amount * sign;
+        });
+        result.returnedSalesCount = Object.keys(returnAmountBySaleId).filter(function(id) { return Number(returnAmountBySaleId[id]) > 0.009; }).length + unlinkedReturnOperations;
+        result.returnOperationsCount = legacyReturnedSales.length + returnEventsInRange.filter(function(event) { return String(event.eventType) === 'return'; }).length;
         var rangeExpenses = activeExpenses.filter(function(expense) {
             // A salary payout is a cash-flow record in Expenses, but wage expense itself
             // is recognized once from salary_expenses_data by the shift's accrual date.
@@ -11274,6 +11294,6 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
 
 <script src="backup-tools.js"></script>
 <script src="stock.js?v=48"></script>
-<script src="business-advisor.js?v=3"></script>
+<script src="business-advisor.js?v=5"></script>
 </body>
 </html>
