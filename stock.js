@@ -793,8 +793,7 @@
       var key2=pid+'|'+sid;
       if(!movementByKey[key2])movementByKey[key2]=[];
       movementByKey[key2].push({at:at,delta:Number(m.quantityDelta)||0,before:m.before==null?null:Number(m.before),after:m.after==null?null:Number(m.after),saleId:m.saleId?String(m.saleId):'',source:'movement'});
-      if(m.saleId&&String(m.type||'')==='sale')saleOutMovementIds[String(m.saleId)]=true;
-      if(m.saleId&&String(m.type||'')==='return')saleReturnMovementIds[String(m.saleId)]=true;
+      if(m.saleId)saleMovementIds[String(m.saleId)]=true;
     });
     var soldByKey={};
     salesRows.forEach(function(sale){
@@ -982,7 +981,8 @@
       if(!movementByKey[key2])movementByKey[key2]=[];
       var before=m.before==null?null:Number(m.before),after=m.after==null?null:Number(m.after),delta=Number(m.quantityDelta);
       movementByKey[key2].push({at:at,delta:isFinite(delta)?delta:0,before:before,after:after,saleId:m.saleId?String(m.saleId):''});
-      if(m.saleId)saleMovementIds[String(m.saleId)]=true;
+      if(m.saleId&&String(m.type||'')==='sale')saleOutMovementIds[String(m.saleId)]=true;
+      if(m.saleId&&String(m.type||'')==='return')saleReturnMovementIds[String(m.saleId)]=true;
       if(at<earliest)earliest=at;
     });
     salesRows.forEach(function(sale){
