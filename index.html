@@ -4567,9 +4567,9 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
     populatePurchaseStoreOptions();
     var selectedStore=document.getElementById('purchaseStoreSelect')?document.getElementById('purchaseStoreSelect').value:'all';
     if(purchaseRecommendationFilterKey!==String(selectedStore)){purchaseRecommendationFilterKey=String(selectedStore);purchaseRecommendationVisibleCount=10;}
-    if(typeof window.stockGetReplenishmentRecommendations!=='function'){table.innerHTML='<tr><td colspan="6" style="padding:16px;color:var(--text-light);">Модуль складской аналитики ещё загружается.</td></tr>';if(status)status.textContent='Ожидаем синхронизацию складских данных.';return;}
+    if(typeof window.stockGetReplenishmentRecommendations!=='function'){var recMoreWait=document.getElementById('purchaseRecommendationMore');if(recMoreWait)recMoreWait.innerHTML='';table.innerHTML='<tr><td colspan="6" style="padding:16px;color:var(--text-light);">Модуль складской аналитики ещё загружается.</td></tr>';if(status)status.textContent='Ожидаем синхронизацию складских данных.';return;}
     var result=window.stockGetReplenishmentRecommendations('','',selectedStore,14);
-    if(!result||!result.ready){table.innerHTML='<tr><td colspan="6" style="padding:16px;color:var(--text-light);">Складские данные загружаются…</td></tr>';if(status)status.textContent=result&&result.message||'Загрузка…';return;}
+    if(!result||!result.ready){var recMoreWait=document.getElementById('purchaseRecommendationMore');if(recMoreWait)recMoreWait.innerHTML='';table.innerHTML='<tr><td colspan="6" style="padding:16px;color:var(--text-light);">Складские данные загружаются…</td></tr>';if(status)status.textContent=result&&result.message||'Загрузка…';return;}
     var rows=result.rows||[];
     var urgent=rows.filter(function(row){return row.priorityStatus==='urgent';}).length;
     var soon=rows.filter(function(row){return row.priorityStatus==='soon';}).length;
@@ -4578,7 +4578,7 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
     var units=recommended.reduce(function(sum,row){return sum+row.recommendedQty;},0);
     function h(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
     function n(value,digits){return Number(value||0).toLocaleString('ru-RU',{maximumFractionDigits:digits==null?1:digits});}
-    if(status)status.textContent='Вся доступная история продаж · срочно: '+urgent+' · скоро: '+soon+' · запас достаточный: '+sufficient+' · расчётное пополнение на 14 дней: '+n(units,0)+' шт.';
+    if(status)status.textContent='Вся доступная история продаж · срочно: '+urgent+' · скоро: '+soon+' · запас достаточный: '+sufficient+' · расчётное пополнение на 14 дней: '+n(units,0)+' шт. · показано '+Math.min(purchaseRecommendationVisibleCount,rows.length)+' из '+rows.length;
     var more=document.getElementById('purchaseRecommendationMore');
     if(!rows.length){
         table.innerHTML='<tr><td colspan="6" style="padding:18px;color:var(--text-light);">Нет активных карточек с остатками и продажами для выбранного магазина.</td></tr>';
@@ -4655,14 +4655,14 @@ function renderPurchaseCardRanking(useCachedResult) {
     }
     var rankingFilterKey=[periodSelect.value||'30',storeSelect.value||'all',document.getElementById('purchaseRankingStartDate')?document.getElementById('purchaseRankingStartDate').value:'',document.getElementById('purchaseRankingEndDate')?document.getElementById('purchaseRankingEndDate').value:''].join('|');
     if(purchaseRankingFilterKey!==rankingFilterKey){purchaseRankingFilterKey=rankingFilterKey;purchaseRankingVisibleCount=10;purchaseRankingCachedKey='';purchaseRankingCachedResult=null;}
-    if(typeof window.stockGetCardSalesRanking!=='function'){list.innerHTML='<div style="padding:16px;color:var(--text-light);">Модуль складской аналитики ещё загружается.</div>';if(status)status.textContent='Ожидаем загрузку складского модуля.';return;}
+    if(typeof window.stockGetCardSalesRanking!=='function'){var rankMoreWait=document.getElementById('purchaseRankingMore');if(rankMoreWait)rankMoreWait.innerHTML='';list.innerHTML='<div style="padding:16px;color:var(--text-light);">Модуль складской аналитики ещё загружается.</div>';if(status)status.textContent='Ожидаем загрузку складского модуля.';return;}
     var rankingRequestKey=[period,startDate,endDate,storeSelect.value||'all',previousStart,previousEnd].join('|');
     var result=useCachedResult&&purchaseRankingCachedKey===rankingRequestKey?purchaseRankingCachedResult:window.stockGetCardSalesRanking(startDate,endDate,storeSelect.value||'all',previousStart,previousEnd);
     if(result&&result.ready){purchaseRankingCachedKey=rankingRequestKey;purchaseRankingCachedResult=result;}
-    if(!result||!result.ready){list.innerHTML='<div style="padding:16px;color:var(--text-light);">Загрузка данных…</div>';if(status)status.textContent=result&&result.message||'Загрузка…';return;}
+    if(!result||!result.ready){var rankMoreWait=document.getElementById('purchaseRankingMore');if(rankMoreWait)rankMoreWait.innerHTML='';list.innerHTML='<div style="padding:16px;color:var(--text-light);">Загрузка данных…</div>';if(status)status.textContent=result&&result.message||'Загрузка…';return;}
     var rows=result.rows||[];
     var storeIsAll=(storeSelect.value||'all')==='all';
-    if(status)status.textContent=periodLabel+' · '+(storeIsAll?'все магазины':String(STORES[storeSelect.value]||storeSelect.value))+' · карточек в рейтинге: '+rows.length;
+    if(status)status.textContent=periodLabel+' · '+(storeIsAll?'все магазины':String(STORES[storeSelect.value]||storeSelect.value))+' · показано '+Math.min(purchaseRankingVisibleCount,rows.length)+' из '+rows.length+' карточек';
     var more=document.getElementById('purchaseRankingMore');
     if(!rows.length){list.innerHTML='<div style="padding:16px;color:var(--text-light);">За выбранный период нет продаж, привязанных к карточкам склада.</div>';if(more)more.innerHTML='';return;}
     var visibleRows=rows.slice(0,purchaseRankingVisibleCount);
