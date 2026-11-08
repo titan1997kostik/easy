@@ -873,7 +873,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <div class="payment-method" onclick="selectPayment(this, 'Перевод')">Перевод</div>
                 <div class="payment-method" onclick="selectPayment(this, 'СБП')">СБП</div>
                 <div class="payment-method" onclick="selectSplitPayment(this)" style="grid-column: 1 / -1; background: linear-gradient(135deg, #f0f4ff, #e8eeff); border-color: #667eea;">Раздельная оплата</div>
-                <button type="button" id="promotionSaleToggle" class="btn btn-secondary" aria-pressed="false" onclick="togglePromotionSale()" style="grid-column:1 / -1;padding:7px 12px;font-size:12px;">🎟 Акция</button>
+                <button type="button" id="promotionSaleToggle" role="switch" aria-checked="false" aria-pressed="false" onclick="togglePromotionSale()" style="grid-column:1 / -1;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#f1f5f9;color:#475569;font-size:13px;font-weight:600;cursor:pointer;"><span id="promotionSaleTrack" style="display:inline-flex;align-items:center;width:38px;height:22px;padding:3px;border-radius:20px;background:#94a3b8;transition:background .18s;"><span id="promotionSaleThumb" style="display:block;width:16px;height:16px;border-radius:50%;background:#fff;transform:translateX(0);transition:transform .18s;"></span></span><span id="promotionSaleLabel">Акция выключена</span></button>
             </div>
             <div id="splitPaymentFields" style="display:none; margin-bottom:15px; padding:12px; background:rgba(102,126,234,0.05); border-radius:8px; border:1px solid rgba(102,126,234,0.2);">
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -4231,15 +4231,26 @@ function clearSaleGender() {
     });
 }
 
+function updatePromotionSaleToggle() {
+    var button = document.getElementById('promotionSaleToggle');
+    var track = document.getElementById('promotionSaleTrack');
+    var thumb = document.getElementById('promotionSaleThumb');
+    var label = document.getElementById('promotionSaleLabel');
+    if (button) {
+        button.setAttribute('aria-checked', promotionSaleEnabled ? 'true' : 'false');
+        button.setAttribute('aria-pressed', promotionSaleEnabled ? 'true' : 'false');
+        button.style.background = promotionSaleEnabled ? '#ecfdf5' : '#f1f5f9';
+        button.style.borderColor = promotionSaleEnabled ? '#86efac' : '#cbd5e1';
+        button.style.color = promotionSaleEnabled ? '#166534' : '#475569';
+    }
+    if (track) track.style.background = promotionSaleEnabled ? '#16a34a' : '#94a3b8';
+    if (thumb) thumb.style.transform = promotionSaleEnabled ? 'translateX(16px)' : 'translateX(0)';
+    if (label) label.textContent = promotionSaleEnabled ? 'Акция включена' : 'Акция выключена';
+}
+
 function togglePromotionSale() {
     promotionSaleEnabled = !promotionSaleEnabled;
-    var button = document.getElementById('promotionSaleToggle');
-    if (button) {
-        button.classList.toggle('btn-success', promotionSaleEnabled);
-        button.classList.toggle('btn-secondary', !promotionSaleEnabled);
-        button.setAttribute('aria-pressed', promotionSaleEnabled ? 'true' : 'false');
-        button.textContent = promotionSaleEnabled ? '✓ Акция' : '🎟 Акция';
-    }
+    updatePromotionSaleToggle();
 }
 
 function selectPayment(el, method) {
@@ -4840,8 +4851,7 @@ function saveSale() {
         if (totalDisplay) totalDisplay.textContent = 'Итого: 0 руб.';
         activePaymentMethod = '';
         promotionSaleEnabled = false;
-        var promotionToggle = document.getElementById('promotionSaleToggle');
-        if (promotionToggle) { promotionToggle.classList.remove('btn-success'); promotionToggle.classList.add('btn-secondary'); promotionToggle.setAttribute('aria-pressed', 'false'); promotionToggle.textContent = '🎟 Акция'; }
+        updatePromotionSaleToggle();
         if (adminDateInput) adminDateInput.value = '';
         saveAllToLocal();
         renderAll();
@@ -6981,7 +6991,14 @@ function renderSalesTable() {
             ? String(sale.payment1 || 'Способ 1') + ' (' + (Number(sale.amount1) || 0).toLocaleString('ru-RU') + ' руб.) + ' + String(sale.payment2 || 'Способ 2') + ' (' + (Number(sale.amount2) || 0).toLocaleString('ru-RU') + ' руб.)'
             : String(sale.payment || 'Не указана');
         [date, getSaleHistoryDisplayName(sale), String(sale.storeName || STORES[sale.storeId] || ''), (Number(sale.price) || 0).toLocaleString('ru-RU') + ' руб.', payDisplay, String(sale.seller || sale.sellerName || '')].forEach(function(value, index) {
-            var td = document.createElement('td'); td.textContent = value;
+            var td = document.createElement('td');
+            if (index === 1 && sale.isPromotion === true) {
+                td.appendChild(document.createTextNode(value + ' '));
+                var promotionBadge = document.createElement('span');
+                promotionBadge.textContent = 'АКЦИЯ';
+                promotionBadge.style.cssText = 'display:inline-block;margin-left:3px;padding:2px 6px;border-radius:5px;background:#dcfce7;color:#166534;font-size:10px;font-weight:700;white-space:nowrap;vertical-align:middle;';
+                td.appendChild(promotionBadge);
+            } else td.textContent = value;
             if (index === 0) td.style.whiteSpace = 'nowrap';
             tr.appendChild(td);
         });
