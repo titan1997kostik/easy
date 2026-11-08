@@ -552,7 +552,6 @@
     }).filter(function(item) { return !!item.summary; });
 
     var recommendations = [];
-    var nonReturnedChecks = currentSales.checks - currentSales.returnedChecks;
     if (currentSales.checks === 0) {
       recommendations.push(recommendation('info','ℹ','Пока недостаточно продаж для анализа','За выбранный период не найдено продаж в доступных данных. Когда появятся записи, здесь будут динамика выручки, возвраты и сравнение магазинов.','Продажи за период ' + bounds.start.split('-').reverse().join('.') + ' — ' + bounds.end.split('-').reverse().join('.') + '; доступных магазинов: ' + visibleKeys.length + '.','sales'));
     } else if (salesChange !== null && salesChange <= -0.15 && previousSales.checks >= 3 && currentSales.checks >= 3) {
