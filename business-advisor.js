@@ -420,6 +420,13 @@
     var previousExpenses = aggregateExpenses(scope.expenses || [], previousBounds);
     var salesChange = changePercent(currentSales.netRevenue, previousSales.netRevenue);
     var expenseChange = changePercent(currentExpenses.amount, previousExpenses.amount);
+    var financialCurrent = getFinancialSummary(bounds.start, bounds.end, selectedStore);
+    var financialPrevious = getFinancialSummary(bounds.previousStart, bounds.previousEnd, selectedStore);
+    var financeStoreIds = selectedStore === 'all' ? visibleKeys.slice() : [selectedStore];
+    var financeStoreRows = financeStoreIds.map(function(id) {
+      return { id:String(id), name:storeLabel(id), summary:getFinancialSummary(bounds.start, bounds.end, String(id)) };
+    }).filter(function(item) { return !!item.summary; });
+
     var recommendations = [];
     var nonReturnedChecks = currentSales.checks - currentSales.returnedChecks;
     if (currentSales.checks === 0) {
@@ -477,6 +484,7 @@
         recommendations.push(recommendation('info','🧾','Не для всех продаж указана себестоимость','Для ' + missingCosts + ' продаж ещё не заполнена закупочная стоимость. Пока она неизвестна, выводы о реальной прибыли и маржинальности могут быть неполными.','Счётчик использует доступные продажи текущей организации, без удалённых записей и записей до сброса магазина.','costs'));
       }
     }
+    appendFinancialRecommendations(recommendations, financialCurrent, financialPrevious, financeStoreRows);
     if (!recommendations.length) {
       recommendations.push(recommendation('success','✓','Критичных сигналов не обнаружено','По доступным данным и выбранному периоду автоматические проверки не нашли резких отклонений. Это не гарантирует отсутствие проблем — регулярно сверяйте продажи, расходы и остатки.','Проверки: динамика выручки, возвраты, записанные расходы, сравнение магазинов, концентрация продаж и складские сигналы.','analytics'));
     }
@@ -488,6 +496,7 @@
         metricCard('Возвраты', String(currentSales.returnedChecks), 'Доля от продаж: ' + pct(currentSales.returnRate)) +
         metricCard('Записанные расходы', money(currentExpenses.amount), currentExpenses.count + ' записей за период');
     }
+    renderFinancialPanel(financialCurrent, financialPrevious, financeStoreRows, selectedStore);
     var periodLabel = el('businessAdvisorPeriodLabel');
     if (periodLabel) periodLabel.textContent = bounds.start.split('-').reverse().join('.') + ' — ' + bounds.end.split('-').reverse().join('.') + ' · сравнение с предыдущими ' + days + ' днями · ' + (selectedStore === 'all' ? 'все доступные магазины' : storeLabel(selectedStore));
     var recHost = el('businessAdvisorRecommendations');
