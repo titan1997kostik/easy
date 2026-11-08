@@ -3295,6 +3295,7 @@ db.ref('stores_data').on('value', function(snapshot) {
 }, function(error) { setFirebaseCoreDataError('stores_data', error); });
 
 db.ref('orgs_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('orgs_data');
     isRemoteChange = true;
     var val = snapshot.val() || {};
     ORGS = (val && typeof val === 'object') ? val : {};
@@ -3303,9 +3304,10 @@ db.ref('orgs_data').on('value', function(snapshot) {
     if (currentOrgFilter && !ORGS[currentOrgFilter]) currentOrgFilter = 'mine';
     if (currentUser) { refreshOrgSwitcher(); renderOrgsManagement(); renderAll(); }
     isRemoteChange = false;
-});
+}, function(error) { setFirebaseCoreDataError('orgs_data', error); });
 
 db.ref('store_orgs_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('store_orgs_data');
     isRemoteChange = true;
     var val = snapshot.val() || {};
     STORE_ORGS = {};
@@ -3318,7 +3320,7 @@ db.ref('store_orgs_data').on('value', function(snapshot) {
     refreshStoreDropdowns();
     if (currentUser) renderAll();
     isRemoteChange = false;
-});
+}, function(error) { setFirebaseCoreDataError('store_orgs_data', error); });
 
 db.ref('audit_log_data').on('value', function(snapshot) {
     isRemoteChange = true;
