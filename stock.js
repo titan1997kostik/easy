@@ -793,7 +793,8 @@
       var key2=pid+'|'+sid;
       if(!movementByKey[key2])movementByKey[key2]=[];
       movementByKey[key2].push({at:at,delta:Number(m.quantityDelta)||0,before:m.before==null?null:Number(m.before),after:m.after==null?null:Number(m.after),saleId:m.saleId?String(m.saleId):'',source:'movement'});
-      if(m.saleId)saleMovementIds[String(m.saleId)]=true;
+      if(m.saleId&&String(m.type||'')==='sale')saleOutMovementIds[String(m.saleId)]=true;
+      if(m.saleId&&String(m.type||'')==='return')saleReturnMovementIds[String(m.saleId)]=true;
     });
     var soldByKey={};
     salesRows.forEach(function(sale){
@@ -969,7 +970,7 @@
     var now=Date.now(),salesRows=window.sales||[],DAY=86400000;
     var stores=visibleStoreIds().filter(function(id){return selectedStore==='all'||String(id)===String(selectedStore);});
     if(!stores.length)return {ready:true,rows:[],insufficientRows:[],periodDays:0,message:'Нет доступных магазинов для выбранного фильтра.'};
-    var storeSet={},active=allProducts().filter(function(p){return p.status==='active';}),movementByKey={},saleMovementIds={},salesByKey={},untrackedReturns={},earliest=Infinity,earliestBalance=Infinity;
+    var storeSet={},active=allProducts().filter(function(p){return p.status==='active';}),movementByKey={},saleOutMovementIds={},saleReturnMovementIds={},salesByKey={},untrackedReturns={},earliest=Infinity,earliestBalance=Infinity;
     stores.forEach(function(id){storeSet[String(id)]=true;});
     Object.keys(movements).forEach(function(key){
       var m=movements[key];if(!m||String(m.org||'')!==String(org())||!m.storeId)return;
@@ -997,17 +998,15 @@
       if(at<earliest)earliest=at;
       var units=Number(sale.stockQuantity)||1;
       if(!isFinite(units)||units<=0)units=1;
-      if(sale.returned){
-        if(!saleMovementIds[String(sale.id)])untrackedReturns[key2]=true;
-        return;
-      }
-      if(!salesByKey[key2])salesByKey[key2]={units:0,revenue:0};
-      salesByKey[key2].units+=units;
-      salesByKey[key2].revenue+=Math.max(0,Number(sale.price)||0);
-      if(!saleMovementIds[String(sale.id)]){
+      if(sale.returned&&!saleReturnMovementIds[String(sale.id)])untrackedReturns[key2]=true;
+      if(!saleOutMovementIds[String(sale.id)]){
         if(!movementByKey[key2])movementByKey[key2]=[];
         movementByKey[key2].push({at:at,delta:-units,before:null,after:null,saleId:String(sale.id)});
       }
+      if(sale.returned)return;
+      if(!salesByKey[key2])salesByKey[key2]={units:0,revenue:0};
+      salesByKey[key2].units+=units;
+      salesByKey[key2].revenue+=Math.max(0,Number(sale.price)||0);
     });
     if(startDate){
       var startMs=stockLocalDateMs(startDate,false);
