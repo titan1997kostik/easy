@@ -820,7 +820,7 @@
         if(firstAfterStart&&firstAfterStart.before!==null&&isFinite(firstAfterStart.before))opening=firstAfterStart.before;
         else if(!firstAfterStart){
           var balance=balances[sid]&&balances[sid][pid]||{},updated=stockDateMs(balance.updatedAt);
-          if(updated>startMs&&updated<=now)known=false;
+          if(!updated||updated>startMs)known=false;
           else opening=current;
         }else known=false;
         if(opening<0){known=false;opening=0;}
