@@ -4610,10 +4610,12 @@ function renderPurchaseCardRanking() {
         var startInput=document.getElementById('purchaseRankingStartDate'),endInput=document.getElementById('purchaseRankingEndDate');
         if(startInput&&!startInput.value)startInput.value=dateText(addDays(today,-29));
         if(endInput&&!endInput.value)endInput.value=dateText(today);
+        if(startInput)startInput.max=dateText(today);
+        if(endInput)endInput.max=dateText(today);
         startDate=startInput?startInput.value:'';
         endDate=endInput?endInput.value:'';
         var customStart=parseDate(startDate),customEnd=parseDate(endDate);
-        if(!customStart||!customEnd||customStart>customEnd){list.innerHTML='<div style="padding:16px;color:var(--text-light);">Укажите корректный период: дата начала не должна быть позже даты окончания.</div>';if(status)status.textContent='Проверьте даты периода.';return;}
+        if(!customStart||!customEnd||customStart>customEnd||customEnd>today){list.innerHTML='<div style="padding:16px;color:var(--text-light);">Укажите корректный период: дата начала должна быть не позже даты окончания, а дата окончания не может быть в будущем.</div>';if(status)status.textContent='Проверьте даты периода.';return;}
         var rangeDays=Math.floor((customEnd.getTime()-customStart.getTime())/86400000)+1;
         var priorEnd=addDays(customStart,-1),priorStart=addDays(priorEnd,-rangeDays+1);
         previousStart=dateText(priorStart);previousEnd=dateText(priorEnd);
@@ -4650,7 +4652,7 @@ function renderPurchaseCardRanking() {
             (storeIsAll?metric('Магазинов с продажами',n(row.storesWithSales,0)):'')+
             metric('Остаток '+(storeIsAll?'по сети':'в магазине'),n(row.currentStock,0)+' шт.')+
             metric('Выручка',n(row.revenue,0)+' ₽')+
-            metric('Изменение к прошлому периоду','<span style="color:'+trendColor+';">'+h(trend)+'</span>');
+            metric('Динамика продаж к прошлому периоду','<span style="color:'+trendColor+';">'+h(trend)+'</span>');
         return '<article style="border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:12px;min-width:0;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--surface,#f3f4f6);font-size:12px;font-weight:800;flex:0 0 28px;">'+(index+1)+'</div>'+photo+'<div style="font-size:14px;font-weight:700;min-width:0;overflow-wrap:anywhere;">'+h(row.productName)+'</div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:7px;">'+metrics+'</div></article>';
     }).join('');
 }
