@@ -2934,7 +2934,7 @@ db.ref('deleted_stores_data').on('value', function(snapshot) {
     saveAllToLocal();
     refreshStoreDropdowns();
     if (currentUser) renderAll();
-, function(error) { setFirebaseSyncError('deleted_stores_data', error); });
+}, function(error) { setFirebaseSyncError('deleted_stores_data', error); });
 
 db.ref('store_reset_data').on('value', function(snapshot) {
     var remote = snapshot.val() || {};
@@ -2948,7 +2948,7 @@ db.ref('store_reset_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-, function(error) { setFirebaseSyncError('store_reset_data', error); });
+}, function(error) { setFirebaseSyncError('store_reset_data', error); });
 
 db.ref('deleted_sales_data').on('value', function(snapshot) {
     var remote = snapshot.val() || {};
@@ -2960,7 +2960,7 @@ db.ref('deleted_sales_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-, function(error) { setFirebaseSyncError('deleted_sales_data', error); });
+}, function(error) { setFirebaseSyncError('deleted_sales_data', error); });
 
 db.ref('deleted_expenses_data').on('value', function(snapshot) {
     var remote = snapshot.val() || {};
@@ -2972,7 +2972,7 @@ db.ref('deleted_expenses_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-, function(error) { setFirebaseSyncError('deleted_expenses_data', error); });
+}, function(error) { setFirebaseSyncError('deleted_expenses_data', error); });
 
 function applySalesSnapshot(snapshot) {
     var data = snapshot.val() || {};
@@ -3451,7 +3451,7 @@ db.ref('.info/connected').on('value', function(snapshot) {
     }
     if (currentUser) renderAll();
     if (typeof updatePendingSalesNotice === 'function') updatePendingSalesNotice();
-, function(error) {
+}, function(error) {
     syncConnectionKnown = false;
     syncConnected = false;
     setFirebaseSyncError('.info/connected', error);
