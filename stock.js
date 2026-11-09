@@ -13,6 +13,19 @@
   var activeFilter = 'all';
   var adminTab = 'shops';
   var selectedStoreId = '';
+  var selectedStoreOrg = '';
+  function selectedStoreStorageKey(){ return 'easy_stock_selected_store_'+encodeURIComponent(org()); }
+  function restoreSelectedStore(){
+    if(!isAdmin())return;
+    var currentOrg=org();
+    if(selectedStoreOrg===currentOrg)return;
+    selectedStoreOrg=currentOrg;
+    try{selectedStoreId=String(localStorage.getItem(selectedStoreStorageKey())||'');}catch(e){selectedStoreId='';}
+  }
+  function persistSelectedStore(){
+    if(!isAdmin())return;
+    try{localStorage.setItem(selectedStoreStorageKey(),String(selectedStoreId||''));}catch(e){}
+  }
   var searchText = '';
   var editingId = '';
   var selectedPhoto = null;
@@ -180,9 +193,10 @@
     if(isSeller() && (!storeId() || !storeDirection(storeId()))){
       root.innerHTML='<div class="card"><b>Склад ещё не настроен.</b><p>Попросите администратора назначить направление вашего магазина в разделе «Управление магазинами».</p></div>';return;
     }
+    restoreSelectedStore();
     var stores=visibleStoreIds();
     var locations=stockLocationIds();
-    if(isAdmin() && selectedStoreId!=='all' && locations.length && locations.indexOf(String(selectedStoreId))===-1) selectedStoreId=String(stores[0]||warehouseId());
+    if(isAdmin() && selectedStoreId!=='all' && locations.length && locations.indexOf(String(selectedStoreId))===-1){ selectedStoreId=String(stores[0]||warehouseId()); persistSelectedStore(); }
     var list=allProducts().filter(function(p){return isAdmin() ? (activeFilter==='all' || (activeFilter==='pending' ? p.status==='pending' : activeFilter==='active' ? p.status==='active' : p.direction===activeFilter)) : sellerCanSee(p);});
     if(isAdmin() && adminTab==='shops' && selectedStoreId!=='all') list=list.filter(function(p){return qty(p.id,selectedStoreId)>0;});
     if(searchText) list=list.filter(function(p){return norm([p.name,p.article,p.category,p.color,p.size,p.brand,p.model].join(' ')).indexOf(norm(searchText))!==-1;});
@@ -282,7 +296,7 @@
     root.innerHTML=html;
     root.querySelectorAll('[data-stock-tab]').forEach(function(b){b.addEventListener('click',function(){adminTab=b.getAttribute('data-stock-tab');render();});});
     root.querySelectorAll('[data-stock-advisor-move]').forEach(function(b){b.addEventListener('click',function(){moveProduct(b.getAttribute('data-product-id'),b.getAttribute('data-source-id'),{targetId:b.getAttribute('data-target-id'),storesOnly:true,forceAll:true});});});
-    root.querySelectorAll('[data-stock-select-store]').forEach(function(b){b.addEventListener('click',function(){selectedStoreId=b.getAttribute('data-stock-select-store');render();});});
+    root.querySelectorAll('[data-stock-select-store]').forEach(function(b){b.addEventListener('click',function(){selectedStoreId=b.getAttribute('data-stock-select-store');persistSelectedStore();render();});});
     root.querySelectorAll('[data-stock-rename]').forEach(function(el){el.addEventListener('click',function(){renameProduct(el.getAttribute('data-stock-rename'));});});
     root.querySelectorAll('[data-stock-photo]').forEach(function(el){el.addEventListener('click',function(){chooseProductPhoto(el.getAttribute('data-stock-photo'));});});
     root.querySelectorAll('[data-stock-merge-start]').forEach(function(b){b.addEventListener('click',function(){mergeSelectingId=String(b.getAttribute('data-stock-merge-start')||'');render();});});
