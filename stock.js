@@ -132,6 +132,82 @@
     document.head.appendChild(style);
   }
 
+
+  function getStockConsolidationRecommendations(){
+    if(!isAdmin()||!loaded.products||!loaded.balances)return {ready:false,moves:[],promos:[],message:'Складские данные ещё загружаются.'};
+    var now=Date.now(),cutoff=now-90*86400000,stores=visibleStoreIds().map(String),productsList=allProducts().filter(function(p){return p.status==='active'&&!p.mergedInto;}),salesByProduct={};
+    (Array.isArray(window.sales)?window.sales:[]).forEach(function(sale){
+      if(!sale||!sale.stockProductId||!sale.id||sale.returned)return;
+      if(sale.stockOrg&&String(sale.stockOrg)!==String(org()))return;
+      var sid=String(sale.stockStoreId||sale.storeId||'');
+      if(stores.indexOf(sid)===-1||(typeof isStoreDeleted==='function'&&isStoreDeleted(sid)))return;
+      if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(sale.id))return;
+      var resetRecord=sale.storeId?sale:Object.assign({},sale,{storeId:sid});
+      if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(resetRecord))return;
+      var at=stockDateMs(sale.timestamp||sale.createdAt);
+      if(!at||at>now)return;
+      var pid=stockResolvedId(sale.stockProductId),units=Number(sale.stockQuantity)||1;
+      if(!isFinite(units)||units<=0)return;
+      if(!salesByProduct[pid])salesByProduct[pid]={recent:{},all:{}};
+      var group=salesByProduct[pid];
+      group.all[sid]=(group.all[sid]||0)+units;
+      if(at>=cutoff)group.recent[sid]=(group.recent[sid]||0)+units;
+    });
+    var moves=[],promos=[];
+    productsList.forEach(function(product){
+      var pid=String(product.id),sales=salesByProduct[pid]||{recent:{},all:{}},recentTotal=Object.keys(sales.recent).reduce(function(sum,k){return sum+sales.recent[k];},0);
+      var useRecent=recentTotal>=2,ranking=useRecent?sales.recent:sales.all,periodLabel=useRecent?'за последние 90 дней':'за всю доступную историю';
+      var locationsWithStock=[];
+      stores.forEach(function(sid){
+        var balance=balances[sid]&&balances[sid][pid]||{},sizes=Array.isArray(balance.sizes)?balance.sizes.map(String):[];
+        if(!sizes.length||qty(pid,sid)<=0)return;
+        var unique={};sizes.forEach(function(size){unique[size]=(unique[size]||0)+1;});
+        var sizeKeys=Object.keys(unique);
+        if(sizeKeys.length<=2)locationsWithStock.push({storeId:sid,quantity:sizes.length,sizes:sizes,sizeCount:sizeKeys.length,sizeSummary:sizeLabel(sizes)});
+      });
+      if(!locationsWithStock.length)return;
+      var rankedStores=stores.map(function(sid){return {storeId:sid,sold:Number(ranking[sid]||0),stock:qty(pid,sid)};}).sort(function(a,b){return b.sold-a.sold||b.stock-a.stock||stockLocationName(a.storeId).localeCompare(stockLocationName(b.storeId),'ru');});
+      var best=rankedStores.length&&rankedStores[0].sold>0?rankedStores[0]:null;
+      if(!best){
+        locationsWithStock.forEach(function(source){
+          promos.push({productId:pid,productName:String(product.name||'Без названия'),photoUrl:String(product.photoUrl||''),sourceId:source.storeId,sourceName:stockLocationName(source.storeId),quantity:source.quantity,sizeCount:source.sizeCount,sizeSummary:source.sizeSummary,reason:'Нет подтверждённых продаж по карточке, чтобы выбрать магазин-получатель. Остаток стоит рассмотреть для акции.'});
+        });
+        return;
+      }
+      var donors=locationsWithStock.filter(function(source){return source.storeId!==best.storeId;});
+      if(!donors.length){
+        var onlySource=locationsWithStock[0];
+        promos.push({productId:pid,productName:String(product.name||'Без названия'),photoUrl:String(product.photoUrl||''),sourceId:onlySource.storeId,sourceName:stockLocationName(onlySource.storeId),quantity:onlySource.quantity,sizeCount:onlySource.sizeCount,sizeSummary:onlySource.sizeSummary,reason:'Это магазин с лучшими продажами карточки ('+best.sold+' шт. '+periodLabel+'). Другого магазина с подтверждённым спросом нет — рассмотрите акцию для остатка.'});
+        return;
+      }
+      donors.forEach(function(source){
+        moves.push({productId:pid,productName:String(product.name||'Без названия'),photoUrl:String(product.photoUrl||''),sourceId:source.storeId,sourceName:stockLocationName(source.storeId),targetId:best.storeId,targetName:stockLocationName(best.storeId),quantity:source.quantity,sizeCount:source.sizeCount,sizeSummary:source.sizeSummary,targetSold:best.sold,periodLabel:periodLabel,targetStock:best.stock,reason:'В магазине-получателе карточка продавалась лучше: '+best.sold+' шт. '+periodLabel+'. Перенос соберёт остатки в одном магазине.'});
+      });
+    });
+    moves.sort(function(a,b){return b.targetSold-a.targetSold||b.quantity-a.quantity||a.productName.localeCompare(b.productName,'ru');});
+    promos.sort(function(a,b){return b.quantity-a.quantity||a.productName.localeCompare(b.productName,'ru');});
+    return {ready:true,moves:moves,promos:promos,periodDays:90,asOf:new Date(now).toISOString()};
+  }
+  function renderStockAdvisorHtml(){
+    var result=getStockConsolidationRecommendations();
+    if(!result.ready)return '<div class="card">'+esc(result.message||'Загрузка рекомендаций…')+'</div>';
+    var html='<div class="card" style="margin-bottom:14px;"><h3>Помощник склада</h3><p style="font-size:13px;color:var(--text-light);">Ищет карточки, у которых в магазине осталось не более двух разных размеров. Предлагает собрать остатки в магазине с лучшими продажами. Склад хранения не используется как получатель. Если подходящего магазина нет — предлагает рассмотреть акцию.</p><div style="font-size:12px;color:var(--text-light);margin-top:8px;">Сравнение продаж: последние 90 дней; если за этот период продано меньше 2 единиц — используется вся доступная история. Учитываются только продажи, привязанные к карточкам склада, без возвратов.</div></div>';
+    html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:10px;flex-wrap:wrap;"><div><b style="font-size:22px;">'+result.moves.length+'</b><div style="font-size:12px;color:var(--text-light);">предложений перемещения</div></div><div><b style="font-size:22px;">'+result.promos.length+'</b><div style="font-size:12px;color:var(--text-light);">остатков для акции</div></div></div></div>';
+    if(result.moves.length){
+      html+='<h3 style="margin:16px 0 10px;">Куда переместить остатки</h3>';
+      result.moves.forEach(function(item){
+        html+='<div class="card" style="margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">'+(item.photoUrl?'<img src="'+esc(cardPhotoUrl(item.photoUrl))+'" alt="" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:9px;">':'')+'<div style="flex:1;min-width:190px;"><b>'+esc(item.productName)+'</b><div style="font-size:13px;margin-top:5px;">'+esc(item.sourceName)+' → <b>'+esc(item.targetName)+'</b></div><div style="font-size:12px;color:var(--text-light);margin-top:4px;">'+item.quantity+' шт. · '+item.sizeCount+' размера: '+esc(item.sizeSummary)+'</div><div style="font-size:12px;color:var(--text-light);margin-top:5px;">'+esc(item.reason)+'</div></div><button class="btn btn-primary" type="button" data-stock-advisor-move="1" data-product-id="'+esc(item.productId)+'" data-source-id="'+esc(item.sourceId)+'" data-target-id="'+esc(item.targetId)+'">Переместить</button></div>';
+      });
+    }else html+='<div class="card" style="margin-bottom:10px;color:var(--text-light);">Предложений перемещения пока нет.</div>';
+    if(result.promos.length){
+      html+='<h3 style="margin:18px 0 10px;">Рассмотреть акцию</h3>';
+      result.promos.forEach(function(item){
+        html+='<div class="card" style="margin-bottom:10px;"><div style="display:flex;gap:10px;align-items:flex-start;"><div style="flex:1;"><b>'+esc(item.productName)+'</b><div style="font-size:13px;margin-top:5px;">'+esc(item.sourceName)+' · '+item.quantity+' шт. · '+item.sizeCount+' размера: '+esc(item.sizeSummary)+'</div><div style="font-size:12px;color:var(--text-light);margin-top:5px;">'+esc(item.reason)+'</div></div><span style="font-size:12px;font-weight:700;padding:5px 8px;border-radius:8px;background:#fff0f0;color:#a33;">Акция</span></div></div>';
+      });
+    }
+    if(!result.moves.length&&!result.promos.length)html+='<div class="card" style="color:var(--text-light);">Нет карточек с остатками не более чем в двух размерах.</div>';
+    return html;
+  }
   function render(){
     ensureStockActionStyles();
     if(!initPage()) return;
@@ -153,7 +229,7 @@
     list.sort(function(a,b){return Number(b.updatedAt||b.createdAt||0)-Number(a.updatedAt||a.createdAt||0);});
     var html='';
     if(isAdmin()){
-      if(adminTab!=='shops'&&adminTab!=='history')adminTab='shops';html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:7px;flex-wrap:wrap;"><button class="btn '+(adminTab==='shops'?'btn-primary':'btn-secondary')+'" data-stock-tab="shops" type="button">Магазины</button><button class="btn '+(adminTab==='history'?'btn-primary':'btn-secondary')+'" data-stock-tab="history" type="button">История</button></div></div>';
+      if(['shops','history','advisor'].indexOf(adminTab)===-1)adminTab='shops';html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:7px;flex-wrap:wrap;"><button class="btn '+(adminTab==='shops'?'btn-primary':'btn-secondary')+'" data-stock-tab="shops" type="button">Магазины</button><button class="btn '+(adminTab==='advisor'?'btn-primary':'btn-secondary')+'" data-stock-tab="advisor" type="button">Помощник склада</button><button class="btn '+(adminTab==='history'?'btn-primary':'btn-secondary')+'" data-stock-tab="history" type="button">История</button></div></div>';
       if(adminTab==='shops'){
         var totalUnits=0,totalProducts=allProducts().filter(function(p){return p.status==='active';}).length;
         locations.forEach(function(k){Object.keys(balances[k]||{}).forEach(function(pid){totalUnits+=Number((balances[k][pid]||{}).quantity||0);});});
@@ -163,6 +239,7 @@
         if(!stores.length) html+='<div style="color:var(--text-light);">Сначала добавьте магазины в разделе «Магазины».</div>';
         html+='</div></div>';
       }
+      if(adminTab==='advisor') html+=renderStockAdvisorHtml();
     }
     if(!isAdmin() || adminTab==='shops'){
     html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;"><div><h3 style="margin:0 0 4px;">'+(isAdmin()?(selectedStoreId==='all'?'Все товары':'Товары: «'+esc(stockLocationName(selectedStoreId))+'»'):'Товары')+'</h3><div style="font-size:12px;color:var(--text-light);">'+(isAdmin()?'Общий каталог организации':'Каталог вашего магазина')+'</div></div>'+'<button class="btn btn-primary" type="button" onclick="stockOpenForm()">＋ Новая карточка</button>'+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><input id="stockSearch" type="search" placeholder="Поиск по названию, артикулу, цвету…" value="'+esc(searchText)+'" oninput="stockSetSearch(this.value)" style="flex:1;min-width:180px;">';
@@ -244,6 +321,7 @@
     }
     root.innerHTML=html;
     root.querySelectorAll('[data-stock-tab]').forEach(function(b){b.addEventListener('click',function(){adminTab=b.getAttribute('data-stock-tab');render();});});
+    root.querySelectorAll('[data-stock-advisor-move]').forEach(function(b){b.addEventListener('click',function(){moveProduct(b.getAttribute('data-product-id'),b.getAttribute('data-source-id'),{targetId:b.getAttribute('data-target-id'),storesOnly:true});});});
     root.querySelectorAll('[data-stock-select-store]').forEach(function(b){b.addEventListener('click',function(){selectedStoreId=b.getAttribute('data-stock-select-store');render();});});
     root.querySelectorAll('[data-stock-rename]').forEach(function(el){el.addEventListener('click',function(){renameProduct(el.getAttribute('data-stock-rename'));});});
     root.querySelectorAll('[data-stock-photo]').forEach(function(el){el.addEventListener('click',function(){chooseProductPhoto(el.getAttribute('data-stock-photo'));});});
@@ -556,11 +634,14 @@
     Object.keys(movements).forEach(function(mid){var m=movements[mid];if(m&&String(m.productId)===String(id))patch[MOVEMENTS_PATH+'/'+mid+'/productName']=p.name;});
     db.ref().update(patch).then(function(){addAuditSafe('stock_product_delete','Полностью удалена карточка склада: '+p.name);}).catch(function(e){alert('Не удалось удалить карточку: '+e.message);});
   }
-  function moveProduct(id,sourceId){
+  function moveProduct(id,sourceId,moveOptions){
     if(!isAdmin()||!canUse())return;
+    moveOptions=moveOptions||{};
     var p=products[String(id)];if(!p)return;
     var locations=stockLocationIds().map(String),source=String(sourceId);
     var targets=locations.filter(function(k){return k!==source;});
+    if(moveOptions.storesOnly)targets=targets.filter(function(k){return visibleStoreIds().map(String).indexOf(k)!==-1;});
+    var preferredTarget=String(moveOptions.targetId||'');
     if(!targets.length){alert('Нет другого места хранения для перемещения.');return;}
     var sourceBalance=balances[source]&&balances[source][String(id)]||{};
     var sourceSizes=Array.isArray(sourceBalance.sizes)?sourceBalance.sizes.map(String):[];
@@ -577,7 +658,8 @@
     var modal=document.getElementById('stockMoveModal');if(modal)modal.remove();
     modal=document.createElement('div');modal.id='stockMoveModal';
     modal.style.cssText='position:fixed;inset:0;z-index:10080;background:rgba(20,20,25,.55);display:flex;align-items:center;justify-content:center;padding:14px;overflow-y:auto;';
-    var options=targets.map(function(k){return '<option value="'+esc(k)+'">'+esc(stockLocationName(k))+'</option>';}).join('');
+    if(preferredTarget&&targets.indexOf(preferredTarget)===-1)preferredTarget='';
+    var options=targets.map(function(k){return '<option value="'+esc(k)+'" '+(preferredTarget===k?'selected':'')+'>'+esc(stockLocationName(k))+'</option>';}).join('');
     var rows=sortedSizes.map(function(size){
       return '<label style="display:grid;grid-template-columns:minmax(0,1fr) 90px 72px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);"><span style="font-weight:600;">'+esc(size)+' <small style="font-weight:400;color:var(--text-light);">доступно '+counts[size]+'</small></span><input type="number" min="0" max="'+counts[size]+'" step="1" value="0" data-move-size="'+esc(size)+'" style="width:100%;min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px;"><button type="button" class="btn btn-secondary" data-move-all-size="'+esc(size)+'" style="padding:6px;">Все</button></label>';
     }).join('');
@@ -1240,7 +1322,7 @@
   }
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;window.stockGetReplenishmentRecommendations=getReplenishmentRecommendations;window.stockGetCardSalesRanking=getCardSalesRanking;window.stockGetCardSalesAntiRanking=getCardSalesAntiRanking;window.stockInvalidateReplenishmentCache=invalidateReplenishmentCache;
+    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;window.stockGetReplenishmentRecommendations=getReplenishmentRecommendations;window.stockGetCardSalesRanking=getCardSalesRanking;window.stockGetCardSalesAntiRanking=getCardSalesAntiRanking;window.stockGetStockConsolidationRecommendations=getStockConsolidationRecommendations;window.stockInvalidateReplenishmentCache=invalidateReplenishmentCache;
   }
   function start(){
     expose();load();initPage();
