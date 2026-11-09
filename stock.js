@@ -644,15 +644,28 @@
           if(index<0)throw new Error('Остаток изменился. Обновите карточку и повторите перемещение.');
           remaining.splice(index,1);
         });
-        var currentSource=balances[source]&&balances[source][String(id)]||{};
-        var currentTarget=balances[target]&&balances[target][String(id)]||{};
-        if(JSON.stringify(currentSource.sizes||[])!==JSON.stringify(sourceSizes))throw new Error('Остаток источника изменился. Обновите карточку и повторите.');
-        var targetSizes=Array.isArray(currentTarget.sizes)?currentTarget.sizes.map(String):[];
-        var now=Date.now(),patch={};
-        patch[BALANCES_PATH+'/'+source+'/'+id]=Object.assign({},currentSource,{quantity:remaining.length,sizes:remaining,updatedAt:now});
-        patch[BALANCES_PATH+'/'+target+'/'+id]=Object.assign({},currentTarget,{quantity:targetSizes.length+moving.length,sizes:targetSizes.concat(moving),updatedAt:now});
         button.disabled=true;button.textContent='Перемещаем…';
-        db.ref().update(patch).then(function(){
+        var transferError=null,transferTime=Date.now();
+        db.ref(BALANCES_PATH).transaction(function(allBalances){
+          allBalances=allBalances||{};
+          var liveSource=allBalances[source]&&allBalances[source][String(id)]||{};
+          var liveSourceSizes=Array.isArray(liveSource.sizes)?liveSource.sizes.map(String):[];
+          var liveRemaining=liveSourceSizes.slice();
+          for(var moveIndex=0;moveIndex<moving.length;moveIndex++){
+            var liveIndex=liveRemaining.indexOf(moving[moveIndex]);
+            if(liveIndex<0){transferError='Остаток изменился или товара уже недостаточно. Обновите карточку и повторите.';return;}
+            liveRemaining.splice(liveIndex,1);
+          }
+          var liveTarget=allBalances[target]&&allBalances[target][String(id)]||{};
+          var liveTargetSizes=Array.isArray(liveTarget.sizes)?liveTarget.sizes.map(String):[];
+          var nextBalances=Object.assign({},allBalances);
+          nextBalances[source]=Object.assign({},allBalances[source]||{});
+          nextBalances[target]=Object.assign({},allBalances[target]||{});
+          nextBalances[source][String(id)]=Object.assign({},liveSource,{quantity:liveRemaining.length,sizes:liveRemaining,updatedAt:transferTime});
+          nextBalances[target][String(id)]=Object.assign({},liveTarget,{quantity:liveTargetSizes.length+moving.length,sizes:liveTargetSizes.concat(moving),updatedAt:transferTime});
+          return nextBalances;
+        },undefined,false).then(function(result){
+          if(!result.committed)throw new Error(transferError||'Перемещение не выполнено. Остатки не изменены.');
           close();render();alert('Перемещение выполнено: '+moving.length+' шт. ('+sizeLabel(moving)+').');
         }).catch(function(error){
           button.disabled=false;button.textContent='Переместить';
