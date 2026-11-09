@@ -148,6 +148,7 @@
     var locations=stockLocationIds();
     if(isAdmin() && locations.length && locations.indexOf(String(selectedStoreId))===-1) selectedStoreId=String(stores[0]||warehouseId());
     var list=allProducts().filter(function(p){return isAdmin() ? (activeFilter==='all' || (activeFilter==='pending' ? p.status==='pending' : activeFilter==='active' ? p.status==='active' : p.direction===activeFilter)) : sellerCanSee(p);});
+    if(isAdmin() && adminTab==='shops') list=list.filter(function(p){return qty(p.id,selectedStoreId)>0;});
     if(searchText) list=list.filter(function(p){return norm([p.name,p.article,p.category,p.color,p.size,p.brand,p.model].join(' ')).indexOf(norm(searchText))!==-1;});
     list.sort(function(a,b){return Number(b.updatedAt||b.createdAt||0)-Number(a.updatedAt||a.createdAt||0);});
     var html='';
@@ -171,7 +172,7 @@
       var selectedMain=products[mergeSelectingId];
       html+='<div class="card" style="margin-bottom:12px;border:1px solid var(--warning);"><b>Выбрана главная карточка:</b> '+esc(selectedMain&&selectedMain.name||'Товар')+'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">Теперь выберите вторую карточку. Объединение доступно, только если фактические остатки находятся в разных магазинах.</div></div>';
     }
-    if(!list.length) html+='<div class="card" style="text-align:center;color:var(--text-light);">Карточек пока нет. Создайте первую карточку товара.</div>';
+    if(!list.length) html+='<div class="card" style="text-align:center;color:var(--text-light);">В выбранном магазине или на складе пока нет товаров с остатком.</div>';
     list.forEach(function(p){
       var balanceStoreId=isAdmin()?String(selectedStoreId):String(storeId());
       var currentBalance=balances[balanceStoreId]&&balances[balanceStoreId][String(p.id)]||{};
