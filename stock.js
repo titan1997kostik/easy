@@ -558,38 +558,109 @@
   function moveProduct(id,sourceId){
     if(!isAdmin()||!canUse())return;
     var p=products[String(id)];if(!p)return;
-    var locations=stockLocationIds(),source=String(sourceId);
+    var locations=stockLocationIds().map(String),source=String(sourceId);
     var targets=locations.filter(function(k){return k!==source;});
     if(!targets.length){alert('Нет другого места хранения для перемещения.');return;}
-    var menu=targets.map(function(k,n){return (n+1)+'. '+stockLocationName(k)+' ['+k+']';}).join('\\n');
-    var choice=prompt('Куда переместить товар «'+p.name+'»? Введите номер места назначения:\\n'+menu,'1');
-    if(choice===null)return;
-    var target=String(choice).trim();
-    if(/^\\d+$/.test(target)&&Number(target)>=1&&Number(target)<=targets.length)target=targets[Number(target)-1];
-    if(targets.indexOf(target)<0){alert('Место назначения не найдено.');return;}
     var sourceBalance=balances[source]&&balances[source][String(id)]||{};
-    var sourceSizes=Array.isArray(sourceBalance.sizes)?sourceBalance.sizes.slice():[];
+    var sourceSizes=Array.isArray(sourceBalance.sizes)?sourceBalance.sizes.map(String):[];
     if(!sourceSizes.length){alert('В выбранном месте нет размеров для перемещения.');return;}
-    var mode=prompt('Выберите вариант:\\n1 — Переместить целиком (все размеры и остатки)\\n2 — Переместить отдельные размеры','1');
-    if(mode===null)return;
-    var moving=[];
-    if(String(mode).trim()==='1')moving=sourceSizes.slice();
-    else if(String(mode).trim()==='2'){
-      var available={};sourceSizes.forEach(function(z){var k=String(z);available[k]=(available[k]||0)+1;});
-      var request=prompt('Введите размеры для перемещения через запятую. Повтор размера означает количество.\\nДоступно: '+sizeLabel(sourceSizes), '');
-      if(request===null)return;
-      moving=request.split(',').map(function(x){return String(x).trim().toUpperCase();}).filter(Boolean);
-      var wanted={};moving.forEach(function(z){wanted[z]=(wanted[z]||0)+1;});
-      if(!moving.length||Object.keys(wanted).some(function(k){return wanted[k]>(available[k]||0);})){alert('Указаны размеры или количества, которых нет в остатке. Ничего не перемещено.');return;}
-    }else{alert('Выберите 1 или 2.');return;}
-    var targetBalance=balances[target]&&balances[target][String(id)]||{},targetSizes=Array.isArray(targetBalance.sizes)?targetBalance.sizes.slice():[];
-    var remaining=sourceSizes.slice();
-    moving.forEach(function(z){var ix=remaining.indexOf(z);if(ix>=0)remaining.splice(ix,1);});
-    var now=Date.now(),mid=uid('sm'),patch={};
-    patch[BALANCES_PATH+'/'+source+'/'+id]={quantity:remaining.length,sizes:remaining,updatedAt:now};
-    patch[BALANCES_PATH+'/'+target+'/'+id]={quantity:targetSizes.length+moving.length,sizes:targetSizes.concat(moving),updatedAt:now};
-    [source,target].forEach(function(loc,index){var before=index===0?sourceSizes.length:targetSizes.length,after=index===0?remaining.length:targetSizes.length+moving.length,delta=after-before,movementId=mid+'_'+index;patch[MOVEMENTS_PATH+'/'+movementId]={id:movementId,org:org(),productId:String(id),productName:p.name,storeId:loc,type:'transfer',quantityDelta:delta,before:before,after:after,transferId:mid,fromLocation:source,toLocation:target,sizes:moving.slice(),note:'Перемещение '+stockLocationName(source)+' → '+stockLocationName(target),createdAt:now,createdById:String(user().id),createdByName:user().name||''};});
-    db.ref().update(patch).then(function(){addAuditSafe('stock_transfer','Перемещён товар «'+p.name+'»: '+stockLocationName(source)+' → '+stockLocationName(target)+', '+moving.length+' шт. ('+sizeLabel(moving)+')');render();alert('Перемещение выполнено: '+moving.length+' шт.');}).catch(function(e){alert('Не удалось переместить товар: '+(e&&e.message||e));});
+    var counts={};
+    sourceSizes.forEach(function(size){counts[size]=(counts[size]||0)+1;});
+    var sortedSizes=Object.keys(counts).sort(function(a,b){
+      var an=/^\d+$/.test(a),bn=/^\d+$/.test(b);
+      if(an&&bn)return Number(a)-Number(b);
+      if(an)return -1;if(bn)return 1;
+      var letters=['XXS','XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
+      return letters.indexOf(a.toUpperCase())-letters.indexOf(b.toUpperCase());
+    });
+    var modal=document.getElementById('stockMoveModal');if(modal)modal.remove();
+    modal=document.createElement('div');modal.id='stockMoveModal';
+    modal.style.cssText='position:fixed;inset:0;z-index:10080;background:rgba(20,20,25,.55);display:flex;align-items:center;justify-content:center;padding:14px;overflow-y:auto;';
+    var options=targets.map(function(k){return '<option value="'+esc(k)+'">'+esc(stockLocationName(k))+'</option>';}).join('');
+    var rows=sortedSizes.map(function(size){
+      return '<label style="display:grid;grid-template-columns:minmax(0,1fr) 90px 72px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);"><span style="font-weight:600;">'+esc(size)+' <small style="font-weight:400;color:var(--text-light);">доступно '+counts[size]+'</small></span><input type="number" min="0" max="'+counts[size]+'" step="1" value="0" data-move-size="'+esc(size)+'" style="width:100%;min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px;"><button type="button" class="btn btn-secondary" data-move-all-size="'+esc(size)+'" style="padding:6px;">Все</button></label>';
+    }).join('');
+    modal.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="stockMoveTitle" style="width:100%;max-width:480px;max-height:90vh;overflow:auto;background:var(--card,#fff);color:var(--text);border-radius:14px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.25);">'
+      +'<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;"><h3 id="stockMoveTitle" style="margin:0;">Перемещение товара</h3><button type="button" data-move-close="1" aria-label="Закрыть" style="border:0;background:transparent;font-size:24px;cursor:pointer;">×</button></div>'
+      +'<p style="margin:8px 0 14px;font-weight:600;">'+esc(p.name||'Товар')+'</p>'
+      +'<div style="font-size:13px;color:var(--text-light);margin-bottom:5px;">Откуда</div><div style="padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:12px;">'+esc(stockLocationName(source))+'</div>'
+      +'<label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;" for="stockMoveTarget">Куда переместить</label><select id="stockMoveTarget" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,#fff);color:var(--text);">'+options+'</select>'
+      +'<div style="font-size:13px;font-weight:600;margin:16px 0 7px;">Количество</div>'
+      +'<label style="display:flex;gap:8px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;"><input type="radio" name="stockMoveMode" value="all" checked> <span>Переместить весь остаток — '+sourceSizes.length+' шт.</span></label>'
+      +'<label style="display:flex;gap:8px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:8px;"><input type="radio" name="stockMoveMode" value="partial"> <span>Выбрать размеры и количество</span></label>'
+      +'<div id="stockMoveSizes" style="display:none;margin-top:8px;">'+rows+'</div>'
+      +'<div id="stockMoveSummary" style="font-size:13px;color:var(--text-light);margin-top:12px;">Будет перемещено: '+sourceSizes.length+' шт.</div>'
+      +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;"><button type="button" class="btn btn-secondary" data-move-close="1">Отмена</button><button type="button" class="btn btn-primary" id="stockMoveConfirm">Переместить</button></div>'
+      +'</div>';
+    document.body.appendChild(modal);
+    function close(){if(modal&&modal.parentNode)modal.parentNode.removeChild(modal);}
+    function selectedSizes(){
+      var mode=modal.querySelector('input[name="stockMoveMode"]:checked');
+      if(!mode||mode.value==='all')return sourceSizes.slice();
+      var wanted=[];
+      modal.querySelectorAll('[data-move-size]').forEach(function(input){
+        var n=Number(input.value),max=Number(input.max);
+        if(!Number.isInteger(n)||n<0||n>max)throw new Error('Проверьте количество для размера '+input.getAttribute('data-move-size')+'.');
+        for(var j=0;j<n;j++)wanted.push(String(input.getAttribute('data-move-size')));
+      });
+      return wanted;
+    }
+    function updateSummary(){
+      try{
+        var n=selectedSizes().length,summary=modal.querySelector('#stockMoveSummary');
+        if(summary)summary.textContent='Будет перемещено: '+n+' шт.';
+        var confirmButton=modal.querySelector('#stockMoveConfirm');
+        if(confirmButton)confirmButton.disabled=n===0;
+      }catch(e){
+        var summaryError=modal.querySelector('#stockMoveSummary');
+        if(summaryError)summaryError.textContent=e.message;
+        var confirmError=modal.querySelector('#stockMoveConfirm');if(confirmError)confirmError.disabled=true;
+      }
+    }
+    modal.querySelectorAll('[data-move-close]').forEach(function(b){b.addEventListener('click',close);});
+    modal.querySelectorAll('input[name="stockMoveMode"]').forEach(function(r){
+      r.addEventListener('change',function(){
+        modal.querySelector('#stockMoveSizes').style.display=r.value==='partial'&&r.checked?'block':'none';
+        updateSummary();
+      });
+    });
+    modal.querySelectorAll('[data-move-size]').forEach(function(input){input.addEventListener('input',updateSummary);});
+    modal.querySelectorAll('[data-move-all-size]').forEach(function(button){
+      button.addEventListener('click',function(){
+        var size=button.getAttribute('data-move-all-size'),input=modal.querySelector('[data-move-size="'+size.replace(/"/g,'\\"')+'"]');
+        if(input){input.value=input.max;var partial=modal.querySelector('input[name="stockMoveMode"][value="partial"]');partial.checked=true;modal.querySelector('#stockMoveSizes').style.display='block';updateSummary();}
+      });
+    });
+    modal.querySelector('#stockMoveConfirm').addEventListener('click',function(){
+      var button=modal.querySelector('#stockMoveConfirm');
+      try{
+        var moving=selectedSizes(),target=String(modal.querySelector('#stockMoveTarget').value||'');
+        if(!targets.includes(target))throw new Error('Выберите корректное место назначения.');
+        if(!moving.length)throw new Error('Укажите количество для перемещения.');
+        if(moving.length>sourceSizes.length)throw new Error('Нельзя переместить больше остатка.');
+        var remaining=sourceSizes.slice();
+        moving.forEach(function(size){
+          var index=remaining.indexOf(size);
+          if(index<0)throw new Error('Остаток изменился. Обновите карточку и повторите перемещение.');
+          remaining.splice(index,1);
+        });
+        var currentSource=balances[source]&&balances[source][String(id)]||{};
+        var currentTarget=balances[target]&&balances[target][String(id)]||{};
+        if(JSON.stringify(currentSource.sizes||[])!==JSON.stringify(sourceSizes))throw new Error('Остаток источника изменился. Обновите карточку и повторите.');
+        var targetSizes=Array.isArray(currentTarget.sizes)?currentTarget.sizes.map(String):[];
+        var now=Date.now(),patch={};
+        patch[BALANCES_PATH+'/'+source+'/'+id]=Object.assign({},currentSource,{quantity:remaining.length,sizes:remaining,updatedAt:now});
+        patch[BALANCES_PATH+'/'+target+'/'+id]=Object.assign({},currentTarget,{quantity:targetSizes.length+moving.length,sizes:targetSizes.concat(moving),updatedAt:now});
+        button.disabled=true;button.textContent='Перемещаем…';
+        db.ref().update(patch).then(function(){
+          close();render();alert('Перемещение выполнено: '+moving.length+' шт. ('+sizeLabel(moving)+').');
+        }).catch(function(error){
+          button.disabled=false;button.textContent='Переместить';
+          alert('Не удалось переместить товар: '+(error&&error.message||error));
+        });
+      }catch(error){alert(error&&error.message||String(error));}
+    });
+    modal.addEventListener('click',function(event){if(event.target===modal)close();});
   }
   function activeStockStores(productId){
     return visibleStoreIds().filter(function(store){
