@@ -21,7 +21,7 @@
   var refs = {};
   var replenishmentCache = Object.create(null);
   var replenishmentCacheRevision = 0;
-  function invalidateReplenishmentCache(){ replenishmentCache = Object.create(null); replenishmentCacheRevision++; }
+  function invalidateReplenishmentCache(){ replenishmentCache = Object.create(null); replenishmentCacheRevision++; if(adminTab==='advisor')render(); }
 
   function user(){ return window.currentUser || null; }
   function isAdmin(){ return !!(user() && user().role === 'admin'); }
