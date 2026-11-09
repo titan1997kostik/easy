@@ -145,10 +145,10 @@
         var unique={};sizes.forEach(function(size){unique[size]=(unique[size]||0)+1;});
         locations.push({storeId:sid,sizes:sizes,quantity:sizes.length,sizeCount:Object.keys(unique).length,sizeSummary:sizeLabel(sizes)});
       });
-      locations.filter(function(source){return source.sizeCount<=2;}).forEach(function(source){
-        var targets=locations.filter(function(x){return x.storeId!==source.storeId;}).sort(function(a,b){return b.quantity-a.quantity||stockLocationName(a.storeId).localeCompare(stockLocationName(b.storeId),'ru');});
-        if(!targets.length)return;
-        var target=targets[0],after=target.sizes.concat(source.sizes);
+      if(!locations.length)return;
+      var target=locations.slice().sort(function(a,b){return b.quantity-a.quantity||stockLocationName(a.storeId).localeCompare(stockLocationName(b.storeId),'ru');})[0];
+      locations.filter(function(source){return source.sizeCount<=2&&source.storeId!==target.storeId;}).forEach(function(source){
+        var after=target.sizes.concat(source.sizes);
         moves.push({productId:pid,productName:String(product.name||'Без названия'),photoUrl:String(product.photoUrl||''),sourceId:source.storeId,sourceName:stockLocationName(source.storeId),sourceSizes:source.sizes.slice(),quantity:source.quantity,sizeCount:source.sizeCount,sizeSummary:source.sizeSummary,targetId:target.storeId,targetName:stockLocationName(target.storeId),targetSizes:target.sizes.slice(),targetSummary:sizeLabel(target.sizes),targetStock:target.quantity,afterSizes:after,afterSummary:sizeLabel(after),reason:'Переносится весь остаток карточки из магазина-донора. Получатель выбран по наибольшему текущему остатку этой карточки.'});
       });
     });
