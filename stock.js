@@ -31,6 +31,7 @@
   var editingId = '';
   var selectedPhoto = null;
   var mergeSelectingId = '';
+  var mergeSelectingStoreId = '';
   var formSizes = [];
   var refs = {};
   var replenishmentCache = Object.create(null);
@@ -296,9 +297,9 @@
       if(canEditCard(p)) html+='<button class="btn btn-secondary" type="button" onclick="stockOpenForm(\''+esc(p.id)+'\')">Изменить</button>';
       if(isAdmin() && selectedStoreId!=='all' && p.status==='active') html+='<button class="btn btn-primary" type="button" onclick="stockMove(\''+esc(p.id)+'\',\''+esc(balanceStoreId)+'\')">Переместить</button>';
       if(isAdmin() && p.status==='active'){
-        if(!mergeSelectingId) html+='<button class="btn btn-warning" type="button" data-stock-merge-start="'+esc(p.id)+'">Объединить</button>';
+        if(!mergeSelectingId) html+='<button class="btn btn-warning" type="button" data-stock-merge-start="'+esc(p.id)+'">Выбрать для объединения</button>';
         else if(String(mergeSelectingId)!==String(p.id)){
-          var eligibility=mergeEligibility(mergeSelectingId,p.id);
+          var eligibility=mergeEligibility(mergeSelectingId,p.id,mergeSelectingStoreId,selectedStoreId);
           html+='<button class="btn '+(eligibility.ok?'btn-warning':'btn-secondary')+'" type="button" data-stock-merge-finish="'+esc(p.id)+'" '+(eligibility.ok?'':'disabled title="'+esc(eligibility.reason)+'"')+'>Объединить</button>';
           if(!eligibility.ok)html+='<div style="flex-basis:100%;font-size:11px;color:var(--danger,#b42318);margin-top:3px;">'+esc(eligibility.reason)+'</div>';
         } else html+='<button class="btn btn-secondary" type="button" data-stock-merge-cancel="1">Отменить выбор</button>';
@@ -362,9 +363,15 @@
     root.querySelectorAll('[data-stock-select-store]').forEach(function(b){b.addEventListener('click',function(){selectedStoreId=b.getAttribute('data-stock-select-store');persistSelectedStore();render();});});
     root.querySelectorAll('[data-stock-rename]').forEach(function(el){el.addEventListener('click',function(){renameProduct(el.getAttribute('data-stock-rename'));});});
     root.querySelectorAll('[data-stock-photo]').forEach(function(el){el.addEventListener('click',function(){chooseProductPhoto(el.getAttribute('data-stock-photo'));});});
-    root.querySelectorAll('[data-stock-merge-start]').forEach(function(b){b.addEventListener('click',function(){mergeSelectingId=String(b.getAttribute('data-stock-merge-start')||'');render();});});
-    root.querySelectorAll('[data-stock-merge-cancel]').forEach(function(b){b.addEventListener('click',function(){mergeSelectingId='';render();});});
-    root.querySelectorAll('[data-stock-merge-finish]').forEach(function(b){b.addEventListener('click',function(){merge(mergeSelectingId,b.getAttribute('data-stock-merge-finish'));});});
+    root.querySelectorAll('[data-stock-merge-start]').forEach(function(b){b.addEventListener('click',function(){
+      var origin=String(selectedStoreId||'');
+      if(!origin||origin==='all'||stockLocationIds().map(String).indexOf(origin)===-1){alert('Сначала откройте конкретный магазин или склад и выберите карточку в нём.');return;}
+      var productId=String(b.getAttribute('data-stock-merge-start')||'');
+      if(qty(productId,origin)<=0){alert('У этой карточки нет остатка в выбранной локации.');return;}
+      mergeSelectingId=productId;mergeSelectingStoreId=origin;render();
+    });});
+    root.querySelectorAll('[data-stock-merge-cancel]').forEach(function(b){b.addEventListener('click',function(){mergeSelectingId='';mergeSelectingStoreId='';render();});});
+    root.querySelectorAll('[data-stock-merge-finish]').forEach(function(b){b.addEventListener('click',function(){merge(mergeSelectingId,b.getAttribute('data-stock-merge-finish'),mergeSelectingStoreId,selectedStoreId);});});
   }
 
   function openCatalog(){
@@ -877,16 +884,20 @@
       return Number(qty(productId,location))>0;
     }).map(String);
   }
-  function mergeEligibility(mainId,sourceId){
+  function mergeEligibility(mainId,sourceId,mainOrigin,sourceOrigin){
     var main=products[String(mainId)],source=products[String(sourceId)];
     if(!main||!source)return {ok:false,reason:'Карточка не найдена.'};
     if(String(mainId)===String(sourceId))return {ok:false,reason:'Нельзя объединить карточку саму с собой.'};
     if(main.status!=='active'||source.status!=='active'||main.mergedInto||source.mergedInto)return {ok:false,reason:'Можно объединять только активные карточки.'};
     if(main.org!==source.org || (main.direction&&source.direction&&main.direction!==source.direction))return {ok:false,reason:'Карточки должны относиться к одной организации и направлению.'};
+    var locations=stockLocationIds().map(String);
+    mainOrigin=String(mainOrigin||'');sourceOrigin=String(sourceOrigin||'');
+    if(!mainOrigin||!sourceOrigin||mainOrigin==='all'||sourceOrigin==='all'||locations.indexOf(mainOrigin)===-1||locations.indexOf(sourceOrigin)===-1)return {ok:false,reason:'Выберите для каждой карточки отдельный магазин или склад хранения.'};
+    if(mainOrigin===sourceOrigin)return {ok:false,reason:'Нельзя объединять две карточки из одного магазина или склада. Выберите другую локацию.'};
+    if(qty(mainId,mainOrigin)<=0)return {ok:false,reason:'У первой карточки нет остатка в выбранной локации: '+stockLocationName(mainOrigin)+'.'};
+    if(qty(sourceId,sourceOrigin)<=0)return {ok:false,reason:'У второй карточки нет остатка в выбранной локации: '+stockLocationName(sourceOrigin)+'.'};
     var mainLocations=activeStockLocations(mainId),sourceLocations=activeStockLocations(sourceId);
-    if(!mainLocations.length||!sourceLocations.length)return {ok:false,reason:'У обеих карточек должны быть фактические остатки в магазинах или на складе хранения.'};
-    var overlap=mainLocations.filter(function(location){return sourceLocations.indexOf(location)!==-1;});
-    return {ok:true,mainLocations:mainLocations,sourceLocations:sourceLocations,overlapLocations:overlap};
+    return {ok:true,mainLocations:mainLocations,sourceLocations:sourceLocations,mainOrigin:mainOrigin,sourceOrigin:sourceOrigin};
   }
   function mergeCompareCardHtml(product,role,locations){
     var total=locations.reduce(function(sum,location){return sum+qty(product.id,location);},0);
@@ -913,10 +924,10 @@
     return html;
   }
 
-  function merge(mainId,sourceId){
+  function merge(mainId,sourceId,mainOrigin,sourceOrigin){
     if(!isAdmin()||!canUse())return;
     mainId=String(mainId||'');sourceId=String(sourceId||'');
-    var eligibility=mergeEligibility(mainId,sourceId);
+    var eligibility=mergeEligibility(mainId,sourceId,mainOrigin,sourceOrigin);
     if(!eligibility.ok){alert(eligibility.reason);return;}
     var main=products[mainId],source=products[sourceId];
     var locations=stockLocationIds().map(String);
@@ -935,7 +946,7 @@
       +'<div style="margin-top:12px;padding:11px;border:1px solid var(--border);border-radius:9px;font-size:13px;">'
       +'<b>Что произойдёт:</b> остатки и размеры второй карточки будут перенесены в первую в локациях: '
       +'<b>'+esc(eligibility.sourceLocations.map(function(location){return stockLocationName(location);}).join(', '))+'</b>. '
-      +'Первая карточка останется основной, вторая будет помечена как объединённая.</div>'
+      +'Первая карточка из «'+esc(stockLocationName(mainOrigin))+'» останется основной. Вторая карточка из «'+esc(stockLocationName(sourceOrigin))+'» будет объединена с ней.</div>'
       +'<div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px;">'
       +'<button type="button" class="btn btn-secondary" data-merge-close>Отмена</button>'
       +'<button type="button" class="btn btn-warning" data-merge-confirm>Подтвердить объединение</button>'
@@ -957,7 +968,7 @@
     var confirmButton=modal.querySelector('[data-merge-confirm]');
     confirmButton.addEventListener('click',function(){
       if(!isAdmin()||!canUse()){closeModal();alert('Соединение потеряно. Объединение не выполнено.');return;}
-      var currentEligibility=mergeEligibility(mainId,sourceId);
+      var currentEligibility=mergeEligibility(mainId,sourceId,mainOrigin,sourceOrigin);
       if(!currentEligibility.ok){closeModal();alert('Остатки изменились. Проверьте карточки ещё раз: '+currentEligibility.reason);render();return;}
       var currentMain=products[mainId],currentSource=products[sourceId];
       if(!currentMain||!currentSource){closeModal();alert('Одна из карточек больше недоступна. Объединение не выполнено.');render();return;}
@@ -999,6 +1010,7 @@
       db.ref().update(patch).then(function(){
         closeModal();
         mergeSelectingId='';
+        mergeSelectingStoreId='';
         addAuditSafe('stock_product_merge','Объединена карточка «'+currentSource.name+'» в главную карточку «'+currentMain.name+'». Перенесены локации: '+sourceLocationNames);
         render();
       }).catch(function(error){
