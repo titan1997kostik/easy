@@ -809,9 +809,10 @@
     });
     modal.addEventListener('click',function(event){if(event.target===modal)close();});
   }
-  function activeStockStores(productId){
-    return visibleStoreIds().filter(function(store){
-      return Number(qty(productId,store))>0;
+  function activeStockLocations(productId){
+    // Include the organization's warehouse as well as retail stores.
+    return stockLocationIds().filter(function(location){
+      return Number(qty(productId,location))>0;
     }).map(String);
   }
   function mergeEligibility(mainId,sourceId){
@@ -820,11 +821,11 @@
     if(String(mainId)===String(sourceId))return {ok:false,reason:'Нельзя объединить карточку саму с собой.'};
     if(main.status!=='active'||source.status!=='active'||main.mergedInto||source.mergedInto)return {ok:false,reason:'Можно объединять только активные карточки.'};
     if(main.org!==source.org || (main.direction&&source.direction&&main.direction!==source.direction))return {ok:false,reason:'Карточки должны относиться к одной организации и направлению.'};
-    var mainStores=activeStockStores(mainId),sourceStores=activeStockStores(sourceId);
-    if(!mainStores.length||!sourceStores.length)return {ok:false,reason:'У обеих карточек должны быть фактические остатки.'};
-    var overlap=mainStores.filter(function(s){return sourceStores.indexOf(s)!==-1;});
-    if(overlap.length)return {ok:false,reason:'В обеих карточках есть остатки в одном магазине: '+overlap.map(function(s){return String(STORES[s]||s);}).join(', ')+'.'};
-    return {ok:true,mainStores:mainStores,sourceStores:sourceStores};
+    var mainLocations=activeStockLocations(mainId),sourceLocations=activeStockLocations(sourceId);
+    if(!mainLocations.length||!sourceLocations.length)return {ok:false,reason:'У обеих карточек должны быть фактические остатки в магазинах или на складе хранения.'};
+    var overlap=mainLocations.filter(function(location){return sourceLocations.indexOf(location)!==-1;});
+    if(overlap.length)return {ok:false,reason:'В обеих карточках есть остатки в одной локации: '+overlap.map(function(location){return stockLocationName(location);}).join(', ')+'.'};
+    return {ok:true,mainLocations:mainLocations,sourceLocations:sourceLocations};
   }
   function merge(mainId,sourceId){
     if(!isAdmin()||!canUse())return;
@@ -832,23 +833,23 @@
     var eligibility=mergeEligibility(mainId,sourceId);
     if(!eligibility.ok){alert(eligibility.reason);return;}
     var main=products[mainId],source=products[sourceId];
-    var sourceStoreNames=eligibility.sourceStores.map(function(s){return String(STORES[s]||s);}).join(', ');
-    if(!confirm('Объединить «'+source.name+'» в главную карточку «'+main.name+'»? Остатки второй карточки из магазинов '+sourceStoreNames+' будут перенесены. Первая карточка останется главной.'))return;
+    var sourceLocationNames=eligibility.sourceLocations.map(function(location){return stockLocationName(location);}).join(', ');
+    if(!confirm('Объединить «'+source.name+'» в главную карточку «'+main.name+'»? Остатки второй карточки из локаций '+sourceLocationNames+' будут перенесены. Первая карточка останется главной.'))return;
     var patch={},now=Date.now();
-    eligibility.sourceStores.forEach(function(store){
-      var sourceBalance=balances[store]&&balances[store][sourceId]||{};
+    eligibility.sourceLocations.forEach(function(location){
+      var sourceBalance=balances[location]&&balances[location][sourceId]||{};
       if(Number(sourceBalance.quantity||0)<=0)return;
-      patch[BALANCES_PATH+'/'+store+'/'+mainId]=Object.assign({},sourceBalance,{updatedAt:now});
-      patch[BALANCES_PATH+'/'+store+'/'+sourceId]=null;
+      patch[BALANCES_PATH+'/'+location+'/'+mainId]=Object.assign({},sourceBalance,{updatedAt:now});
+      patch[BALANCES_PATH+'/'+location+'/'+sourceId]=null;
     });
-    // Remove any zero-only balance records for the source so the merged card is fully consolidated.
-    visibleStoreIds().forEach(function(store){
-      if(eligibility.sourceStores.indexOf(String(store))===-1 && balances[String(store)] && balances[String(store)][sourceId]){
-        patch[BALANCES_PATH+'/'+store+'/'+sourceId]=null;
+    // Remove any zero-only balance records from the source in stores and in the warehouse.
+    stockLocationIds().forEach(function(location){
+      if(eligibility.sourceLocations.indexOf(String(location))===-1 && balances[String(location)] && balances[String(location)][sourceId]){
+        patch[BALANCES_PATH+'/'+location+'/'+sourceId]=null;
       }
     });
     var movementId=uid('sm');
-    patch[MOVEMENTS_PATH+'/'+movementId]={id:movementId,org:org(),productId:mainId,mergedProductId:sourceId,type:'merge',createdAt:now,createdById:String(user().id),createdByName:String(user().name||''),note:'Объединение «'+source.name+'» в главную карточку «'+main.name+'». Магазины: '+sourceStoreNames};
+    patch[MOVEMENTS_PATH+'/'+movementId]={id:movementId,org:org(),productId:mainId,mergedProductId:sourceId,type:'merge',createdAt:now,createdById:String(user().id),createdByName:String(user().name||''),note:'Объединение «'+source.name+'» в главную карточку «'+main.name+'». Локации: '+sourceLocationNames};
     patch[PRODUCTS_PATH+'/'+sourceId+'/status']='merged';
     patch[PRODUCTS_PATH+'/'+sourceId+'/mergedInto']=mainId;
     patch[PRODUCTS_PATH+'/'+sourceId+'/mergedAt']=now;
@@ -857,7 +858,7 @@
     patch[PRODUCTS_PATH+'/'+mainId+'/updatedAt']=now;
     db.ref().update(patch).then(function(){
       mergeSelectingId='';
-      addAuditSafe('stock_product_merge','Объединена карточка «'+source.name+'» в главную карточку «'+main.name+'». Перенесены магазины: '+sourceStoreNames);
+      addAuditSafe('stock_product_merge','Объединена карточка «'+source.name+'» в главную карточку «'+main.name+'». Перенесены локации: '+sourceLocationNames);
       render();
     }).catch(function(e){alert('Не удалось объединить карточки: '+(e&&e.message||e));});
   }
