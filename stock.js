@@ -297,7 +297,7 @@
       if(canEditCard(p)) html+='<button class="btn btn-secondary" type="button" onclick="stockOpenForm(\''+esc(p.id)+'\')">Изменить</button>';
       if(isAdmin() && selectedStoreId!=='all' && p.status==='active') html+='<button class="btn btn-primary" type="button" onclick="stockMove(\''+esc(p.id)+'\',\''+esc(balanceStoreId)+'\')">Переместить</button>';
       if(isAdmin() && p.status==='active'){
-        if(!mergeSelectingId) html+='<button class="btn btn-warning" type="button" data-stock-merge-start="'+esc(p.id)+'">Выбрать для объединения</button>';
+        if(!mergeSelectingId) html+='<button class="btn btn-warning" type="button" data-stock-merge-start="'+esc(p.id)+'">Объединить</button>';
         else if(String(mergeSelectingId)!==String(p.id)){
           var eligibility=mergeEligibility(mergeSelectingId,p.id,mergeSelectingStoreId,selectedStoreId);
           html+='<button class="btn '+(eligibility.ok?'btn-warning':'btn-secondary')+'" type="button" data-stock-merge-finish="'+esc(p.id)+'" '+(eligibility.ok?'':'disabled title="'+esc(eligibility.reason)+'"')+'>Объединить</button>';

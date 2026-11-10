@@ -259,7 +259,7 @@ body.logged-out #loginScreen .login-card{width:min(100%,420px)!important;margin:
 :root{--primary:#d75d8a;--primary-hover:#bd4774;--bg:#fff7fa;--card:#fff;--text:#35242d;--text-light:#8e7781;--border:#f0dce4;--success:#299a68;--danger:#d94f68;--warning:#d98936;--nav-width:238px}
 body{padding:0;background:#fff7fa;color:var(--text)}
 #mainApp.container{max-width:none;width:100%;margin:0;padding:0 0 90px 0}
-#mainApp>header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:14px 24px;margin:0;border-bottom:1px solid var(--border);gap:16px}
+#mainApp>header{position:static;top:auto;z-index:auto;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding:14px 24px;margin:0;border-bottom:1px solid var(--border);gap:16px}
 #mainApp header h1{font-size:22px;color:#a83f70;letter-spacing:-.4px}
 .header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
 .workspace{display:grid;grid-template-columns:var(--nav-width) minmax(0,1fr);min-height:calc(100vh - 82px)}
@@ -11430,7 +11430,7 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
 </style>
 
 <script src="backup-tools.js"></script>
-<script src="stock.js?v=59"></script>
+<script src="stock.js?v=60"></script>
 <script src="business-advisor.js?v=8"></script>
 </body>
 </html>
