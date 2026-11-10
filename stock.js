@@ -157,20 +157,22 @@
   }
   function getStockConsolidationRecommendations(){
     if(!isAdmin()||!loaded.products||!loaded.balances)return {ready:false,moves:[],message:'Складские данные ещё загружаются.'};
-    var stores=visibleStoreIds().map(String),productsList=allProducts().filter(function(p){return p.status==='active'&&!p.mergedInto;}),moves=[];
+    var stores=visibleStoreIds().map(String),warehouse=warehouseId(),allLocations=stores.concat([warehouse]),productsList=allProducts().filter(function(p){return p.status==='active'&&!p.mergedInto;}),moves=[];
     productsList.forEach(function(product){
       var pid=String(product.id),locations=[];
-      stores.forEach(function(sid){
+      allLocations.forEach(function(sid){
         var balance=balances[sid]&&balances[sid][pid]||{},sizes=Array.isArray(balance.sizes)?balance.sizes.map(String):[];
         if(!sizes.length||qty(pid,sid)<=0)return;
         var unique={};sizes.forEach(function(size){unique[size]=(unique[size]||0)+1;});
         locations.push({storeId:sid,sizes:sizes,quantity:sizes.length,sizeCount:Object.keys(unique).length,sizeSummary:sizeLabel(sizes)});
       });
       if(!locations.length)return;
-      var target=locations.slice().sort(function(a,b){return b.quantity-a.quantity||stockLocationName(a.storeId).localeCompare(stockLocationName(b.storeId),'ru');})[0];
+      var shopLocations=locations.filter(function(location){return location.storeId!==warehouse;});
+      if(!shopLocations.length)return;
+      var target=shopLocations.slice().sort(function(a,b){return b.quantity-a.quantity||stockLocationName(a.storeId).localeCompare(stockLocationName(b.storeId),'ru');})[0];
       locations.filter(function(source){return source.sizeCount<=2&&source.storeId!==target.storeId;}).forEach(function(source){
         var after=target.sizes.concat(source.sizes);
-        var inventory=stores.filter(function(location){return location!==source.storeId&&location!==target.storeId;}).map(function(location){
+        var inventory=allLocations.filter(function(location){return location!==source.storeId&&location!==target.storeId;}).map(function(location){
           var balance=balances[location]&&balances[location][pid]||{};
           var sizes=Array.isArray(balance.sizes)?balance.sizes.map(String):[];
           return {locationId:location,locationName:stockLocationName(location),quantity:qty(pid,location),sizes:sizes,sizeSummary:sizeLabel(sizes)};
@@ -183,7 +185,7 @@
           targetId:target.storeId,targetName:stockLocationName(target.storeId),targetSizes:target.sizes.slice(),
           targetSummary:sizeLabel(target.sizes),targetStock:target.quantity,afterSizes:after,afterSummary:sizeLabel(after),
           inventory:inventory,
-          reason:'Переносится весь остаток карточки из магазина-донора. Получатель выбран по наибольшему текущему остатку этой карточки.'
+          reason:'Переносится весь остаток карточки из локации-донора. Склад хранения может быть донором, но получателем выбирается только магазин с наибольшим текущим остатком этой карточки.'
         });
       });
     });
@@ -200,7 +202,7 @@
     if(advisorCategoryFilter!=='all'&&!Object.prototype.hasOwnProperty.call(categoryMap,advisorCategoryFilter))advisorCategoryFilter='all';
     var categoryKeys=Object.keys(categoryMap).sort(function(a,b){return categoryMap[a].localeCompare(categoryMap[b],'ru');});
     var visibleMoves=result.moves.filter(function(item){return advisorCategoryFilter==='all'||item.categoryKey===advisorCategoryFilter;});
-    var html='<div class="card" style="margin-bottom:14px;"><h3>Помощник склада</h3><p style="font-size:13px;color:var(--text-light);">Анализируются текущие остатки по магазинам. Находим карточки, в которых в магазине не более двух разных размеров. Если в другом магазине есть остаток этой же карточки, предлагаем собрать товар там. Склад хранения не используется как магазин назначения. В дополнительном обзоре показаны только остальные магазины, кроме донора и получателя.</p>'
+    var html='<div class="card" style="margin-bottom:14px;"><h3>Помощник склада</h3><p style="font-size:13px;color:var(--text-light);">Анализируются остатки по магазинам и складу хранения. Если в локации не более двух разных размеров, она может стать донором. Получателем всегда выбирается только магазин с наибольшим текущим остатком этой карточки. Склад хранения может быть донором, но никогда не получателем.</p>'
       +'<div style="margin-top:12px;"><label for="stockAdvisorCategory" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Категория товара</label><select id="stockAdvisorCategory" style="width:100%;max-width:360px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,#fff);color:var(--text);"><option value="all" '+(advisorCategoryFilter==='all'?'selected':'')+'>Все категории</option>'
       +categoryKeys.map(function(key){return '<option value="'+esc(key)+'" '+(advisorCategoryFilter===key?'selected':'')+'>'+esc(categoryMap[key])+'</option>';}).join('')
       +'</select><div style="font-size:12px;color:var(--text-light);margin-top:5px;">Рекомендации сгруппированы по категориям. Можно выбрать одну категорию для отдельного анализа.</div></div></div>';
@@ -213,7 +215,7 @@
         var groupItems=grouped[categoryKey],categoryName=categoryMap[categoryKey]||'Без категории';
         html+='<h3 style="margin:18px 0 10px;">'+esc(categoryName)+' <span style="font-size:12px;font-weight:400;color:var(--text-light);">· '+groupItems.length+'</span></h3>';
         groupItems.forEach(function(item){
-          var inventoryHtml='<div style="margin-top:12px;padding:11px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:13px;">Остатки и размеры в других магазинах</b><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-top:9px;">';
+          var inventoryHtml='<div style="margin-top:12px;padding:11px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:13px;">Остатки и размеры в других магазинах и на складе</b><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-top:9px;">';
           item.inventory.filter(function(location){return Number(location.quantity)>0;}).forEach(function(location){
             inventoryHtml+='<div style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--card,#fff);">'
               +'<div style="font-size:12px;font-weight:700;">'+esc(location.locationName)+'</div>'
