@@ -26,6 +26,7 @@
     if(!isAdmin())return;
     try{localStorage.setItem(selectedStoreStorageKey(),String(selectedStoreId||''));}catch(e){}
   }
+  var advisorCategoryFilter = 'all';
   var searchText = '';
   var editingId = '';
   var selectedPhoto = null;
@@ -147,9 +148,16 @@
   }
 
 
+  function stockAdvisorCategoryKey(value){
+    var category=String(value||'').trim();
+    return category || '__uncategorized__';
+  }
+  function stockAdvisorCategoryLabel(value){
+    return String(value||'').trim() || 'Без категории';
+  }
   function getStockConsolidationRecommendations(){
     if(!isAdmin()||!loaded.products||!loaded.balances)return {ready:false,moves:[],message:'Складские данные ещё загружаются.'};
-    var stores=visibleStoreIds().map(String),productsList=allProducts().filter(function(p){return p.status==='active'&&!p.mergedInto;}),moves=[];
+    var stores=visibleStoreIds().map(String),allLocations=stockLocationIds().map(String),productsList=allProducts().filter(function(p){return p.status==='active'&&!p.mergedInto;}),moves=[];
     productsList.forEach(function(product){
       var pid=String(product.id),locations=[];
       stores.forEach(function(sid){
@@ -162,23 +170,74 @@
       var target=locations.slice().sort(function(a,b){return b.quantity-a.quantity||stockLocationName(a.storeId).localeCompare(stockLocationName(b.storeId),'ru');})[0];
       locations.filter(function(source){return source.sizeCount<=2&&source.storeId!==target.storeId;}).forEach(function(source){
         var after=target.sizes.concat(source.sizes);
-        moves.push({productId:pid,productName:String(product.name||'Без названия'),photoUrl:String(product.photoUrl||''),sourceId:source.storeId,sourceName:stockLocationName(source.storeId),sourceSizes:source.sizes.slice(),quantity:source.quantity,sizeCount:source.sizeCount,sizeSummary:source.sizeSummary,targetId:target.storeId,targetName:stockLocationName(target.storeId),targetSizes:target.sizes.slice(),targetSummary:sizeLabel(target.sizes),targetStock:target.quantity,afterSizes:after,afterSummary:sizeLabel(after),reason:'Переносится весь остаток карточки из магазина-донора. Получатель выбран по наибольшему текущему остатку этой карточки.'});
+        var inventory=allLocations.map(function(location){
+          var balance=balances[location]&&balances[location][pid]||{};
+          var sizes=Array.isArray(balance.sizes)?balance.sizes.map(String):[];
+          return {locationId:location,locationName:stockLocationName(location),quantity:qty(pid,location),sizes:sizes,sizeSummary:sizeLabel(sizes)};
+        });
+        moves.push({
+          productId:pid,productName:String(product.name||'Без названия'),
+          category:String(product.category||'').trim(),categoryKey:stockAdvisorCategoryKey(product.category),
+          photoUrl:String(product.photoUrl||''),sourceId:source.storeId,sourceName:stockLocationName(source.storeId),
+          sourceSizes:source.sizes.slice(),quantity:source.quantity,sizeCount:source.sizeCount,sizeSummary:source.sizeSummary,
+          targetId:target.storeId,targetName:stockLocationName(target.storeId),targetSizes:target.sizes.slice(),
+          targetSummary:sizeLabel(target.sizes),targetStock:target.quantity,afterSizes:after,afterSummary:sizeLabel(after),
+          inventory:inventory,
+          reason:'Переносится весь остаток карточки из магазина-донора. Получатель выбран по наибольшему текущему остатку этой карточки.'
+        });
       });
     });
-    moves.sort(function(a,b){return b.quantity-a.quantity||a.productName.localeCompare(b.productName,'ru');});
+    moves.sort(function(a,b){return a.category.localeCompare(b.category,'ru')||b.quantity-a.quantity||a.productName.localeCompare(b.productName,'ru');});
     return {ready:true,moves:moves};
   }
   function renderStockAdvisorHtml(){
     var result=getStockConsolidationRecommendations();
     if(!result.ready)return '<div class="card">'+esc(result.message||'Загрузка рекомендаций…')+'</div>';
-    var html='<div class="card" style="margin-bottom:14px;"><h3>Помощник склада</h3><p style="font-size:13px;color:var(--text-light);">Анализируются только текущие остатки. Находим карточки, в которых в магазине не более двух разных размеров. Если в другом магазине есть остаток этой карточки, предлагаем собрать товар там. Переносится весь остаток карточки из магазина-донора. Склад хранения не используется как магазин назначения.</p></div>';
-    html+='<div class="card" style="margin-bottom:14px;"><b style="font-size:22px;">'+result.moves.length+'</b><div style="font-size:12px;color:var(--text-light);">предложений полного перемещения</div></div>';
-    if(result.moves.length){
-      html+='<h3 style="margin:16px 0 10px;">Рекомендации по перемещению</h3>';
-      result.moves.forEach(function(item){
-        html+='<div class="card" style="margin-bottom:12px;">'+(item.photoUrl?'<img src="'+esc(cardPhotoUrl(item.photoUrl))+'" alt="" loading="lazy" style="width:56px;height:56px;object-fit:cover;border-radius:9px;float:left;margin:0 10px 8px 0;">':'')+'<b>'+esc(item.productName)+'</b><div style="font-size:13px;margin:6px 0 10px;">'+esc(item.sourceName)+' → <b>'+esc(item.targetName)+'</b></div><div style="clear:both;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px;"><div style="padding:10px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:12px;">Забираем полностью · '+item.quantity+' шт.</b><div style="font-size:13px;margin-top:5px;">'+esc(item.sizeSummary)+'</div></div><div style="padding:10px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:12px;">В магазине назначения сейчас · '+item.targetStock+' шт.</b><div style="font-size:13px;margin-top:5px;">'+esc(item.targetSummary||'Нет размеров')+'</div></div><div style="padding:10px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:12px;">Будет после переноса · '+item.afterSizes.length+' шт.</b><div style="font-size:13px;margin-top:5px;">'+esc(item.afterSummary)+'</div></div></div><div style="font-size:12px;color:var(--text-light);margin-top:9px;">'+esc(item.reason)+'</div><button class="btn btn-primary" style="margin-top:10px;" type="button" data-stock-advisor-move="1" data-product-id="'+esc(item.productId)+'" data-source-id="'+esc(item.sourceId)+'" data-target-id="'+esc(item.targetId)+'">Переместить все размеры</button></div>';
+    var categoryMap=Object.create(null);
+    allProducts().filter(function(p){return p.status==='active'&&!p.mergedInto;}).forEach(function(p){
+      var key=stockAdvisorCategoryKey(p.category);categoryMap[key]=stockAdvisorCategoryLabel(p.category);
+    });
+    if(advisorCategoryFilter!=='all'&&!Object.prototype.hasOwnProperty.call(categoryMap,advisorCategoryFilter))advisorCategoryFilter='all';
+    var categoryKeys=Object.keys(categoryMap).sort(function(a,b){return categoryMap[a].localeCompare(categoryMap[b],'ru');});
+    var visibleMoves=result.moves.filter(function(item){return advisorCategoryFilter==='all'||item.categoryKey===advisorCategoryFilter;});
+    var html='<div class="card" style="margin-bottom:14px;"><h3>Помощник склада</h3><p style="font-size:13px;color:var(--text-light);">Анализируются текущие остатки по магазинам. Находим карточки, в которых в магазине не более двух разных размеров. Если в другом магазине есть остаток этой же карточки, предлагаем собрать товар там. Склад хранения не используется как магазин назначения, но его остатки также показаны для анализа.</p>'
+      +'<div style="margin-top:12px;"><label for="stockAdvisorCategory" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Категория товара</label><select id="stockAdvisorCategory" style="width:100%;max-width:360px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,#fff);color:var(--text);"><option value="all" '+(advisorCategoryFilter==='all'?'selected':'')+'>Все категории</option>'
+      +categoryKeys.map(function(key){return '<option value="'+esc(key)+'" '+(advisorCategoryFilter===key?'selected':'')+'>'+esc(categoryMap[key])+'</option>';}).join('')
+      +'</select><div style="font-size:12px;color:var(--text-light);margin-top:5px;">Рекомендации сгруппированы по категориям. Можно выбрать одну категорию для отдельного анализа.</div></div></div>';
+    html+='<div class="card" style="margin-bottom:14px;"><b style="font-size:22px;">'+visibleMoves.length+'</b><div style="font-size:12px;color:var(--text-light);">предложений перемещения'+(advisorCategoryFilter==='all'?'':' в категории «'+esc(categoryMap[advisorCategoryFilter]||'')+'»')+'</div>'
+      +(advisorCategoryFilter==='all'?'':'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">Всего по всем категориям: '+result.moves.length+'</div>')+'</div>';
+    if(visibleMoves.length){
+      var grouped=Object.create(null);
+      visibleMoves.forEach(function(item){if(!grouped[item.categoryKey])grouped[item.categoryKey]=[];grouped[item.categoryKey].push(item);});
+      Object.keys(grouped).sort(function(a,b){return (categoryMap[a]||'Без категории').localeCompare(categoryMap[b]||'Без категории','ru');}).forEach(function(categoryKey){
+        var groupItems=grouped[categoryKey],categoryName=categoryMap[categoryKey]||'Без категории';
+        html+='<h3 style="margin:18px 0 10px;">'+esc(categoryName)+' <span style="font-size:12px;font-weight:400;color:var(--text-light);">· '+groupItems.length+'</span></h3>';
+        groupItems.forEach(function(item){
+          var inventoryHtml='<div style="margin-top:12px;padding:11px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:13px;">Остатки и размеры во всех магазинах и на складе</b><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-top:9px;">';
+          item.inventory.forEach(function(location){
+            var role=location.locationId===item.sourceId?' · магазин-донор':location.locationId===item.targetId?' · магазин-получатель':'';
+            inventoryHtml+='<div style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--card,#fff);">'
+              +'<div style="font-size:12px;font-weight:700;">'+esc(location.locationName)+esc(role)+'</div>'
+              +'<div style="font-size:12px;margin-top:4px;">Остаток: <b>'+location.quantity+' шт.</b></div>'
+              +'<div style="font-size:12px;color:var(--text-light);margin-top:3px;">Размеры: '+(location.sizes.length?'<span style="color:var(--text);">'+esc(location.sizeSummary)+'</span>':'нет')+'</div></div>';
+          });
+          inventoryHtml+='</div></div>';
+          html+='<div class="card" style="margin-bottom:12px;">'
+            +(item.photoUrl?'<img src="'+esc(cardPhotoUrl(item.photoUrl))+'" alt="" loading="lazy" style="width:56px;height:56px;object-fit:cover;border-radius:9px;float:left;margin:0 10px 8px 0;">':'')
+            +'<b>'+esc(item.productName)+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc(categoryName)+'</div>'
+            +'<div style="font-size:13px;margin:6px 0 10px;clear:both;">'+esc(item.sourceName)+' → <b>'+esc(item.targetName)+'</b></div>'
+            +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;">'
+            +'<div style="padding:10px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:12px;">Забираем полностью · '+item.quantity+' шт.</b><div style="font-size:13px;margin-top:5px;">'+esc(item.sizeSummary)+'</div></div>'
+            +'<div style="padding:10px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:12px;">В магазине назначения сейчас · '+item.targetStock+' шт.</b><div style="font-size:13px;margin-top:5px;">'+esc(item.targetSummary||'Нет размеров')+'</div></div>'
+            +'<div style="padding:10px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:12px;">Будет после переноса · '+item.afterSizes.length+' шт.</b><div style="font-size:13px;margin-top:5px;">'+esc(item.afterSummary)+'</div></div></div>'
+            +inventoryHtml
+            +'<div style="font-size:12px;color:var(--text-light);margin-top:9px;">'+esc(item.reason)+'</div>'
+            +'<button class="btn btn-primary" style="margin-top:10px;" type="button" data-stock-advisor-move="1" data-product-id="'+esc(item.productId)+'" data-source-id="'+esc(item.sourceId)+'" data-target-id="'+esc(item.targetId)+'">Переместить все размеры</button></div>';
+        });
       });
-    }else html+='<div class="card" style="color:var(--text-light);">Подходящих перемещений пока нет. Для рекомендации нужен другой магазин с остатком этой же карточки.</div>';
+    }else{
+      html+='<div class="card" style="color:var(--text-light);">'+(advisorCategoryFilter==='all'?'Подходящих перемещений пока нет. Для рекомендации нужен другой магазин с остатком этой же карточки.':'В выбранной категории пока нет предложений перемещения.')+'</div>';
+    }
     return html;
   }
   function render(){
@@ -295,6 +354,7 @@
     }
     root.innerHTML=html;
     var catalogButton=root.querySelector('#stockOpenCatalog');if(catalogButton)catalogButton.addEventListener('click',openCatalog);
+    var advisorCategorySelect=root.querySelector('#stockAdvisorCategory');if(advisorCategorySelect)advisorCategorySelect.addEventListener('change',function(){advisorCategoryFilter=String(this.value||'all');render();});
     root.querySelectorAll('[data-stock-tab]').forEach(function(b){b.addEventListener('click',function(){adminTab=b.getAttribute('data-stock-tab');render();});});
     root.querySelectorAll('[data-stock-advisor-move]').forEach(function(b){b.addEventListener('click',function(){moveProduct(b.getAttribute('data-product-id'),b.getAttribute('data-source-id'),{targetId:b.getAttribute('data-target-id'),storesOnly:true,forceAll:true});});});
     root.querySelectorAll('[data-stock-select-store]').forEach(function(b){b.addEventListener('click',function(){selectedStoreId=b.getAttribute('data-stock-select-store');persistSelectedStore();render();});});
