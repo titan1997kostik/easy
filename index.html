@@ -658,7 +658,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 Панель управления
                 <span id="syncIndicator" class="sync-indicator connecting" style="margin-left:10px;">
                     <span class="sync-dot connecting"></span>
-                    <span id="syncText">Firebase: проверка подключения...</span>
+                    <span id="syncText">Интернет: проверка подключения...</span>
                 </span>
                 <span id="mqttIndicator" class="sync-indicator connecting" style="margin-left:6px;">
                     <span class="sync-dot connecting"></span>
@@ -2684,21 +2684,32 @@ function mergeDeletionLedgerSnapshots(snapshots) {
     saveAllToLocal();
 }
 
+function updateInternetConnectionIndicator() {
+    var online = !window.navigator || window.navigator.onLine !== false;
+    var indicator = document.getElementById('syncIndicator');
+    var dot = indicator && indicator.querySelector('.sync-dot');
+    var label = document.getElementById('syncText');
+    var status = online ? 'online' : 'offline';
+    if (indicator) indicator.className = 'sync-indicator ' + status;
+    if (dot) dot.className = 'sync-dot ' + status;
+    if (label) {
+        label.textContent = online ? 'Интернет: подключен' : 'Интернет: нет соединения';
+        label.style.color = online ? '#28a745' : '#d44a6a';
+        label.title = firebaseSyncError ? 'Ошибка синхронизации с облаком: ' + firebaseSyncError :
+            (online ? 'Браузер сообщает, что сетевое соединение доступно.' : 'Устройство не подключено к сети.');
+    }
+}
+window.addEventListener('online', updateInternetConnectionIndicator);
+window.addEventListener('offline', updateInternetConnectionIndicator);
+updateInternetConnectionIndicator();
+
 function setFirebaseSyncError(path, error) {
     var code = error && error.code ? String(error.code) : '';
     var message = error && error.message ? String(error.message) : String(error || 'Неизвестная ошибка');
     firebaseSyncError = String(path || 'Firebase') + (code ? ' [' + code + ']' : '') + ': ' + message.slice(0, 260);
     window.easyAppSyncFirebaseError = firebaseSyncError;
-    var indicator = document.getElementById('syncIndicator');
-    var dot = indicator && indicator.querySelector('.sync-dot');
     var label = document.getElementById('syncText');
-    if (indicator) indicator.className = 'sync-indicator connecting';
-    if (dot) dot.className = 'sync-dot connecting';
-    if (label) {
-        var isJavaScript = String(path || '').indexOf('JavaScript') === 0 || String(path || '').indexOf('Promise') === 0;
-        label.textContent = (isJavaScript ? 'Ошибка приложения: ' : 'Ошибка Firebase: ') + firebaseSyncError;
-        label.title = firebaseSyncError;
-    }
+    if (label) label.title = 'Ошибка синхронизации с облаком: ' + firebaseSyncError;
     console.error('Ошибка синхронизации Easy в ' + path + ':', error);
 }
 
@@ -2706,8 +2717,7 @@ function clearFirebaseSyncError() {
     if (Object.keys(firebaseCoreDataErrors).length) return;
     firebaseSyncError = '';
     window.easyAppSyncFirebaseError = '';
-    var label = document.getElementById('syncText');
-    if (label) { label.title = ''; label.textContent = syncConnected ? 'Firebase: подключено' : 'Firebase: нет соединения'; }
+    updateInternetConnectionIndicator();
 }
 
 function setFirebaseCoreDataError(path, error) {
@@ -3457,26 +3467,17 @@ db.ref('deleted_super_admins_data').on('value', function(snapshot) {
 });
 
 // ========== FIREBASE CONNECTION STATUS ==========
+// This connection state remains internal for cloud operations; the header indicator shows internet access separately.
 db.ref('.info/connected').on('value', function(snapshot) {
     syncConnectionKnown = true;
     syncConnected = snapshot.val() === true;
-    var ind = document.getElementById('syncIndicator');
-    var txt = document.getElementById('syncText');
-    if (!ind) return;
-    var dot = ind.querySelector('.sync-dot');
     var st = document.getElementById('sync-status');
     if (syncConnected) {
-        ind.className = 'sync-indicator online';
-        if (dot) dot.className = 'sync-dot online';
-        if (txt) { txt.textContent = 'Firebase: подключено'; txt.style.color = '#28a745'; }
         if (st) st.textContent = 'Облако подключено';
         deletionLedgersFresh = false;
         refreshDeletionLedgersFromServerAndFlush();
     } else {
         deletionLedgersFresh = false;
-        ind.className = 'sync-indicator offline';
-        if (dot) dot.className = 'sync-dot offline';
-        if (txt) { txt.textContent = 'Firebase: нет соединения'; txt.style.color = '#d44a6a'; }
         if (st) st.textContent = 'Нет соединения с облаком';
     }
     if (currentUser) renderAll();
@@ -6970,26 +6971,7 @@ function renderActiveWorkspace() {
     // guarded by canUseStoreData()/online checks, so this does not authorize offline server mutations.
     var canRenderCachedOffline = !syncConnected && hasReadableLocalCacheForOffline();
     if (currentUser && !canUseStoreData() && !canRenderCachedOffline) {
-        var syncInd = document.getElementById('syncIndicator');
-        var syncDot = syncInd ? syncInd.querySelector('.sync-dot') : null;
-        var syncTextNode = document.getElementById('syncText');
-        if (syncInd) syncInd.className = 'sync-indicator connecting';
-        if (syncDot) syncDot.className = 'sync-dot connecting';
-        if (syncTextNode) {
-            if (firebaseSyncError) {
-                syncTextNode.textContent = firebaseSyncError;
-                syncTextNode.title = firebaseSyncError;
-            } else if (!syncConnectionKnown) {
-                syncTextNode.textContent = 'Firebase: ожидаем ответ сервера';
-                syncTextNode.title = 'Firebase ещё не сообщил состояние .info/connected.';
-            } else if (syncConnected) {
-                syncTextNode.textContent = 'Firebase: проверка данных...';
-                syncTextNode.title = 'Соединение установлено, проверяем журналы удалений и сбросов.';
-            } else {
-                syncTextNode.textContent = 'Firebase: нет соединения';
-                syncTextNode.title = 'Проверьте подключение к интернету.';
-            }
-        }
+        // The header indicator reports browser internet connectivity; cloud status is tracked separately.
         return;
     }
     try { refreshStoreDropdowns(); } catch(e) {}
