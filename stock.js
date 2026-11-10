@@ -213,8 +213,8 @@
         var groupItems=grouped[categoryKey],categoryName=categoryMap[categoryKey]||'Без категории';
         html+='<h3 style="margin:18px 0 10px;">'+esc(categoryName)+' <span style="font-size:12px;font-weight:400;color:var(--text-light);">· '+groupItems.length+'</span></h3>';
         groupItems.forEach(function(item){
-          var inventoryHtml='<div style="margin-top:12px;padding:11px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:13px;">Остатки и размеры во всех магазинах и на складе</b><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-top:9px;">';
-          item.inventory.forEach(function(location){
+          var inventoryHtml='<div style="margin-top:12px;padding:11px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:13px;">Остатки и размеры в локациях с наличием</b><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:7px;margin-top:9px;">';
+          item.inventory.filter(function(location){return Number(location.quantity)>0;}).forEach(function(location){
             var role=location.locationId===item.sourceId?' · магазин-донор':location.locationId===item.targetId?' · магазин-получатель':'';
             inventoryHtml+='<div style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--card,#fff);">'
               +'<div style="font-size:12px;font-weight:700;">'+esc(location.locationName)+esc(role)+'</div>'
