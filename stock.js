@@ -216,7 +216,7 @@
       if(adminTab==='advisor') html+=renderStockAdvisorHtml();
     }
     if(!isAdmin() || adminTab==='shops'){
-    html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;"><div><h3 style="margin:0 0 4px;">'+(isAdmin()?(selectedStoreId==='all'?'Все товары':'Товары: «'+esc(stockLocationName(selectedStoreId))+'»'):'Товары')+'</h3><div style="font-size:12px;color:var(--text-light);">'+(isAdmin()?'Общий каталог организации':'Каталог вашего магазина')+'</div></div>'+'<button class="btn btn-primary" type="button" onclick="stockOpenForm()">＋ Новая карточка</button>'+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><input id="stockSearch" type="search" placeholder="Поиск по названию, артикулу, цвету…" value="'+esc(searchText)+'" oninput="stockSetSearch(this.value)" style="flex:1;min-width:180px;">';
+    html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;"><div><h3 style="margin:0 0 4px;">'+(isAdmin()?(selectedStoreId==='all'?'Все товары':'Товары: «'+esc(stockLocationName(selectedStoreId))+'»'):'Товары')+'</h3><div style="font-size:12px;color:var(--text-light);">'+(isAdmin()?'Общий каталог организации':'Каталог вашего магазина')+'</div></div>'+(isAdmin()&&selectedStoreId!=='all'?'<button class="btn btn-secondary" type="button" id="stockOpenCatalog">＋ Из общего каталога</button>':'')+'<button class="btn btn-primary" type="button" onclick="stockOpenForm()">＋ Новая карточка</button>'+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><input id="stockSearch" type="search" placeholder="Поиск по названию, артикулу, цвету…" value="'+esc(searchText)+'" oninput="stockSetSearch(this.value)" style="flex:1;min-width:180px;">';
     if(isAdmin()) html+='<select id="stockFilter" onchange="stockSetFilter(this.value)" style="min-width:150px;"><option value="all" '+(activeFilter==='all'?'selected':'')+'>Все карточки</option><option value="pending" '+(activeFilter==='pending'?'selected':'')+'>Ожидают проверки</option><option value="active" '+(activeFilter==='active'?'selected':'')+'>Опубликованные</option><option value="krossy" '+(activeFilter==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(activeFilter==='easy'?'selected':'')+'>Изи</option></select>';
     html+='</div><div id="stockStatus" style="font-size:12px;margin-top:8px;color:var(--text-light);"></div></div>';
     if(isAdmin()&&mergeSelectingId){
@@ -294,6 +294,7 @@
       html+='</tbody></table></div></div>';
     }
     root.innerHTML=html;
+    var catalogButton=root.querySelector('#stockOpenCatalog');if(catalogButton)catalogButton.addEventListener('click',openCatalog);
     root.querySelectorAll('[data-stock-tab]').forEach(function(b){b.addEventListener('click',function(){adminTab=b.getAttribute('data-stock-tab');render();});});
     root.querySelectorAll('[data-stock-advisor-move]').forEach(function(b){b.addEventListener('click',function(){moveProduct(b.getAttribute('data-product-id'),b.getAttribute('data-source-id'),{targetId:b.getAttribute('data-target-id'),storesOnly:true,forceAll:true});});});
     root.querySelectorAll('[data-stock-select-store]').forEach(function(b){b.addEventListener('click',function(){selectedStoreId=b.getAttribute('data-stock-select-store');persistSelectedStore();render();});});
@@ -303,6 +304,82 @@
     root.querySelectorAll('[data-stock-merge-cancel]').forEach(function(b){b.addEventListener('click',function(){mergeSelectingId='';render();});});
     root.querySelectorAll('[data-stock-merge-finish]').forEach(function(b){b.addEventListener('click',function(){merge(mergeSelectingId,b.getAttribute('data-stock-merge-finish'));});});
   }
+
+  function openCatalog(){
+    if(!isAdmin() || !canUse()){alert('Общий каталог доступен только администратору после подключения к Firebase.');return;}
+    var targetId=String(selectedStoreId||'');
+    var locations=stockLocationIds().map(String);
+    if(!targetId || targetId==='all' || locations.indexOf(targetId)===-1){
+      alert('Сначала выберите конкретный магазин или склад хранения.');
+      return;
+    }
+    var candidates=allProducts().filter(function(p){return p && p.status==='active' && !p.mergedInto;});
+    if(!candidates.length){alert('В общем каталоге пока нет опубликованных карточек.');return;}
+    var oldModal=document.getElementById('stockCatalogModal');if(oldModal)oldModal.remove();
+    var modal=document.createElement('div');modal.id='stockCatalogModal';
+    modal.style.cssText='position:fixed;inset:0;z-index:10020;background:rgba(20,10,16,.58);display:flex;align-items:center;justify-content:center;padding:12px;';
+    modal.innerHTML='<div role="dialog" aria-modal="true" aria-labelledby="stockCatalogTitle" style="width:100%;max-width:760px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;background:var(--card,#fff);color:var(--text);border-radius:14px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.25);">'
+      +'<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;"><div><h3 id="stockCatalogTitle" style="margin:0;">Общий каталог товаров</h3><div style="font-size:13px;color:var(--text-light);margin-top:4px;">Добавление в место хранения: <b>'+esc(stockLocationName(targetId))+'</b></div></div><button type="button" data-catalog-close="1" aria-label="Закрыть" style="border:0;background:transparent;font-size:25px;cursor:pointer;color:inherit;">×</button></div>'
+      +'<input id="stockCatalogSearch" type="search" placeholder="Поиск по названию, артикулу, категории…" style="width:100%;margin:14px 0 10px;padding:11px;border:1px solid var(--border);border-radius:9px;background:var(--card,#fff);color:var(--text);">'
+      +'<div style="font-size:12px;color:var(--text-light);margin-bottom:9px;">Выберите существующую карточку. Новая карточка товара не создаётся.</div>'
+      +'<div id="stockCatalogItems" style="overflow:auto;min-height:100px;padding:1px 2px 4px;"></div></div>';
+    document.body.appendChild(modal);
+    var search=modal.querySelector('#stockCatalogSearch'),results=modal.querySelector('#stockCatalogItems');
+    function close(){if(modal&&modal.parentNode)modal.parentNode.removeChild(modal);}
+    function renderItems(){
+      var term=norm(search.value);
+      var matches=candidates.filter(function(p){
+        return !term || norm([p.name,p.article,p.category,p.color,p.brand,p.model].join(' ')).indexOf(term)!==-1;
+      }).sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'ru');});
+      if(!matches.length){results.innerHTML='<div style="padding:24px 10px;text-align:center;color:var(--text-light);">По вашему запросу ничего не найдено.</div>';return;}
+      results.innerHTML=matches.map(function(p){
+        var pid=String(p.id),currentQty=qty(pid,targetId);
+        var currentBalance=balances[targetId]&&balances[targetId][pid]||{};
+        var currentSizes=Array.isArray(currentBalance.sizes)?currentBalance.sizes:[];
+        var sourceLocations=locations.filter(function(sid){return sid!==targetId && qty(pid,sid)>0;});
+        var sourceText=sourceLocations.length?sourceLocations.map(function(sid){
+          var sourceBalance=balances[sid]&&balances[sid][pid]||{};
+          var sourceSizes=Array.isArray(sourceBalance.sizes)?sourceBalance.sizes:[];
+          return stockLocationName(sid)+': '+qty(pid,sid)+' шт.'+(sourceSizes.length?' ('+sizeLabel(sourceSizes)+')':'');
+        }).join(' · '):'Нет остатков в других магазинах/на складе';
+        var moveButtons=sourceLocations.map(function(sid){
+          return '<button type="button" class="btn btn-secondary" data-catalog-move="'+esc(pid)+'" data-catalog-source="'+esc(sid)+'" style="font-size:12px;padding:7px 9px;">Переместить из '+esc(stockLocationName(sid))+' · '+qty(pid,sid)+' шт.</button>';
+        }).join('');
+        return '<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 8px;border-bottom:1px solid var(--border);">'
+          +'<div style="width:60px;height:60px;flex:0 0 60px;border-radius:9px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;">'
+          +(p.photoUrl?'<img src="'+esc(cardPhotoUrl(p.photoUrl))+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:23px;">📦</span>')+'</div>'
+          +'<div style="flex:1;min-width:0;"><b>'+esc(p.name||'Без названия')+'</b>'
+          +'<div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color].filter(Boolean).join(' · '))+'</div>'
+          +'<div style="font-size:12px;margin-top:6px;">'+(currentQty>0?'<span style="color:var(--primary);font-weight:600;">Уже есть здесь: '+currentQty+' шт.</span>'+(currentSizes.length?' · '+esc(sizeLabel(currentSizes)):''):'<span style="color:var(--text-light);">В выбранном месте пока нет остатка</span>')+'</div>'
+          +'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">В других локациях: '+esc(sourceText)+'</div>'
+          +'<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;">'
+          +'<button type="button" class="btn btn-primary" data-catalog-add="'+esc(pid)+'" style="font-size:12px;padding:7px 9px;">'+(currentQty>0?'Добавить / изменить размеры':'Добавить в этот магазин')+'</button>'
+          +moveButtons+'</div></div></div>';
+      }).join('');
+    }
+    modal.querySelectorAll('[data-catalog-close]').forEach(function(button){button.addEventListener('click',close);});
+    modal.addEventListener('click',function(event){if(event.target===modal)close();});
+    search.addEventListener('input',renderItems);
+    results.addEventListener('click',function(event){
+      var addButton=event.target.closest('[data-catalog-add]');
+      if(addButton){
+        var productId=String(addButton.getAttribute('data-catalog-add')||'');
+        close();
+        openForm(productId);
+        return;
+      }
+      var moveButton=event.target.closest('[data-catalog-move]');
+      if(moveButton){
+        var productIdToMove=String(moveButton.getAttribute('data-catalog-move')||'');
+        var sourceId=String(moveButton.getAttribute('data-catalog-source')||'');
+        close();
+        moveProduct(productIdToMove,sourceId,{targetId:targetId});
+      }
+    });
+    renderItems();
+    search.focus();
+  }
+
   function openForm(id){
     if(!isAdmin()&&!isSeller()){alert('Нет доступа к созданию карточек.');return;}
     if(id&&!isAdmin()){alert('Продавцы не могут редактировать существующие карточки.');return;}
@@ -335,7 +412,7 @@
     if(!categoryNames.length){categorySelect.options[0].textContent='Список товаров пока пуст';categorySelect.disabled=true;}
     var grid=document.getElementById('stockSizeGrid'), selected=document.getElementById('stockSelectedSizes');
     var editStoreSelect=document.getElementById('stockEditStore');
-    if(editStoreSelect)editStoreSelect.addEventListener('change',function(){selectedStoreId=String(this.value||'');var balance=balances[selectedStoreId]&&balances[selectedStoreId][String(p.id)]||{};formSizes=Array.isArray(balance.sizes)?balance.sizes.map(String):[];drawSizes();});
+    if(editStoreSelect)editStoreSelect.addEventListener('change',function(){selectedStoreId=String(this.value||'');persistSelectedStore();var balance=balances[selectedStoreId]&&balances[selectedStoreId][String(p.id)]||{};formSizes=Array.isArray(balance.sizes)?balance.sizes.map(String):[];drawSizes();});
     var sizeMode='numeric', letters=['XXS','XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
     function currentSizes(){return sizeMode==='numeric'?Array.from({length:30},function(_,i){return String(i+25);}):letters.slice();}
     function countSizes(){var counts={};formSizes.forEach(function(v){counts[v]=(counts[v]||0)+1;});return counts;}
