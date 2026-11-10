@@ -281,7 +281,7 @@
     html+='</div><div id="stockStatus" style="font-size:12px;margin-top:8px;color:var(--text-light);"></div></div>';
     if(isAdmin()&&mergeSelectingId){
       var selectedMain=products[mergeSelectingId];
-      html+='<div class="card" style="margin-bottom:12px;border:1px solid var(--warning);"><b>Выбрана главная карточка:</b> '+esc(selectedMain&&selectedMain.name||'Товар')+'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">Теперь выберите вторую карточку. Объединение доступно, только если фактические остатки находятся в разных магазинах.</div></div>';
+      html+='<div class="card" style="margin-bottom:12px;border:1px solid var(--warning);"><b>Выбрана главная карточка:</b> '+esc(selectedMain&&selectedMain.name||'Товар')+'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">Теперь выберите вторую карточку. Если у обеих карточек есть остатки в одной локации, размеры и количество будут сложены без потери товара.</div></div>';
     }
     if(!list.length) html+='<div class="card" style="text-align:center;color:var(--text-light);">В выбранном магазине или на складе пока нет товаров с остатком.</div>';
     list.forEach(function(p){
@@ -300,6 +300,7 @@
         else if(String(mergeSelectingId)!==String(p.id)){
           var eligibility=mergeEligibility(mergeSelectingId,p.id);
           html+='<button class="btn '+(eligibility.ok?'btn-warning':'btn-secondary')+'" type="button" data-stock-merge-finish="'+esc(p.id)+'" '+(eligibility.ok?'':'disabled title="'+esc(eligibility.reason)+'"')+'>Объединить</button>';
+          if(!eligibility.ok)html+='<div style="flex-basis:100%;font-size:11px;color:var(--danger,#b42318);margin-top:3px;">'+esc(eligibility.reason)+'</div>';
         } else html+='<button class="btn btn-secondary" type="button" data-stock-merge-cancel="1">Отменить выбор</button>';
       }
       if(isAdmin() && p.status==='pending') html+='<button class="btn btn-success" type="button" onclick="stockReview(\''+esc(p.id)+'\')">Проверить</button>';
@@ -885,8 +886,7 @@
     var mainLocations=activeStockLocations(mainId),sourceLocations=activeStockLocations(sourceId);
     if(!mainLocations.length||!sourceLocations.length)return {ok:false,reason:'У обеих карточек должны быть фактические остатки в магазинах или на складе хранения.'};
     var overlap=mainLocations.filter(function(location){return sourceLocations.indexOf(location)!==-1;});
-    if(overlap.length)return {ok:false,reason:'В обеих карточках есть остатки в одной локации: '+overlap.map(function(location){return stockLocationName(location);}).join(', ')+'.'};
-    return {ok:true,mainLocations:mainLocations,sourceLocations:sourceLocations};
+    return {ok:true,mainLocations:mainLocations,sourceLocations:sourceLocations,overlapLocations:overlap};
   }
   function mergeCompareCardHtml(product,role,locations){
     var total=locations.reduce(function(sum,location){return sum+qty(product.id,location);},0);
@@ -967,8 +967,19 @@
       var patch={},now=Date.now();
       currentEligibility.sourceLocations.forEach(function(location){
         var sourceBalance=balances[location]&&balances[location][sourceId]||{};
-        if(Number(sourceBalance.quantity||0)<=0)return;
-        patch[BALANCES_PATH+'/'+location+'/'+mainId]=Object.assign({},sourceBalance,{updatedAt:now});
+        var mainBalance=balances[location]&&balances[location][mainId]||{};
+        var sourceQuantity=Number(sourceBalance.quantity||0);
+        if(sourceQuantity<=0)return;
+        var mainQuantity=Number(mainBalance.quantity||0);
+        var combinedBalance=Object.assign({},sourceBalance,mainBalance,{
+          quantity:mainQuantity+sourceQuantity,
+          updatedAt:now
+        });
+        if(Array.isArray(sourceBalance.sizes)||Array.isArray(mainBalance.sizes)){
+          combinedBalance.sizes=(Array.isArray(mainBalance.sizes)?mainBalance.sizes.map(String):[])
+            .concat(Array.isArray(sourceBalance.sizes)?sourceBalance.sizes.map(String):[]);
+        }
+        patch[BALANCES_PATH+'/'+location+'/'+mainId]=combinedBalance;
         patch[BALANCES_PATH+'/'+location+'/'+sourceId]=null;
       });
       // Remove any zero-only balance records from the source in stores and in the warehouse.
