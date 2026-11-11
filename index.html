@@ -4676,7 +4676,7 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
     var units=recommended.reduce(function(sum,row){return sum+row.recommendedQty;},0);
     function h(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
     function n(value,digits){return Number(value||0).toLocaleString('ru-RU',{maximumFractionDigits:digits==null?1:digits});}
-    if(status)status.textContent='Вся доступная история продаж · срочно: '+urgent+' · скоро: '+soon+' · запас достаточный: '+sufficient+' · расчётное пополнение на 14 дней: '+n(units,0)+' шт. · показано '+Math.min(purchaseRecommendationVisibleCount,rows.length)+' из '+rows.length;
+    if(status)status.textContent='Продажи за последние 30 дней · срочно: '+urgent+' · скоро: '+soon+' · запас достаточный: '+sufficient+' · расчётное пополнение на 14 дней: '+n(units,0)+' шт. · показано '+Math.min(purchaseRecommendationVisibleCount,rows.length)+' из '+rows.length;
     var more=document.getElementById('purchaseRecommendationMore');
     if(!rows.length){
         table.innerHTML='<div style="padding:18px;color:var(--text-light);">Нет активных карточек с остатками и продажами для выбранного магазина.</div>';
@@ -4704,7 +4704,7 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
       var remaining=rows.length-visibleRows.length;
       more.innerHTML=remaining>0?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseRecommendations()" style="width:100%;">Показать ещё 10 · осталось '+remaining+'</button>':'<div style="font-size:12px;color:var(--text-light);text-align:center;padding:8px 0;">Показаны все '+rows.length+' карточек</div>';
     }
-    if(foot)foot.textContent='«Срочно»: карточка входит в верхние 25% по продажам в своём магазине и остаток не больше 1 шт. (для обуви — не больше 3 шт.) ИЛИ запаса хватит не более чем на 2 дня. «Скоро»: остатка хватит не более чем на 4 дня или история наличия требует проверки. «Запас достаточный»: остатка хватит более чем на 4 дня. Данные пересчитываются по текущим остаткам; размерный ряд отдельно не анализируется.';
+    if(foot)foot.textContent='Продажи и средний спрос считаются за последние 30 дней. «Срочно»: карточка входит в верхние 25% по продажам в своём магазине и остаток не больше 1 шт. (для обуви — не больше 3 шт.) ИЛИ запаса хватит не более чем на 2 дня. «Скоро»: остатка хватит не более чем на 4 дня. «Запас достаточный»: остатка хватит более чем на 4 дня. История дней, когда товар был в наличии, отдельно не анализируется, поэтому при длительном отсутствии товара спрос может быть занижен.';
 }
 function showMorePurchaseRecommendations(){
     purchaseRecommendationVisibleCount+=10;
