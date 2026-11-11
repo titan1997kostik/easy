@@ -1223,13 +1223,18 @@
     if(cached)return cached;
     var rows=[],active=allProducts().filter(function(product){return product.status==='active'&&!product.mergedInto;});
     function isFootwearProduct(product){
-      var category=norm(product&&product.category||'');
-      return /обув|крос|ботин|сандал|туфл|shoe|sneaker/.test(category);
+      // In stock cards the product direction is the authoritative shoe/clothing split.
+      // Category and name checks cover older cards where direction/category metadata is incomplete.
+      var classification=norm([product&&product.direction,product&&product.category,product&&product.name,product&&product.brand,product&&product.model].join(' '));
+      return /krossy|обув|крос|ботин|сандал|туфл|shoe|sneaker/.test(classification);
     }
     active.forEach(function(product){
       var pid=String(product.id),footwear=isFootwearProduct(product);
       stores.forEach(function(sid){
-        var current=Math.max(0,qty(pid,sid));
+        var balance=balances[String(sid)]&&balances[String(sid)][pid]||{};
+        // For footwear the size list is the unit-level source of truth (duplicate sizes are separate pairs).
+        var rawCurrent=footwear&&Array.isArray(balance.sizes)?balance.sizes.length:qty(pid,sid);
+        var current=Math.max(0,Number(rawCurrent)||0);
         var priorityStatus;
         if(footwear){
           priorityStatus=current<=1?'urgent':current<=3?'soon':'sufficient';
