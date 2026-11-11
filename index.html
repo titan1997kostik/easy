@@ -4695,7 +4695,9 @@ function togglePurchaseQueueItem(productId,storeId,checked){
             productId:String(row.productId),productName:String(row.productName||'Без названия'),
             photoUrl:String(row.photoUrl||''),category:String(row.category||''),
             storeId:String(row.storeId),storeName:String(row.storeName||row.storeId),
-            currentStock:Number(row.currentStock)||0,isFootwear:!!row.isFootwear,addedAt:Date.now()
+            currentStock:Number(row.currentStock)||0,
+            remainingSizes:Array.isArray(row.remainingSizes)?row.remainingSizes.map(function(size){return String(size);}):[],
+            isFootwear:!!row.isFootwear,addedAt:Date.now()
         });
     }else if(!checked&&index>=0){
         items.splice(index,1);
@@ -4708,34 +4710,60 @@ function removePurchaseQueueItem(productId,storeId){
     togglePurchaseQueueItem(productId,storeId,false);
 }
 function resetPurchaseQueue(){
-    purchaseQueueItems=[];
+    var select=document.getElementById('purchaseStoreSelect'),selectedStore=select?String(select.value||'all'):'all';
+    var items=getPurchaseQueueItems();
+    purchaseQueueItems=selectedStore==='all'?[]:items.filter(function(item){return String(item.storeId)!==selectedStore;});
     if(!purchaseQueueStorageKey)purchaseQueueStorageKey=getPurchaseQueueStorageKey();
     savePurchaseQueueItems();
-    renderPurchaseQueue();
+    renderPurchaseQueue(selectedStore);
 }
-function renderPurchaseQueue(){
+function purchaseQueueSizesLabel(values){
+    if(!Array.isArray(values)||!values.length)return '';
+    var counts=Object.create(null);
+    values.forEach(function(value){var key=String(value||'').trim();if(key)counts[key]=(counts[key]||0)+1;});
+    return Object.keys(counts).sort(function(a,b){
+        var an=/^\d+(?:[.,]\d+)?$/.test(a),bn=/^\d+(?:[.,]\d+)?$/.test(b);
+        if(an&&bn)return Number(a.replace(',','.'))-Number(b.replace(',','.'));
+        if(an)return -1;if(bn)return 1;
+        return a.localeCompare(b,'ru');
+    }).map(function(key){return key+(counts[key]>1?' × '+counts[key]:'');}).join(', ');
+}
+function renderPurchaseQueue(selectedStore,currentRows){
     var host=document.getElementById('purchaseQueueList');
     if(!host)return;
-    var items=getPurchaseQueueItems(),count=document.getElementById('purchaseQueueCount');
+    var select=document.getElementById('purchaseStoreSelect');
+    selectedStore=selectedStore==null?(select?String(select.value||'all'):'all'):String(selectedStore);
+    var allItems=getPurchaseQueueItems();
+    var items=selectedStore==='all'?allItems:allItems.filter(function(item){return String(item.storeId)===selectedStore;});
+    var count=document.getElementById('purchaseQueueCount');
     if(count)count.textContent='· '+items.length;
+    var cityLabel=document.getElementById('purchaseQueueCityLabel');
+    if(cityLabel){
+        var option=select&&select.options?select.options[select.selectedIndex]:null;
+        cityLabel.textContent=selectedStore==='all'?'Все города':(option?option.textContent:String((items[0]&&items[0].storeName)||selectedStore));
+    }
     function h(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
+    var liveByKey=Object.create(null);
+    (Array.isArray(currentRows)?currentRows:[]).forEach(function(row){liveByKey[String(row.productId)+'|'+String(row.storeId)]=row;});
     if(!items.length){
-        host.innerHTML='<div style="padding:12px;border:1px dashed var(--border);border-radius:9px;font-size:13px;color:var(--text-light);">Список пуст. Отметьте нужные карточки выше, чтобы добавить их к закупке.</div>';
+        host.innerHTML='<div style="padding:12px;border:1px dashed var(--border);border-radius:9px;font-size:13px;color:var(--text-light);">'+(selectedStore==='all'?'Список пуст. Отметьте нужные карточки выше, чтобы добавить их к закупке.':'В этом городе пока нет выбранных товаров. Отметьте карточки в рекомендациях выше.')+'</div>';
         return;
     }
     host.innerHTML=items.map(function(item){
+        var live=liveByKey[String(item.productId)+'|'+String(item.storeId)]||null;
+        var currentStock=live?Number(live.currentStock)||0:Number(item.currentStock)||0;
+        var sizes=live&&Array.isArray(live.remainingSizes)?live.remainingSizes:(Array.isArray(item.remainingSizes)?item.remainingSizes:[]);
+        var sizesLabel=purchaseQueueSizesLabel(sizes);
         var photo=item.photoUrl?'<img src="'+h(item.photoUrl)+'" alt="" loading="lazy" decoding="async" style="width:44px;height:44px;object-fit:cover;border-radius:8px;flex:0 0 44px;">':'<span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--surface,#f3f4f6);font-size:20px;flex:0 0 44px;">📦</span>';
+        var sizeLine=sizesLabel?'<div style="font-size:12px;color:var(--text-light);margin-top:3px;">Оставшиеся размеры: <b style="color:var(--text);">'+h(sizesLabel)+'</b></div>':'';
         return '<article style="display:flex;align-items:center;gap:10px;padding:9px;border:1px solid var(--border);border-radius:10px;min-width:0;">'
             +photo
             +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;overflow-wrap:anywhere;">'+h(item.productName)+'</div>'
-            +'<div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+h(item.storeName)+' · сейчас '+Number(item.currentStock||0)+' шт.</div></div>'
+            +'<div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+h(item.storeName)+' · сейчас '+currentStock+' шт.</div>'+sizeLine+'</div>'
             +'<button type="button" class="btn btn-secondary" data-purchase-queue-remove="1" data-product-id="'+h(item.productId)+'" data-store-id="'+h(item.storeId)+'" style="padding:6px 9px;white-space:nowrap;">Убрать</button></article>';
     }).join('');
-    host.querySelectorAll('[data-purchase-queue-remove]').forEach(function(button){
-        button.addEventListener('click',function(){removePurchaseQueueItem(button.getAttribute('data-product-id'),button.getAttribute('data-store-id'));});
-    });
+    host.querySelectorAll('[data-purchase-queue-remove]').forEach(function(button){button.addEventListener('click',function(){removePurchaseQueueItem(button.getAttribute('data-product-id'),button.getAttribute('data-store-id'));});});
 }
-
 function purchaseRecommendationCategoryKey(value) {
     var label=String(value||'').trim();
     return label ? label.toLowerCase() : '__uncategorized__';
@@ -4772,7 +4800,7 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
         var waitMore=document.getElementById('purchaseRecommendationMore');if(waitMore)waitMore.innerHTML='';
         table.innerHTML='<div style="padding:16px;color:var(--text-light);">Модуль склада ещё загружается…</div>';
         if(status)status.textContent='Ожидаем данные товаров и остатков.';
-        renderPurchaseQueue();
+        renderPurchaseQueue(selectedStore);
         return;
     }
     var result=window.stockGetReplenishmentRecommendations('','',selectedStore,14);
@@ -4780,7 +4808,7 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
         var loadingMore=document.getElementById('purchaseRecommendationMore');if(loadingMore)loadingMore.innerHTML='';
         table.innerHTML='<div style="padding:16px;color:var(--text-light);">'+(result&&result.message||'Загружаются данные товаров и остатков…')+'</div>';
         if(status)status.textContent='Загрузка…';
-        renderPurchaseQueue();
+        renderPurchaseQueue(selectedStore);
         return;
     }
     var rows=result.rows||[];
@@ -4800,7 +4828,7 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
         table.innerHTML='<div style="padding:16px;color:var(--text-light);">Нет карточек для выбранного города и категории.</div>';
         if(more)more.innerHTML='';
         if(foot)foot.textContent='Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.';
-        renderPurchaseQueue();
+        renderPurchaseQueue(selectedStore,rows);
         return;
     }
     table.innerHTML=visibleRows.map(function(row){
@@ -4811,10 +4839,12 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
         var badge='<span style="display:inline-block;padding:4px 8px;border-radius:999px;background:'+bg+';color:'+color+';font-size:12px;font-weight:700;white-space:nowrap;">'+label+'</span>';
         var photo=row.photoUrl?'<img src="'+h(row.photoUrl)+'" alt="" loading="lazy" decoding="async" style="width:50px;height:50px;object-fit:cover;border-radius:8px;background:var(--surface,#f3f4f6);flex:0 0 50px;">':'<span style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--surface,#f3f4f6);font-size:22px;flex:0 0 50px;">📦</span>';
         var category=row.category?'<div style="font-size:11px;color:var(--text-light);margin-top:2px;">'+h(row.category)+'</div>':'';
+        var sizesLabel=purchaseQueueSizesLabel(row.remainingSizes);
+        var sizesLine=sizesLabel?'<div style="font-size:11px;color:var(--text-light);margin-top:3px;">Оставшиеся размеры: <b style="color:var(--text);">'+h(sizesLabel)+'</b></div>':'';
         return '<article style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:10px;min-width:0;">'
             +photo
             +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;overflow-wrap:anywhere;">'+h(row.productName)+'</div>'
-            +category+'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">'+h(row.storeName)+' · остаток: <b style="color:var(--text);">'+Number(row.currentStock||0)+' шт.</b></div></div>'
+            +category+sizesLine+'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">'+h(row.storeName)+' · остаток: <b style="color:var(--text);">'+Number(row.currentStock||0)+' шт.</b></div></div>'
             +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex:0 0 auto;">'+badge
             +'<label style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;cursor:pointer;"><input type="checkbox" data-purchase-queue-toggle="1" data-product-id="'+h(row.productId)+'" data-store-id="'+h(row.storeId)+'" '+(selected?'checked':'')+'>К закупке</label></div></article>';
     }).join('');
@@ -4828,7 +4858,7 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
         more.innerHTML=remaining>0?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseRecommendations()" style="width:100%;">Показать ещё 10 · осталось '+remaining+'</button>':'<div style="font-size:12px;color:var(--text-light);text-align:center;padding:8px 0;">Показаны все '+filteredRows.length+' карточек</div>';
     }
     if(foot)foot.textContent='Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.';
-    renderPurchaseQueue();
+    renderPurchaseQueue(selectedStore,rows);
 }
 function showMorePurchaseRecommendations(){
     purchaseRecommendationVisibleCount+=10;
@@ -10233,7 +10263,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var sellerPlanWidget=document.createElement('section');sellerPlanWidget.id='sellerStoreSalesPlanWidget';sellerPlanWidget.className='card seller-plan-widget';sellerPlanWidget.innerHTML='<button id="sellerPlanToggle" class="seller-plan-toggle" type="button" onclick="toggleSellerSalesPlanDetails()" aria-expanded="false" aria-controls="sellerPlanProgress"><span class="seller-plan-toggle-row"><span><span class="seller-plan-toggle-title">План продаж</span><span id="sellerPlanStoreMonth" class="seller-plan-toggle-subtitle">Текущий месяц</span></span><span class="seller-plan-toggle-score"><span id="sellerPlanCompactPercent">—</span><span class="seller-plan-toggle-chevron" aria-hidden="true">⌄</span></span></span><span class="seller-plan-toggle-track" aria-hidden="true"><span id="sellerPlanCompactBar" class="seller-plan-toggle-fill" style="display:block;width:0%"></span></span></button><div id="sellerPlanProgress" class="seller-plan-details" hidden><div class="sales-plan-progress-list"><div class="sales-plan-empty">Загружаем план магазина…</div></div></div>';dashboard.appendChild(sellerPlanWidget);
     if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(true);
     var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации');
-    purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Простая оценка только по текущему остатку. Выберите карточки, которые нужно закупить, — они появятся в отдельном списке ниже.</p></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Город / магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все города и магазины</option></select></div><div class="form-group"><label for="purchaseCategorySelect">Категория товара</label><select id="purchaseCategorySelect" onchange="renderPurchaseRecommendations()"><option value="all">Все категории</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div><p id="purchaseRecommendationFootnote" style="font-size:12px;color:var(--text-light);margin:10px 0 0;">Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.</p></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Выбранные карточки для следующей закупки. Список сохраняется в этом браузере для текущей организации.</p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
+    purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Простая оценка только по текущему остатку. Выберите карточки, которые нужно закупить, — они появятся в отдельном списке ниже.</p></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Город / магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все города и магазины</option></select></div><div class="form-group"><label for="purchaseCategorySelect">Категория товара</label><select id="purchaseCategorySelect" onchange="renderPurchaseRecommendations()"><option value="all">Все категории</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div><p id="purchaseRecommendationFootnote" style="font-size:12px;color:var(--text-light);margin:10px 0 0;">Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.</p></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Город: <b id="purchaseQueueCityLabel">Все города</b>. Выбранные товары для этого города; при переключении города список меняется. Отметки сохраняются в этом браузере.</p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
     costsPage.insertAdjacentHTML('beforeend', `
       <div class="card sale-cost-manager-card">
         <h3>Закупочная стоимость каждой продажи</h3>
