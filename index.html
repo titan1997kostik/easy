@@ -4735,6 +4735,29 @@ function renderPurchaseQueue(){
     });
 }
 
+function purchaseRecommendationCategoryKey(value) {
+    var label=String(value||'').trim();
+    return label ? label.toLowerCase() : '__uncategorized__';
+}
+function populatePurchaseCategoryOptions(rows) {
+    var select=document.getElementById('purchaseCategorySelect');
+    if(!select)return 'all';
+    var previous=select.value||'all',categories=Object.create(null);
+    (rows||[]).forEach(function(row){
+        var label=String(row&&row.category||'').trim()||'Без категории';
+        var key=purchaseRecommendationCategoryKey(label);
+        if(!Object.prototype.hasOwnProperty.call(categories,key))categories[key]=label;
+    });
+    select.innerHTML='';
+    var all=document.createElement('option');all.value='all';all.textContent='Все категории';select.appendChild(all);
+    Object.keys(categories).sort(function(a,b){return categories[a].localeCompare(categories[b],'ru');}).forEach(function(key){
+        var option=document.createElement('option');option.value=key;option.textContent=categories[key];select.appendChild(option);
+    });
+    var valid=previous==='all'||Object.prototype.hasOwnProperty.call(categories,previous);
+    select.value=valid?previous:'all';
+    return select.value||'all';
+}
+
 function renderPurchaseRecommendations(skipRankingRefresh) {
     if (!isWorkspacePageActive('purchase')) return;
     var table=document.getElementById('purchaseRecommendationTable');
@@ -4744,7 +4767,6 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
     getPurchaseQueueItems();
     populatePurchaseStoreOptions();
     var selectedStore=document.getElementById('purchaseStoreSelect')?document.getElementById('purchaseStoreSelect').value:'all';
-    if(purchaseRecommendationFilterKey!==String(selectedStore)){purchaseRecommendationFilterKey=String(selectedStore);purchaseRecommendationVisibleCount=10;}
     if(typeof window.stockGetReplenishmentRecommendations!=='function'){
         var waitMore=document.getElementById('purchaseRecommendationMore');if(waitMore)waitMore.innerHTML='';
         table.innerHTML='<div style="padding:16px;color:var(--text-light);">Модуль склада ещё загружается…</div>';
@@ -4760,13 +4782,21 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
         renderPurchaseQueue();
         return;
     }
-    var rows=result.rows||[],counts=result.counts||{urgent:0,soon:0,sufficient:0};
-    if(status)status.textContent='Срочно: '+counts.urgent+' · скоро: '+counts.soon+' · достаточно: '+counts.sufficient+' · карточек: '+rows.length;
+    var rows=result.rows||[];
+    var selectedCategory=populatePurchaseCategoryOptions(rows);
+    var filteredRows=rows.filter(function(row){
+        return selectedCategory==='all'||purchaseRecommendationCategoryKey(row.category)===selectedCategory;
+    });
+    var filterKey=String(selectedStore)+'|'+String(selectedCategory);
+    if(purchaseRecommendationFilterKey!==filterKey){purchaseRecommendationFilterKey=filterKey;purchaseRecommendationVisibleCount=10;}
+    var counts={urgent:0,soon:0,sufficient:0};
+    filteredRows.forEach(function(row){if(Object.prototype.hasOwnProperty.call(counts,row.priorityStatus))counts[row.priorityStatus]++;});
+    if(status)status.textContent='Срочно: '+counts.urgent+' · скоро: '+counts.soon+' · достаточно: '+counts.sufficient+' · карточек: '+filteredRows.length;
     function h(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
     var more=document.getElementById('purchaseRecommendationMore');
-    var visibleRows=rows.slice(0,purchaseRecommendationVisibleCount);
-    if(!rows.length){
-        table.innerHTML='<div style="padding:16px;color:var(--text-light);">Нет активных карточек для выбранного магазина.</div>';
+    var visibleRows=filteredRows.slice(0,purchaseRecommendationVisibleCount);
+    if(!filteredRows.length){
+        table.innerHTML='<div style="padding:16px;color:var(--text-light);">Нет карточек для выбранного города и категории.</div>';
         if(more)more.innerHTML='';
         if(foot)foot.textContent='Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.';
         renderPurchaseQueue();
@@ -4793,8 +4823,8 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
         });
     });
     if(more){
-        var remaining=rows.length-visibleRows.length;
-        more.innerHTML=remaining>0?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseRecommendations()" style="width:100%;">Показать ещё 10 · осталось '+remaining+'</button>':'<div style="font-size:12px;color:var(--text-light);text-align:center;padding:8px 0;">Показаны все '+rows.length+' карточек</div>';
+        var remaining=filteredRows.length-visibleRows.length;
+        more.innerHTML=remaining>0?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseRecommendations()" style="width:100%;">Показать ещё 10 · осталось '+remaining+'</button>':'<div style="font-size:12px;color:var(--text-light);text-align:center;padding:8px 0;">Показаны все '+filteredRows.length+' карточек</div>';
     }
     if(foot)foot.textContent='Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.';
     renderPurchaseQueue();
@@ -10202,7 +10232,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var sellerPlanWidget=document.createElement('section');sellerPlanWidget.id='sellerStoreSalesPlanWidget';sellerPlanWidget.className='card seller-plan-widget';sellerPlanWidget.innerHTML='<button id="sellerPlanToggle" class="seller-plan-toggle" type="button" onclick="toggleSellerSalesPlanDetails()" aria-expanded="false" aria-controls="sellerPlanProgress"><span class="seller-plan-toggle-row"><span><span class="seller-plan-toggle-title">План продаж</span><span id="sellerPlanStoreMonth" class="seller-plan-toggle-subtitle">Текущий месяц</span></span><span class="seller-plan-toggle-score"><span id="sellerPlanCompactPercent">—</span><span class="seller-plan-toggle-chevron" aria-hidden="true">⌄</span></span></span><span class="seller-plan-toggle-track" aria-hidden="true"><span id="sellerPlanCompactBar" class="seller-plan-toggle-fill" style="display:block;width:0%"></span></span></button><div id="sellerPlanProgress" class="seller-plan-details" hidden><div class="sales-plan-progress-list"><div class="sales-plan-empty">Загружаем план магазина…</div></div></div>';dashboard.appendChild(sellerPlanWidget);
     if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(true);
     var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации');
-    purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Простая оценка только по текущему остатку. Выберите карточки, которые нужно закупить, — они появятся в отдельном списке ниже.</p></div><button type="button" class="btn btn-secondary" onclick="renderPurchaseRecommendations()">Обновить</button></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все магазины</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div><p id="purchaseRecommendationFootnote" style="font-size:12px;color:var(--text-light);margin:10px 0 0;">Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.</p></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Выбранные карточки для следующей закупки. Список сохраняется в этом браузере для текущей организации.</p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
+    purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Простая оценка только по текущему остатку. Выберите карточки, которые нужно закупить, — они появятся в отдельном списке ниже.</p></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Город / магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все города и магазины</option></select></div><div class="form-group"><label for="purchaseCategorySelect">Категория товара</label><select id="purchaseCategorySelect" onchange="renderPurchaseRecommendations()"><option value="all">Все категории</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div><p id="purchaseRecommendationFootnote" style="font-size:12px;color:var(--text-light);margin:10px 0 0;">Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.</p></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Выбранные карточки для следующей закупки. Список сохраняется в этом браузере для текущей организации.</p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
     costsPage.insertAdjacentHTML('beforeend', `
       <div class="card sale-cost-manager-card">
         <h3>Закупочная стоимость каждой продажи</h3>
