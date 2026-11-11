@@ -156,9 +156,28 @@
   function stockAdvisorCategoryLabel(value){
     return String(value||'').trim() || 'Без категории';
   }
+  function stockAdvisorIsFootwear(product){
+    var category=norm(product&&product.category||'');
+    return /обув|крос|ботин|сандал|туфл|shoe|sneaker/.test(category);
+  }
   function getStockConsolidationRecommendations(){
     if(!isAdmin()||!loaded.products||!loaded.balances)return {ready:false,moves:[],message:'Складские данные ещё загружаются.'};
-    var stores=visibleStoreIds().map(String),warehouse=warehouseId(),allLocations=stores.concat([warehouse]),productsList=allProducts().filter(function(p){return p.status==='active'&&!p.mergedInto;}),moves=[];
+    var stores=visibleStoreIds().map(String),warehouse=warehouseId(),allLocations=stores.concat([warehouse]),storeSet=Object.create(null),salesByProductStore=Object.create(null),productsList=allProducts().filter(function(p){return p.status==='active'&&!p.mergedInto;}),moves=[];
+    stores.forEach(function(storeId){storeSet[storeId]=true;});
+    (window.sales||[]).forEach(function(sale){
+      if(!sale||!sale.stockProductId||!sale.id||sale.returned)return;
+      if(sale.stockOrg&&String(sale.stockOrg)!==String(org()))return;
+      var sid=String(sale.stockStoreId||sale.storeId||'');
+      if(!storeSet[sid])return;
+      if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(sale.id))return;
+      if(typeof isStoreDeleted==='function'&&isStoreDeleted(sid))return;
+      var resetCheckRecord=sale.storeId?sale:Object.assign({},sale,{storeId:sid});
+      if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(resetCheckRecord))return;
+      var pid=stockResolvedId(sale.stockProductId),units=Number(sale.stockQuantity);
+      if(!isFinite(units)||units<=0)units=1;
+      if(!salesByProductStore[pid])salesByProductStore[pid]=Object.create(null);
+      salesByProductStore[pid][sid]=(salesByProductStore[pid][sid]||0)+units;
+    });
     productsList.forEach(function(product){
       var pid=String(product.id),locations=[];
       allLocations.forEach(function(sid){
@@ -170,9 +189,45 @@
       if(!locations.length)return;
       var shopLocations=locations.filter(function(location){return location.storeId!==warehouse;});
       if(!shopLocations.length)return;
-      var target=shopLocations.slice().sort(function(a,b){return b.quantity-a.quantity||stockLocationName(a.storeId).localeCompare(stockLocationName(b.storeId),'ru');})[0];
-      locations.filter(function(source){return source.sizeCount<=2&&source.storeId!==target.storeId;}).forEach(function(source){
-        var after=target.sizes.concat(source.sizes);
+      var recommendations=[];
+      if(stockAdvisorIsFootwear(product)){
+        var footwearTarget=shopLocations.slice().sort(function(a,b){return b.quantity-a.quantity||stockLocationName(a.storeId).localeCompare(stockLocationName(b.storeId),'ru');})[0];
+        locations.filter(function(source){return source.sizeCount<=2&&source.storeId!==footwearTarget.storeId;}).forEach(function(source){
+          recommendations.push({
+            source:source,
+            target:footwearTarget,
+            actionLabel:'Переместить все размеры',
+            reason:'Переносится весь остаток карточки из локации-донора. Склад хранения может быть донором, но получателем выбирается только магазин с наибольшим текущим остатком этой карточки.'
+          });
+        });
+      }else{
+        var productSales=salesByProductStore[pid]||Object.create(null);
+        var allShopLocations=stores.map(function(sid){
+          var balance=balances[sid]&&balances[sid][pid]||{},sizes=Array.isArray(balance.sizes)?balance.sizes.map(String):[];
+          var unique={};sizes.forEach(function(size){unique[size]=(unique[size]||0)+1;});
+          return {storeId:sid,sizes:sizes,quantity:qty(pid,sid),sizeCount:Object.keys(unique).length,sizeSummary:sizeLabel(sizes)};
+        });
+        allShopLocations.filter(function(source){return source.quantity===1;}).forEach(function(source){
+          var sourceSales=Number(productSales[source.storeId]||0);
+          var betterTargets=allShopLocations.filter(function(candidate){
+            return candidate.storeId!==source.storeId&&Number(productSales[candidate.storeId]||0)>sourceSales;
+          }).sort(function(a,b){
+            return Number(productSales[b.storeId]||0)-Number(productSales[a.storeId]||0)
+              ||a.quantity-b.quantity
+              ||stockLocationName(a.storeId).localeCompare(stockLocationName(b.storeId),'ru');
+          });
+          if(!betterTargets.length)return;
+          var target=betterTargets[0],targetSales=Number(productSales[target.storeId]||0);
+          recommendations.push({
+            source:source,
+            target:target,
+            actionLabel:'Переместить 1 шт.',
+            reason:'В магазине «'+stockLocationName(target.storeId)+'» продано '+targetSales+' шт. этой карточки, а в исходном магазине — '+sourceSales+' шт. По доступной истории продаж спрос выше.'
+          });
+        });
+      }
+      recommendations.forEach(function(recommendation){
+        var source=recommendation.source,target=recommendation.target,after=target.sizes.concat(source.sizes);
         var inventory=allLocations.filter(function(location){return location!==source.storeId&&location!==target.storeId;}).map(function(location){
           var balance=balances[location]&&balances[location][pid]||{};
           var sizes=Array.isArray(balance.sizes)?balance.sizes.map(String):[];
@@ -185,8 +240,7 @@
           sourceSizes:source.sizes.slice(),quantity:source.quantity,sizeCount:source.sizeCount,sizeSummary:source.sizeSummary,
           targetId:target.storeId,targetName:stockLocationName(target.storeId),targetSizes:target.sizes.slice(),
           targetSummary:sizeLabel(target.sizes),targetStock:target.quantity,afterSizes:after,afterSummary:sizeLabel(after),
-          inventory:inventory,
-          reason:'Переносится весь остаток карточки из локации-донора. Склад хранения может быть донором, но получателем выбирается только магазин с наибольшим текущим остатком этой карточки.'
+          inventory:inventory,actionLabel:recommendation.actionLabel,reason:recommendation.reason
         });
       });
     });
@@ -203,7 +257,7 @@
     if(advisorCategoryFilter!=='all'&&!Object.prototype.hasOwnProperty.call(categoryMap,advisorCategoryFilter))advisorCategoryFilter='all';
     var categoryKeys=Object.keys(categoryMap).sort(function(a,b){return categoryMap[a].localeCompare(categoryMap[b],'ru');});
     var visibleMoves=result.moves.filter(function(item){return advisorCategoryFilter==='all'||item.categoryKey===advisorCategoryFilter;});
-    var html='<div class="card" style="margin-bottom:14px;"><h3>Помощник склада</h3><p style="font-size:13px;color:var(--text-light);">Анализируются остатки по магазинам и складу хранения. Если в локации не более двух разных размеров, она может стать донором. Получателем всегда выбирается только магазин с наибольшим текущим остатком этой карточки. Склад хранения может быть донором, но никогда не получателем.</p>'
+    var html='<div class="card" style="margin-bottom:14px;"><h3>Помощник склада</h3><p style="font-size:13px;color:var(--text-light);">Для обуви сохранён прежний алгоритм: локация с не более чем двумя разными размерами может стать донором, а получателем выбирается магазин с наибольшим остатком. Для остальных товаров при остатке 1 шт. в магазине предлагается перемещение туда, где по доступной истории продаж эту карточку покупают чаще.</p>'
       +'<div style="margin-top:12px;"><label for="stockAdvisorCategory" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Категория товара</label><select id="stockAdvisorCategory" style="width:100%;max-width:360px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,#fff);color:var(--text);"><option value="all" '+(advisorCategoryFilter==='all'?'selected':'')+'>Все категории</option>'
       +categoryKeys.map(function(key){return '<option value="'+esc(key)+'" '+(advisorCategoryFilter===key?'selected':'')+'>'+esc(categoryMap[key])+'</option>';}).join('')
       +'</select><div style="font-size:12px;color:var(--text-light);margin-top:5px;">Рекомендации сгруппированы по категориям. Можно выбрать одну категорию для отдельного анализа.</div></div></div>';
@@ -234,11 +288,11 @@
             +'<div style="padding:10px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:12px;">Будет после переноса · '+item.afterSizes.length+' шт.</b><div style="font-size:13px;margin-top:5px;">'+esc(item.afterSummary)+'</div></div></div>'
             +inventoryHtml
             +'<div style="font-size:12px;color:var(--text-light);margin-top:9px;">'+esc(item.reason)+'</div>'
-            +'<button class="btn btn-primary" style="margin-top:10px;" type="button" data-stock-advisor-move="1" data-product-id="'+esc(item.productId)+'" data-source-id="'+esc(item.sourceId)+'" data-target-id="'+esc(item.targetId)+'">Переместить все размеры</button></div>';
+            +'<button class="btn btn-primary" style="margin-top:10px;" type="button" data-stock-advisor-move="1" data-product-id="'+esc(item.productId)+'" data-source-id="'+esc(item.sourceId)+'" data-target-id="'+esc(item.targetId)+'">'+esc(item.actionLabel||'Переместить все размеры')+'</button></div>';
         });
       });
     }else{
-      html+='<div class="card" style="color:var(--text-light);">'+(advisorCategoryFilter==='all'?'Подходящих перемещений пока нет. Для рекомендации нужен другой магазин с остатком этой же карточки.':'В выбранной категории пока нет предложений перемещения.')+'</div>';
+      html+='<div class="card" style="color:var(--text-light);">'+(advisorCategoryFilter==='all'?'Подходящих перемещений пока нет. Для товаров, кроме обуви, рекомендация появится, когда в магазине останется 1 шт. и найдётся магазин с более высокими продажами этой карточки.':'В выбранной категории пока нет предложений перемещения.')+'</div>';
     }
     return html;
   }
