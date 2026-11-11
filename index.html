@@ -4679,7 +4679,7 @@ function renderPurchaseRecommendations(skipRankingRefresh) {
     if(status)status.textContent='Продажи за последние 30 дней · срочно: '+urgent+' · скоро: '+soon+' · запас достаточный: '+sufficient+' · расчётное пополнение на 14 дней: '+n(units,0)+' шт. · показано '+Math.min(purchaseRecommendationVisibleCount,rows.length)+' из '+rows.length;
     var more=document.getElementById('purchaseRecommendationMore');
     if(!rows.length){
-        table.innerHTML='<div style="padding:18px;color:var(--text-light);">Нет активных карточек с остатками и продажами для выбранного магазина.</div>';
+        table.innerHTML='<div style="padding:18px;color:var(--text-light);">Нет активных карточек с остатками или продажами за последние 30 дней для выбранного магазина.</div>';
         if(more)more.innerHTML='';
         if(foot)foot.textContent='Продажи без привязки к карточке склада не распределяются автоматически.';
         return;
