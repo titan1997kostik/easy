@@ -1249,6 +1249,7 @@
           storeId:sid,
           storeName:stockLocationName(sid),
           currentStock:current,
+          remainingSizes:Array.isArray(balance.sizes)?balance.sizes.map(function(size){return String(size);}):[],
           isFootwear:footwear,
           priorityStatus:priorityStatus
         });
