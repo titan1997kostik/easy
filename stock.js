@@ -207,7 +207,7 @@
           var unique={};sizes.forEach(function(size){unique[size]=(unique[size]||0)+1;});
           return {storeId:sid,sizes:sizes,quantity:qty(pid,sid),sizeCount:Object.keys(unique).length,sizeSummary:sizeLabel(sizes)};
         });
-        allShopLocations.filter(function(source){return source.quantity===1;}).forEach(function(source){
+        allShopLocations.filter(function(source){return source.quantity===1&&source.sizes.length===1;}).forEach(function(source){
           var sourceSales=Number(productSales[source.storeId]||0);
           var betterTargets=allShopLocations.filter(function(candidate){
             return candidate.storeId!==source.storeId&&Number(productSales[candidate.storeId]||0)>sourceSales;
