@@ -1216,54 +1216,38 @@
     return current;
   }
   function getReplenishmentRecommendations(startDate,endDate,selectedStore,targetDays){
-    if(!isAdmin()||!loaded.products||!loaded.balances||!loaded.movements)return {ready:false,rows:[],message:'Складские данные ещё загружаются.'};
-    var now=Date.now(),endMs=now,startMs=Infinity;
-    var target=Math.max(1,Math.min(60,Number(targetDays)||14));
+    if(!isAdmin()||!loaded.products||!loaded.balances)return {ready:false,rows:[],message:'Складские данные ещё загружаются.'};
+    var now=Date.now(),day=86400000,target=Math.max(1,Math.min(60,Number(targetDays)||14));
     var salesRows=window.sales||[];
     var stores=visibleStoreIds().filter(function(id){return selectedStore==='all'||String(id)===String(selectedStore);});
-    var day=new Date(now),dayKey=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(day.getDate()).padStart(2,'0');
+    var endMs=endDate?Math.min(stockLocalDateMs(endDate,true)||now,now):now;
+    var startMs=startDate?stockLocalDateMs(startDate,false):endMs-30*day;
+    if(!startMs||!endMs||startMs>endMs)return {ready:true,rows:[],message:'Проверьте выбранный период.'};
+    var periodDays=startDate?Math.max(1,Math.ceil((endMs-startMs+1)/day)):30;
+    var dayKey=new Date(now).toISOString().slice(0,10);
     var cacheKey=[org(),String(selectedStore||'all'),stores.join(','),target,String(startDate||''),String(endDate||''),dayKey,replenishmentCacheRevision,salesRows.length].join('|');
     var cached=replenishmentCache[cacheKey];
     if(cached&&cached.salesRef===salesRows&&cached.salesLength===salesRows.length)return cached.result;
-    var storeSet={},active=allProducts().filter(function(p){return p.status==='active';}),rows=[],movementByKey={},saleMovementIds={};
+
+    var storeSet=Object.create(null),soldByKey=Object.create(null),rows=[];
     stores.forEach(function(id){storeSet[String(id)]=true;});
-    Object.keys(movements).forEach(function(key){
-      var m=movements[key];if(!m||String(m.org||'')!==String(org())||!m.storeId)return;
-      var sid=String(m.storeId);if(!storeSet[sid])return;
-      var pid=stockResolvedId(m.productId);if(!pid)return;
-      var at=stockDateMs(m.createdAt||m.timestamp);if(!at)return;
-      var key2=pid+'|'+sid;
-      if(!movementByKey[key2])movementByKey[key2]=[];
-      movementByKey[key2].push({at:at,delta:Number(m.quantityDelta)||0,before:m.before==null?null:Number(m.before),after:m.after==null?null:Number(m.after),saleId:m.saleId?String(m.saleId):'',source:'movement'});
-      if(m.saleId)saleMovementIds[String(m.saleId)]=true;
-    });
-    var soldByKey={};
     salesRows.forEach(function(sale){
-      if(!sale||!sale.stockProductId||!sale.stockStoreId||!sale.id)return;
+      if(!sale||!sale.stockProductId||!sale.stockStoreId||!sale.id||sale.returned)return;
       if(sale.stockOrg&&String(sale.stockOrg)!==String(org()))return;
-      var sid=String(sale.stockStoreId);if(!storeSet[sid])return;
+      var sid=String(sale.stockStoreId);
+      if(!storeSet[sid])return;
       if(typeof isSaleRecordDeleted==='function'&&isSaleRecordDeleted(sale.id))return;
       if(typeof isRecordBeforeStoreReset==='function'&&isRecordBeforeStoreReset(sale))return;
       var at=stockDateMs(sale.timestamp||sale.createdAt);
-      var pid=stockResolvedId(sale.stockProductId),key2=pid+'|'+sid;
-      if(!saleMovementIds[String(sale.id)]&&at){
-        if(!movementByKey[key2])movementByKey[key2]=[];
-        movementByKey[key2].push({at:at,delta:-(Number(sale.stockQuantity)||1),before:null,after:null,saleId:String(sale.id),source:'sale'});
-      }
-      if(!sale.returned&&at&&at<=endMs){
-        if(!soldByKey[key2])soldByKey[key2]=0;
-        var units=Number(sale.stockQuantity)||1;
-        if(isFinite(units)&&units>0)soldByKey[key2]+=units;
-      }
+      if(!at||at<startMs||at>endMs)return;
+      var pid=stockResolvedId(sale.stockProductId),key=pid+'|'+sid;
+      var units=Number(sale.stockQuantity)||1;
+      if(!isFinite(units)||units<=0)units=1;
+      soldByKey[key]=(soldByKey[key]||0)+units;
     });
-    // Use the earliest available movement/sale as the start of the full-history period.
-    Object.keys(movementByKey).forEach(function(key){
-      movementByKey[key].sort(function(a,b){return a.at-b.at;});
-      if(movementByKey[key].length)startMs=Math.min(startMs,movementByKey[key][0].at);
-    });
-    if(!isFinite(startMs))startMs=endMs-29*86400000;
-    var periodDays=Math.max(1,(endMs-startMs+1)/86400000);
-    var salesRankByKey={};
+
+    var active=allProducts().filter(function(product){return product.status==='active';});
+    var salesRankByKey=Object.create(null);
     stores.forEach(function(sid){
       var selling=[];
       active.forEach(function(product){
@@ -1274,60 +1258,37 @@
       var topCount=selling.length?Math.max(1,Math.ceil(selling.length*0.25)):0;
       selling.forEach(function(item,index){salesRankByKey[item.productId+'|'+String(sid)]=index<topCount?index+1:null;});
     });
+
     function isFootwearProduct(product){
       var category=norm(product&&product.category||'');
       return /обув|крос|ботин|сандал|туфл|shoe|sneaker/.test(category);
     }
     active.forEach(function(product){
-      var pid=String(product.id);
+      var pid=String(product.id),footwear=isFootwearProduct(product);
       stores.forEach(function(sid){
-        var current=qty(pid,sid),key2=pid+'|'+sid,events=movementByKey[key2]||[];
-        var openingDelta=0,firstAfterStart=null;
-        for(var i=0;i<events.length;i++){
-          var event=events[i];
-          if(event.at<startMs)continue;
-          if(event.at>now)break;
-          openingDelta+=event.delta;
-          if(!firstAfterStart)firstAfterStart=event;
-        }
-        var opening=current-openingDelta,availableDays=0,known=true;
-        if(firstAfterStart&&firstAfterStart.before!==null&&isFinite(firstAfterStart.before))opening=firstAfterStart.before;
-        else if(!firstAfterStart){
-          var balance=balances[sid]&&balances[sid][pid]||{},updated=stockDateMs(balance.updatedAt);
-          if(!updated||updated>startMs)known=false;
-          else opening=current;
-        }else known=false;
-        if(opening<0){known=false;opening=0;}
-        var cursor=startMs,level=opening;
-        for(var j=0;j<events.length;j++){
-          var periodEvent=events[j];
-          if(periodEvent.at<startMs)continue;
-          if(periodEvent.at>endMs)break;
-          var at=periodEvent.at;
-          if(level>0&&at>cursor)availableDays+=(at-cursor)/86400000;
-          if(periodEvent.before!==null&&isFinite(periodEvent.before)&&Math.abs(level-periodEvent.before)>0.001)known=false;
-          level+=periodEvent.delta;
-          if(periodEvent.after!==null&&isFinite(periodEvent.after)&&Math.abs(level-periodEvent.after)>0.001){known=false;level=periodEvent.after;}
-          if(level<0){known=false;level=0;}
-          cursor=at;
-        }
-        if(level>0&&endMs>cursor)availableDays+=(endMs-cursor)/86400000;
-        availableDays=Math.min(periodDays,Math.max(0,availableDays));
-        var units=soldByKey[key2]||0;
+        var current=qty(pid,sid),key=pid+'|'+sid,units=Number(soldByKey[key]||0);
         if(units<=0&&current<=0)return;
-        var rate=availableDays>0?units/availableDays:0,coverage=rate>0?current/rate:null;
+        var rate=units/periodDays;
+        var coverage=rate>0?current/rate:null;
         var recommended=rate>0?Math.max(0,Math.ceil(rate*target-current)):0;
-        var reliable=known&&availableDays>=Math.min(3,periodDays);
-        var salesRank=salesRankByKey[key2],isTopSeller=salesRank!==undefined&&salesRank!==null;
-        var footwear=isFootwearProduct(product),urgentStockLimit=footwear?3:1;
-        var priorityStatus=(isTopSeller&&current<=urgentStockLimit)||(coverage!==null&&coverage<=2)?'urgent':(current<=0||(coverage!==null&&coverage<=4)||(!reliable&&units>0)?'soon':'sufficient');
-        var reason= !known?'История остатков неполная — статус предварительный':availableDays<Math.min(3,periodDays)?'Недостаточно дней наличия для оценки спроса':units<=0?'Продаж за период нет':recommended>0?'Текущего остатка недостаточно для запаса на '+target+' дней':'Запаса достаточно';
-        rows.push({productId:pid,productName:String(product.name||'Без названия'),photoUrl:String(product.photoUrl||''),storeId:sid,storeName:stockLocationName(sid),currentStock:current,soldUnits:units,availableDays:availableDays,periodDays:periodDays,dailyDemand:rate,coverageDays:coverage,recommendedQty:reliable?recommended:0,known:reliable,reason:reason,purchaseCost:product.purchaseCost==null||product.purchaseCost===''?null:Number(product.purchaseCost),priorityStatus:priorityStatus,salesRank:salesRank,urgentStockLimit:urgentStockLimit,isFootwear:footwear});
+        var salesRank=salesRankByKey[key],isTopSeller=salesRank!==undefined&&salesRank!==null;
+        var urgentStockLimit=footwear?3:1;
+        var priorityStatus=(isTopSeller&&current<=urgentStockLimit)||(coverage!==null&&coverage<=2)?'urgent':(current<=0||(coverage!==null&&coverage<=4)?'soon':'sufficient');
+        var periodLabel=startDate?'за выбранный период':'за последние 30 дней';
+        var reason=units<=0?'Продаж '+periodLabel+' нет':recommended>0?'По продажам '+periodLabel+' текущего остатка недостаточно на '+target+' дней':'Запаса достаточно';
+        rows.push({
+          productId:pid,productName:String(product.name||'Без названия'),photoUrl:String(product.photoUrl||''),
+          storeId:sid,storeName:stockLocationName(sid),currentStock:current,soldUnits:units,
+          availableDays:null,periodDays:periodDays,dailyDemand:rate,coverageDays:coverage,
+          recommendedQty:recommended,known:false,reason:reason,
+          purchaseCost:product.purchaseCost==null||product.purchaseCost===''?null:Number(product.purchaseCost),
+          priorityStatus:priorityStatus,salesRank:salesRank,urgentStockLimit:urgentStockLimit,isFootwear:footwear
+        });
       });
     });
     var priorityOrder={urgent:0,soon:1,sufficient:2};
     rows.sort(function(a,b){return priorityOrder[a.priorityStatus]-priorityOrder[b.priorityStatus]||(b.recommendedQty-a.recommendedQty)||(a.coverageDays==null?1:b.coverageDays==null?-1:a.coverageDays-b.coverageDays)||a.productName.localeCompare(b.productName,'ru');});
-    var result={ready:true,rows:rows,periodDays:periodDays,targetDays:target,startDate:startDate||'',endDate:endDate||'',currentAsOf:new Date(now).toISOString()};
+    var result={ready:true,rows:rows,periodDays:periodDays,targetDays:target,startDate:startDate||'',endDate:endDate||'',currentAsOf:new Date(now).toISOString(),calculationMode:'last_30_days_sales'};
     replenishmentCache[cacheKey]={salesRef:salesRows,salesLength:salesRows.length,result:result};
     var cacheKeys=Object.keys(replenishmentCache);if(cacheKeys.length>12)delete replenishmentCache[cacheKeys[0]];
     return result;
