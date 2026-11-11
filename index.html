@@ -4646,6 +4646,8 @@ function resolveSaleProduct(sale, productsById, products) {
 }
 var purchaseRecommendationVisibleCount=10;
 var purchaseRecommendationFilterKey='';
+var purchaseQueueItems=null;
+var purchaseQueueStorageKey='';
 var purchaseRankingVisibleCount=10;
 var purchaseRankingFilterKey='';
 var purchaseRankingCachedKey='';
@@ -4656,61 +4658,151 @@ var purchaseAntiRankingCachedKey='';
 var purchaseAntiRankingCachedResult=null;
 var purchaseRankingMode='leaders';
 
+function getPurchaseQueueStorageKey(){
+    var scope='mine';
+    if(currentUser&&typeof isSuperAdmin==='function'&&isSuperAdmin(currentUser))scope=String(currentOrgFilter||'mine');
+    else if(currentUser&&currentUser.org)scope=String(currentUser.org);
+    return 'easy_purchase_queue_v1_'+encodeURIComponent(scope);
+}
+function getPurchaseQueueItems(){
+    var key=getPurchaseQueueStorageKey();
+    if(purchaseQueueStorageKey!==key){
+        purchaseQueueStorageKey=key;
+        purchaseQueueItems=[];
+        try{
+            var stored=localStorage.getItem(key);
+            var parsed=stored?JSON.parse(stored):[];
+            if(Array.isArray(parsed))purchaseQueueItems=parsed.filter(function(item){return item&&item.productId&&item.storeId;});
+        }catch(error){purchaseQueueItems=[];}
+    }
+    return purchaseQueueItems;
+}
+function savePurchaseQueueItems(){
+    try{localStorage.setItem(purchaseQueueStorageKey,JSON.stringify(purchaseQueueItems||[]));}
+    catch(error){console.warn('Не удалось сохранить список «К закупке» в этом браузере:',error);}
+}
+function purchaseQueueContains(productId,storeId){
+    return getPurchaseQueueItems().some(function(item){return String(item.productId)===String(productId)&&String(item.storeId)===String(storeId);});
+}
+function togglePurchaseQueueItem(productId,storeId,checked){
+    var items=getPurchaseQueueItems(),index=items.findIndex(function(item){return String(item.productId)===String(productId)&&String(item.storeId)===String(storeId);});
+    if(checked&&index<0){
+        var result=typeof window.stockGetReplenishmentRecommendations==='function'?window.stockGetReplenishmentRecommendations('','',String(storeId),14):null;
+        var row=result&&result.ready?(result.rows||[]).find(function(item){return String(item.productId)===String(productId)&&String(item.storeId)===String(storeId);}):null;
+        if(!row)return;
+        items.push({
+            productId:String(row.productId),productName:String(row.productName||'Без названия'),
+            photoUrl:String(row.photoUrl||''),category:String(row.category||''),
+            storeId:String(row.storeId),storeName:String(row.storeName||row.storeId),
+            currentStock:Number(row.currentStock)||0,isFootwear:!!row.isFootwear,addedAt:Date.now()
+        });
+    }else if(!checked&&index>=0){
+        items.splice(index,1);
+    }
+    purchaseQueueItems=items;
+    savePurchaseQueueItems();
+    renderPurchaseRecommendations(true);
+}
+function removePurchaseQueueItem(productId,storeId){
+    togglePurchaseQueueItem(productId,storeId,false);
+}
+function resetPurchaseQueue(){
+    purchaseQueueItems=[];
+    if(!purchaseQueueStorageKey)purchaseQueueStorageKey=getPurchaseQueueStorageKey();
+    savePurchaseQueueItems();
+    renderPurchaseQueue();
+}
+function renderPurchaseQueue(){
+    var host=document.getElementById('purchaseQueueList');
+    if(!host)return;
+    var items=getPurchaseQueueItems(),count=document.getElementById('purchaseQueueCount');
+    if(count)count.textContent='· '+items.length;
+    function h(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
+    if(!items.length){
+        host.innerHTML='<div style="padding:12px;border:1px dashed var(--border);border-radius:9px;font-size:13px;color:var(--text-light);">Список пуст. Отметьте нужные карточки выше, чтобы добавить их к закупке.</div>';
+        return;
+    }
+    host.innerHTML=items.map(function(item){
+        var photo=item.photoUrl?'<img src="'+h(item.photoUrl)+'" alt="" loading="lazy" decoding="async" style="width:44px;height:44px;object-fit:cover;border-radius:8px;flex:0 0 44px;">':'<span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--surface,#f3f4f6);font-size:20px;flex:0 0 44px;">📦</span>';
+        return '<article style="display:flex;align-items:center;gap:10px;padding:9px;border:1px solid var(--border);border-radius:10px;min-width:0;">'
+            +photo
+            +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;overflow-wrap:anywhere;">'+h(item.productName)+'</div>'
+            +'<div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+h(item.storeName)+' · сейчас '+Number(item.currentStock||0)+' шт.</div></div>'
+            +'<button type="button" class="btn btn-secondary" data-purchase-queue-remove="1" data-product-id="'+h(item.productId)+'" data-store-id="'+h(item.storeId)+'" style="padding:6px 9px;white-space:nowrap;">Убрать</button></article>';
+    }).join('');
+    host.querySelectorAll('[data-purchase-queue-remove]').forEach(function(button){
+        button.addEventListener('click',function(){removePurchaseQueueItem(button.getAttribute('data-product-id'),button.getAttribute('data-store-id'));});
+    });
+}
+
 function renderPurchaseRecommendations(skipRankingRefresh) {
     if (!isWorkspacePageActive('purchase')) return;
     var table=document.getElementById('purchaseRecommendationTable');
     var status=document.getElementById('purchaseRecommendationStatus');
     var foot=document.getElementById('purchaseRecommendationFootnote');
     if(!table||!currentUser||currentUser.role!=='admin')return;
+    getPurchaseQueueItems();
     populatePurchaseStoreOptions();
     var selectedStore=document.getElementById('purchaseStoreSelect')?document.getElementById('purchaseStoreSelect').value:'all';
     if(purchaseRecommendationFilterKey!==String(selectedStore)){purchaseRecommendationFilterKey=String(selectedStore);purchaseRecommendationVisibleCount=10;}
-    if(typeof window.stockGetReplenishmentRecommendations!=='function'){var recMoreWait=document.getElementById('purchaseRecommendationMore');if(recMoreWait)recMoreWait.innerHTML='';table.innerHTML='<div style="padding:16px;color:var(--text-light);">Модуль складской аналитики ещё загружается.</div>';if(status)status.textContent='Ожидаем синхронизацию складских данных.';return;}
-    var result=window.stockGetReplenishmentRecommendations('','',selectedStore,14);
-    if(!result||!result.ready){var recMoreWait=document.getElementById('purchaseRecommendationMore');if(recMoreWait)recMoreWait.innerHTML='';table.innerHTML='<div style="padding:16px;color:var(--text-light);">Складские данные загружаются…</div>';if(status)status.textContent=result&&result.message||'Загрузка…';return;}
-    var rows=result.rows||[];
-    var urgent=rows.filter(function(row){return row.priorityStatus==='urgent';}).length;
-    var soon=rows.filter(function(row){return row.priorityStatus==='soon';}).length;
-    var sufficient=rows.length-urgent-soon;
-    var recommended=rows.filter(function(row){return row.recommendedQty>0;});
-    var units=recommended.reduce(function(sum,row){return sum+row.recommendedQty;},0);
-    function h(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
-    function n(value,digits){return Number(value||0).toLocaleString('ru-RU',{maximumFractionDigits:digits==null?1:digits});}
-    if(status)status.textContent='Продажи за последние 30 дней · срочно: '+urgent+' · скоро: '+soon+' · запас достаточный: '+sufficient+' · расчётное пополнение на 14 дней: '+n(units,0)+' шт. · показано '+Math.min(purchaseRecommendationVisibleCount,rows.length)+' из '+rows.length;
-    var more=document.getElementById('purchaseRecommendationMore');
-    if(!rows.length){
-        table.innerHTML='<div style="padding:18px;color:var(--text-light);">Нет активных карточек с остатками или продажами за последние 30 дней для выбранного магазина.</div>';
-        if(more)more.innerHTML='';
-        if(foot)foot.textContent='Продажи без привязки к карточке склада не распределяются автоматически.';
+    if(typeof window.stockGetReplenishmentRecommendations!=='function'){
+        var waitMore=document.getElementById('purchaseRecommendationMore');if(waitMore)waitMore.innerHTML='';
+        table.innerHTML='<div style="padding:16px;color:var(--text-light);">Модуль склада ещё загружается…</div>';
+        if(status)status.textContent='Ожидаем данные товаров и остатков.';
+        renderPurchaseQueue();
         return;
     }
-    var visibleRows=rows.slice(0,purchaseRecommendationVisibleCount);
-    table.innerHTML=visibleRows.map(function(row){
-      var cover=row.coverageDays===null?'—':n(row.coverageDays,1)+' дн.';
-      var label=row.priorityStatus==='urgent'?'Срочно':row.priorityStatus==='soon'?'Скоро':'Запас достаточный';
-      var color=row.priorityStatus==='urgent'?'#b42318':row.priorityStatus==='soon'?'#b7791f':'#16803c';
-      var bg=row.priorityStatus==='urgent'?'#fef0f0':row.priorityStatus==='soon'?'#fff7e8':'#edf8f0';
-      var badge='<span style="display:inline-block;padding:4px 8px;border-radius:999px;background:'+bg+';color:'+color+';font-size:12px;font-weight:700;white-space:nowrap;">'+label+'</span>';
-      var photo=row.photoUrl?'<img src="'+h(row.photoUrl)+'" alt="" loading="lazy" decoding="async" style="width:58px;height:58px;object-fit:cover;border-radius:9px;background:var(--surface,#f3f4f6);flex:0 0 58px;">':'<span style="width:58px;height:58px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:var(--surface,#f3f4f6);font-size:24px;flex:0 0 58px;">📦</span>';
-      function metric(label,value){return '<div style="min-width:0;padding:8px 10px;border-radius:8px;background:var(--surface,#f7f7f7);"><div style="font-size:11px;color:var(--text-light);margin-bottom:3px;">'+label+'</div><div style="font-size:14px;font-weight:700;overflow-wrap:anywhere;">'+value+'</div></div>';}
-      var metrics=metric('Статус',badge)+
-          metric('Продано',n(row.soldUnits,0)+' шт.')+
-          metric('Остаток сейчас',n(row.currentStock,0)+' шт.')+
-          metric('Хватит на',cover)+
-          metric('Магазин',h(row.storeName));
-      return '<article style="border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:12px;min-width:0;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;min-width:0;">'+photo+'<div style="font-size:14px;font-weight:700;min-width:0;overflow-wrap:anywhere;">'+h(row.productName)+(row.isFootwear?'<div style="font-size:11px;color:var(--text-light);font-weight:400;">Обувь</div>':'')+'</div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:7px;">'+metrics+'</div></article>';
-    }).join('');
-    if(more){
-      var remaining=rows.length-visibleRows.length;
-      more.innerHTML=remaining>0?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseRecommendations()" style="width:100%;">Показать ещё 10 · осталось '+remaining+'</button>':'<div style="font-size:12px;color:var(--text-light);text-align:center;padding:8px 0;">Показаны все '+rows.length+' карточек</div>';
+    var result=window.stockGetReplenishmentRecommendations('','',selectedStore,14);
+    if(!result||!result.ready){
+        var loadingMore=document.getElementById('purchaseRecommendationMore');if(loadingMore)loadingMore.innerHTML='';
+        table.innerHTML='<div style="padding:16px;color:var(--text-light);">'+(result&&result.message||'Загружаются данные товаров и остатков…')+'</div>';
+        if(status)status.textContent='Загрузка…';
+        renderPurchaseQueue();
+        return;
     }
-    if(foot)foot.textContent='Продажи и средний спрос считаются за последние 30 дней. «Срочно»: карточка входит в верхние 25% по продажам в своём магазине и остаток не больше 1 шт. (для обуви — не больше 3 шт.) ИЛИ запаса хватит не более чем на 2 дня. «Скоро»: остатка хватит не более чем на 4 дня. «Запас достаточный»: остатка хватит более чем на 4 дня. История дней, когда товар был в наличии, отдельно не анализируется, поэтому при длительном отсутствии товара спрос может быть занижен.';
+    var rows=result.rows||[],counts=result.counts||{urgent:0,soon:0,sufficient:0};
+    if(status)status.textContent='Срочно: '+counts.urgent+' · скоро: '+counts.soon+' · достаточно: '+counts.sufficient+' · карточек: '+rows.length;
+    function h(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
+    var more=document.getElementById('purchaseRecommendationMore');
+    var visibleRows=rows.slice(0,purchaseRecommendationVisibleCount);
+    if(!rows.length){
+        table.innerHTML='<div style="padding:16px;color:var(--text-light);">Нет активных карточек для выбранного магазина.</div>';
+        if(more)more.innerHTML='';
+        if(foot)foot.textContent='Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.';
+        renderPurchaseQueue();
+        return;
+    }
+    table.innerHTML=visibleRows.map(function(row){
+        var selected=purchaseQueueContains(row.productId,row.storeId);
+        var label=row.priorityStatus==='urgent'?'Срочно':row.priorityStatus==='soon'?'Скоро':'Достаточно';
+        var color=row.priorityStatus==='urgent'?'#b42318':row.priorityStatus==='soon'?'#b7791f':'#16803c';
+        var bg=row.priorityStatus==='urgent'?'#fef0f0':row.priorityStatus==='soon'?'#fff7e8':'#edf8f0';
+        var badge='<span style="display:inline-block;padding:4px 8px;border-radius:999px;background:'+bg+';color:'+color+';font-size:12px;font-weight:700;white-space:nowrap;">'+label+'</span>';
+        var photo=row.photoUrl?'<img src="'+h(row.photoUrl)+'" alt="" loading="lazy" decoding="async" style="width:50px;height:50px;object-fit:cover;border-radius:8px;background:var(--surface,#f3f4f6);flex:0 0 50px;">':'<span style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--surface,#f3f4f6);font-size:22px;flex:0 0 50px;">📦</span>';
+        var category=row.category?'<div style="font-size:11px;color:var(--text-light);margin-top:2px;">'+h(row.category)+'</div>':'';
+        return '<article style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:10px;min-width:0;">'
+            +photo
+            +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;overflow-wrap:anywhere;">'+h(row.productName)+'</div>'
+            +category+'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">'+h(row.storeName)+' · остаток: <b style="color:var(--text);">'+Number(row.currentStock||0)+' шт.</b></div></div>'
+            +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex:0 0 auto;">'+badge
+            +'<label style="display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;cursor:pointer;"><input type="checkbox" data-purchase-queue-toggle="1" data-product-id="'+h(row.productId)+'" data-store-id="'+h(row.storeId)+'" '+(selected?'checked':'')+'>К закупке</label></div></article>';
+    }).join('');
+    table.querySelectorAll('[data-purchase-queue-toggle]').forEach(function(input){
+        input.addEventListener('change',function(){
+            togglePurchaseQueueItem(input.getAttribute('data-product-id'),input.getAttribute('data-store-id'),input.checked);
+        });
+    });
+    if(more){
+        var remaining=rows.length-visibleRows.length;
+        more.innerHTML=remaining>0?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseRecommendations()" style="width:100%;">Показать ещё 10 · осталось '+remaining+'</button>':'<div style="font-size:12px;color:var(--text-light);text-align:center;padding:8px 0;">Показаны все '+rows.length+' карточек</div>';
+    }
+    if(foot)foot.textContent='Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.';
+    renderPurchaseQueue();
 }
 function showMorePurchaseRecommendations(){
     purchaseRecommendationVisibleCount+=10;
     renderPurchaseRecommendations(true);
 }
-
 
 function switchAnalyticsProductSection(section) {
     if (!currentUser || currentUser.role !== 'admin') return;
@@ -10110,7 +10202,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var sellerPlanWidget=document.createElement('section');sellerPlanWidget.id='sellerStoreSalesPlanWidget';sellerPlanWidget.className='card seller-plan-widget';sellerPlanWidget.innerHTML='<button id="sellerPlanToggle" class="seller-plan-toggle" type="button" onclick="toggleSellerSalesPlanDetails()" aria-expanded="false" aria-controls="sellerPlanProgress"><span class="seller-plan-toggle-row"><span><span class="seller-plan-toggle-title">План продаж</span><span id="sellerPlanStoreMonth" class="seller-plan-toggle-subtitle">Текущий месяц</span></span><span class="seller-plan-toggle-score"><span id="sellerPlanCompactPercent">—</span><span class="seller-plan-toggle-chevron" aria-hidden="true">⌄</span></span></span><span class="seller-plan-toggle-track" aria-hidden="true"><span id="sellerPlanCompactBar" class="seller-plan-toggle-fill" style="display:block;width:0%"></span></span></button><div id="sellerPlanProgress" class="seller-plan-details" hidden><div class="sales-plan-progress-list"><div class="sales-plan-empty">Загружаем план магазина…</div></div></div>';dashboard.appendChild(sellerPlanWidget);
     if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(true);
     var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации');
-    purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Оценка спроса отдельно по каждой карточке и магазину. Остатки — текущие; продажи учитываются за всю доступную историю. Расчётный горизонт запаса — 14 дней. Блок только показывает аналитику и ничего не записывает.</p></div><button type="button" class="btn btn-secondary" onclick="renderPurchaseRecommendations()">Обновить рекомендации</button></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все магазины</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка складских данных…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div><p id="purchaseRecommendationFootnote" style="font-size:12px;color:var(--text-light);margin:10px 0 0;">Продажи без привязки к карточке склада не распределяются автоматически. При неполной истории программа не выдаёт количество к закупке.</p></section>');
+    purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Простая оценка только по текущему остатку. Выберите карточки, которые нужно закупить, — они появятся в отдельном списке ниже.</p></div><button type="button" class="btn btn-secondary" onclick="renderPurchaseRecommendations()">Обновить</button></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все магазины</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div><p id="purchaseRecommendationFootnote" style="font-size:12px;color:var(--text-light);margin:10px 0 0;">Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.</p></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Выбранные карточки для следующей закупки. Список сохраняется в этом браузере для текущей организации.</p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
     costsPage.insertAdjacentHTML('beforeend', `
       <div class="card sale-cost-manager-card">
         <h3>Закупочная стоимость каждой продажи</h3>
