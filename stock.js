@@ -1223,7 +1223,7 @@
     var endMs=endDate?Math.min(stockLocalDateMs(endDate,true)||now,now):now;
     var startMs=startDate?stockLocalDateMs(startDate,false):endMs-30*day;
     if(!startMs||!endMs||startMs>endMs)return {ready:true,rows:[],message:'Проверьте выбранный период.'};
-    var periodDays=Math.max(1,(endMs-startMs+1)/day);
+    var periodDays=startDate?Math.max(1,Math.ceil((endMs-startMs+1)/day)):30;
     var dayKey=new Date(now).toISOString().slice(0,10);
     var cacheKey=[org(),String(selectedStore||'all'),stores.join(','),target,String(startDate||''),String(endDate||''),dayKey,replenishmentCacheRevision,salesRows.length].join('|');
     var cached=replenishmentCache[cacheKey];
@@ -1274,7 +1274,8 @@
         var salesRank=salesRankByKey[key],isTopSeller=salesRank!==undefined&&salesRank!==null;
         var urgentStockLimit=footwear?3:1;
         var priorityStatus=(isTopSeller&&current<=urgentStockLimit)||(coverage!==null&&coverage<=2)?'urgent':(current<=0||(coverage!==null&&coverage<=4)?'soon':'sufficient');
-        var reason=units<=0?'Продаж за последние 30 дней нет':recommended>0?'По продажам за последние 30 дней текущего остатка недостаточно на '+target+' дней':'Запаса достаточно';
+        var periodLabel=startDate?'за выбранный период':'за последние 30 дней';
+        var reason=units<=0?'Продаж '+periodLabel+' нет':recommended>0?'По продажам '+periodLabel+' текущего остатка недостаточно на '+target+' дней':'Запаса достаточно';
         rows.push({
           productId:pid,productName:String(product.name||'Без названия'),photoUrl:String(product.photoUrl||''),
           storeId:sid,storeName:stockLocationName(sid),currentStock:current,soldUnits:units,
