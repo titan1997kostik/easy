@@ -897,8 +897,10 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
             <label>Дата продажи (для админа)</label>
             <input type="datetime-local" id="adminSaleDate">
         </div>
+        <button id="addSaleItemButton" class="btn btn-secondary" type="button" style="width:100%;margin-bottom:8px;" onclick="saveSale(true)">＋ Добавить ещё товар в чек</button>
+        <div id="saleCartContainer" style="display:none;margin:0 0 10px;"></div>
         <div class="form-group">
-            <label>Способ оплаты</label>
+            <label>Способ оплаты всего чека</label>
             <div class="payment-methods">
                 <div class="payment-method" onclick="selectPayment(this, 'Карта')">Карта</div>
                 <div class="payment-method" onclick="selectPayment(this, 'Наличные с чеком')">Нал. с чеком</div>
@@ -936,7 +938,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <div id="splitTotalDisplay" style="margin-top:8px; font-size:13px; color:var(--text-light);">Итого: 0 руб.</div>
             </div>
         </div>
-        <button id="addSaleItemButton" class="btn btn-secondary" type="button" style="width:100%;margin-bottom:8px;" onclick="saveSale(true)">＋ Добавить ещё товар в чек</button>
+
         <button id="saveSaleButton" class="btn" style="width: 100%;" onclick="saveSale()">Сохранить продажу</button>
         <p id="saleSyncNotice" role="status" aria-live="polite" style="display:none;margin-top:9px;padding:9px 11px;border-radius:9px;background:#fff7e6;border:1px solid #f4d7a1;color:#805b16;font-size:12px;line-height:1.45;"></p>
         <!-- BREAK BUTTON (sellers only) -->
@@ -5277,6 +5279,223 @@ function handleStockSaleSizeChange(){var size=document.getElementById('stockSale
 function refreshStockSaleSizes(){var product=document.getElementById('stockSaleProduct'),size=document.getElementById('stockSaleSize');if(!product||!size)return;var option=product.options[product.selectedIndex],counts={};try{counts=JSON.parse(option&&option.dataset.sizes||'{}');}catch(e){}var manual=document.getElementById('stockSaleManualSize'),wrap=document.getElementById('stockSaleManualWrap');if(manual)manual.value='';if(wrap)wrap.style.display='none';size.innerHTML='<option value="">Выберите размер</option>';Object.keys(counts).sort(function(a,b){var an=/^\\d+$/.test(a),bn=/^\\d+$/.test(b);if(an&&bn)return Number(a)-Number(b);if(an)return -1;if(bn)return 1;return a.localeCompare(b,'ru');}).forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v+' · '+counts[v]+' шт.';size.appendChild(o);});var manualOption=document.createElement('option');manualOption.value='__manual__';manualOption.textContent='＋ Другой размер…';size.appendChild(manualOption);}
 function refreshStockSaleQuantityLimit(){}
 
+
+function getPendingSaleCart() {
+    if (!Array.isArray(window.pendingSaleCart)) window.pendingSaleCart = [];
+    return window.pendingSaleCart;
+}
+function renderPendingSaleCart() {
+    var container = document.getElementById('saleCartContainer');
+    if (!container) return;
+    var items = getPendingSaleCart();
+    if (!items.length) { container.innerHTML = ''; container.style.display = 'none'; return; }
+    var total = items.reduce(function(sum, item) { return sum + (Number(item && item.price) || 0); }, 0);
+    var rows = items.map(function(item, index) {
+        var title = escapeProductText(item && (item.name || item.itemDetails) || 'Товар');
+        var detail = item && item.itemDetails ? escapeProductText(item.itemDetails) : '';
+        var stockLabel = item && item.stockSale ? ' · со склада' : '';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">' +
+            '<div style="min-width:0;flex:1;"><div style="font-weight:600;overflow-wrap:anywhere;">' + title + stockLabel + '</div>' +
+            (detail && detail !== title ? '<div style="font-size:12px;color:var(--text-light);margin-top:2px;">' + detail + '</div>' : '') + '</div>' +
+            '<div style="white-space:nowrap;font-weight:700;">' + (Number(item.price) || 0).toLocaleString('ru-RU', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ₽</div>' +
+            '<button type="button" aria-label="Удалить товар из чека" title="Удалить товар" onclick="removePendingSaleItem(' + index + ')" style="flex:0 0 auto;border:1px solid #f0c7d5;background:#fff5f8;color:#b83262;border-radius:8px;padding:7px 10px;cursor:pointer;font-weight:700;">×</button>' +
+            '</div>';
+    }).join('');
+    container.innerHTML = '<div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:0 0 10px;background:var(--card);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:700;margin-bottom:4px;">' +
+        '<span>Товары в чеке</span><span style="font-size:12px;color:var(--text-light);font-weight:600;">' + items.length + ' шт.</span></div>' +
+        rows +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:12px;font-size:16px;font-weight:800;"><span>Итого</span><span>' +
+        total.toLocaleString('ru-RU', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ₽</span></div></div>';
+    container.style.display = 'block';
+}
+function removePendingSaleItem(index) {
+    var items = getPendingSaleCart();
+    if (!Number.isInteger(index) || index < 0 || index >= items.length) return;
+    items.splice(index, 1);
+    if (!items.length) window.activeSaleReceiptId = null;
+    renderPendingSaleCart();
+    var notice = document.getElementById('saleSyncNotice');
+    if (notice) notice.style.display = 'none';
+}
+function resetSaleEntryForNextItem() {
+    var productSelect = document.getElementById('prodName');
+    if (productSelect) productSelect.value = '';
+    if (document.getElementById('prodDetailName')) document.getElementById('prodDetailName').value = '';
+    if (typeof updateProductChooserButton === 'function') updateProductChooserButton();
+    if (typeof clearSaleGender === 'function') clearSaleGender();
+    var priceInput = document.getElementById('prodPrice');
+    if (priceInput) priceInput.value = '';
+    var stockToggle = document.getElementById('stockSaleEnabled');
+    if (stockToggle) { stockToggle.checked = false; if (typeof toggleStockSaleFields === 'function') toggleStockSaleFields(); }
+    ['stockSaleProduct','stockSaleSize','stockSaleManualSize'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+    var manualWrap = document.getElementById('stockSaleManualWrap');
+    if (manualWrap) manualWrap.style.display = 'none';
+    document.querySelectorAll('.payment-method').forEach(function(el) { el.classList.remove('active'); });
+    activePaymentMethod = '';
+    var splitFields = document.getElementById('splitPaymentFields');
+    if (splitFields) splitFields.style.display = 'none';
+    ['splitAmt1','splitAmt2'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+    var totalDisplay = document.getElementById('splitTotalDisplay');
+    if (totalDisplay) totalDisplay.textContent = 'Итого: 0 руб.';
+    promotionSaleEnabled = false;
+    if (typeof updatePromotionSaleToggle === 'function') updatePromotionSaleToggle();
+}
+function commitSaleItems(items, adminDateInput) {
+    if (!items || !items.length) { alert('Добавьте хотя бы один товар в чек.'); return; }
+    var validMethods = ['Карта', 'Наличные с чеком', 'Наличные без чека', 'Перевод', 'СБП'];
+    if (activePaymentMethod !== 'Раздельная оплата' && validMethods.indexOf(activePaymentMethod) === -1) {
+        alert('Выберите способ оплаты перед сохранением чека!');
+        return;
+    }
+    var totalPrice = items.reduce(function(sum, item) { return sum + (Number(item && item.price) || 0); }, 0);
+    if (!isFinite(totalPrice) || totalPrice <= 0) { alert('Общая сумма чека должна быть больше нуля.'); return; }
+    if (activePaymentMethod === 'Раздельная оплата') {
+        var payment1 = document.getElementById('splitPay1') ? document.getElementById('splitPay1').value : '';
+        var payment2 = document.getElementById('splitPay2') ? document.getElementById('splitPay2').value : '';
+        var amount1 = document.getElementById('splitAmt1') ? Number(document.getElementById('splitAmt1').value) : NaN;
+        var amount2 = document.getElementById('splitAmt2') ? Number(document.getElementById('splitAmt2').value) : NaN;
+        if (!isFinite(amount1) || !isFinite(amount2) || amount1 <= 0 || amount2 <= 0) {
+            alert('Укажите положительные суммы для обоих способов оплаты!');
+            return;
+        }
+        amount1 = Math.round(amount1 * 100) / 100;
+        amount2 = Math.round(amount2 * 100) / 100;
+        if (Math.round((amount1 + amount2) * 100) !== Math.round(totalPrice * 100)) {
+            alert('Сумма частей (' + (amount1 + amount2).toFixed(2) + ') не совпадает с итогом чека (' + totalPrice.toFixed(2) + ')!');
+            return;
+        }
+        var remainingAmount1 = amount1;
+        items.forEach(function(item, index) {
+            var linePrice = Math.round((Number(item.price) || 0) * 100) / 100;
+            var lineAmount1 = index === items.length - 1
+                ? remainingAmount1
+                : Math.round((amount1 * linePrice / totalPrice) * 100) / 100;
+            lineAmount1 = Math.max(0, Math.min(linePrice, remainingAmount1, lineAmount1));
+            var lineAmount2 = Math.round((linePrice - lineAmount1) * 100) / 100;
+            remainingAmount1 = Math.round((remainingAmount1 - lineAmount1) * 100) / 100;
+            item.splitPayment = true;
+            item.payment1 = payment1;
+            item.amount1 = lineAmount1;
+            item.payment2 = payment2;
+            item.amount2 = lineAmount2;
+            item.payment = payment1 + ' + ' + payment2;
+        });
+        if (remainingAmount1 > 0) {
+            for (var allocationIndex = items.length - 1; allocationIndex >= 0 && remainingAmount1 > 0; allocationIndex--) {
+                var allocationItem = items[allocationIndex];
+                var allocationCapacity = Math.round(((Number(allocationItem.price) || 0) - (Number(allocationItem.amount1) || 0)) * 100) / 100;
+                var allocationExtra = Math.min(allocationCapacity, remainingAmount1);
+                allocationItem.amount1 = Math.round(((Number(allocationItem.amount1) || 0) + allocationExtra) * 100) / 100;
+                allocationItem.amount2 = Math.round(((Number(allocationItem.price) || 0) - allocationItem.amount1) * 100) / 100;
+                remainingAmount1 = Math.round((remainingAmount1 - allocationExtra) * 100) / 100;
+            }
+        }
+        if (remainingAmount1 > 0) { alert('Не удалось распределить сумму раздельной оплаты по товарам.'); return; }
+    } else {
+        items.forEach(function(item) {
+            item.payment = activePaymentMethod;
+            delete item.splitPayment;
+            delete item.payment1;
+            delete item.amount1;
+            delete item.payment2;
+            delete item.amount2;
+        });
+    }
+    if (saleSaveInProgress) { alert('Чек уже сохраняется. Подождите завершения операции.'); return; }
+    saleSaveInProgress = true;
+    var saveSaleButton = document.getElementById('saveSaleButton');
+    if (saveSaleButton) { saveSaleButton.disabled = true; saveSaleButton.setAttribute('aria-busy', 'true'); }
+    var receiptId = window.activeSaleReceiptId || items[0].receiptId || ('receipt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10));
+    window.activeSaleReceiptId = receiptId;
+    var localRecords = [];
+    items.forEach(function(item) {
+        item.receiptId = receiptId;
+        var saleId = 'sale_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+        item.id = saleId;
+        var localRecord = Object.assign({}, item, { _pendingSync: true });
+        sales.push(localRecord);
+        localRecords.push(localRecord);
+    });
+    var saleCacheSaved = saveAllToLocal();
+    updatePendingSalesNotice();
+    var stockPromises = [];
+    var durabilityPromises = localRecords.map(function(localRecord) {
+        var saleData = Object.assign({}, localRecord);
+        if (saleData.stockSale) {
+            var stockPromise = typeof window.stockCompleteSale === 'function'
+                ? window.stockCompleteSale(Object.assign({}, saleData, { _pendingSync: false })).then(function(result) {
+                    Object.assign(localRecord, result.sale || {}, { _pendingSync: false });
+                    return true;
+                })
+                : Promise.resolve(false);
+            stockPromises.push(stockPromise);
+            return stockPromise;
+        }
+        return uploadPendingLocalRecord('sales_data/' + localRecord.id, localRecord);
+    });
+    updatePendingSalesNotice();
+
+    function finishCommit() {
+        var lastSale = items[items.length - 1];
+        if (currentUser && currentUser.role === 'admin') {
+            var savedSaleDate = getRecordDateString(lastSale.timestamp);
+            var historyDateInput = document.getElementById('salesHistoryDateFilter');
+            var historyStartInput = document.getElementById('salesHistoryStartDateFilter');
+            var historyEndInput = document.getElementById('salesHistoryEndDateFilter');
+            if (historyDateInput && savedSaleDate) historyDateInput.value = savedSaleDate;
+            if (historyStartInput && savedSaleDate) historyStartInput.value = savedSaleDate;
+            if (historyEndInput && savedSaleDate) historyEndInput.value = savedSaleDate;
+            window.salesHistoryAllDates = false;
+            var allDatesButton = document.getElementById('salesHistoryAllDatesButton');
+            if (allDatesButton) allDatesButton.textContent = 'Все даты';
+        }
+        items.forEach(function(item) {
+            var displayName = item.name || item.itemDetails || 'Товар';
+            addAudit('sale', 'Продажа: ' + displayName + (item.genderLabel ? ' · ' + item.genderLabel : '') + ' (' + item.price + ' руб., ' + item.payment + ')');
+        });
+        window.pendingSaleCart = [];
+        window.activeSaleReceiptId = null;
+        resetSaleEntryForNextItem();
+        if (adminDateInput) adminDateInput.value = '';
+        var notice = document.getElementById('saleSyncNotice');
+        if (notice) notice.style.display = 'none';
+        renderPendingSaleCart();
+        saveAllToLocal();
+        renderAll();
+        if (window.stockRefresh) window.stockRefresh();
+        if (typeof drawChart === 'function') drawChart();
+        if (typeof renderPurchaseRecommendations === 'function' && currentUser && currentUser.role === 'admin') renderPurchaseRecommendations();
+        saleSaveInProgress = false;
+        if (saveSaleButton) { saveSaleButton.disabled = false; saveSaleButton.removeAttribute('aria-busy'); }
+        updatePendingSalesNotice();
+    }
+    function failCommit(error) {
+        var ids = localRecords.map(function(record) { return String(record.id); });
+        sales = (sales || []).filter(function(row) { return !row || ids.indexOf(String(row.id)) === -1; });
+        saveAllToLocal();
+        saleSaveInProgress = false;
+        if (saveSaleButton) { saveSaleButton.disabled = false; saveSaleButton.removeAttribute('aria-busy'); }
+        updatePendingSalesNotice();
+        renderPendingSaleCart();
+        console.error('Sale receipt save failed:', error);
+        alert('Не удалось надёжно сохранить чек. Товары оставлены в корзине. Проверьте соединение и повторите сохранение.');
+    }
+    if (!saleCacheSaved) {
+        Promise.all(durabilityPromises).then(function(results) {
+            if (results.every(Boolean)) finishCommit(); else failCommit(new Error('Не все позиции чека сохранены'));
+        }).catch(failCommit);
+        return;
+    }
+    if (stockPromises.length) {
+        Promise.all(stockPromises).then(function(results) {
+            if (results.every(Boolean)) finishCommit(); else failCommit(new Error('Не удалось подтвердить списание со склада'));
+        }).catch(failCommit);
+    } else {
+        finishCommit();
+    }
+}
+
 function saveSale(addAnotherItem) {
     if (isShiftMutating) { alert('Смена сейчас закрывается или открывается. Повторите запись продажи через секунду.'); return; }
     if (saleSaveInProgress) { alert('Продажа уже сохраняется. Подождите завершения операции.'); return; }
@@ -5314,6 +5533,20 @@ function saveSale(addAnotherItem) {
         }
     }
 
+    var pendingCartBeforeSave = getPendingSaleCart();
+    var currentDetailBeforeSave = document.getElementById('prodDetailName');
+    var currentProductBeforeSave = document.getElementById('prodName');
+    var currentPriceBeforeSave = document.getElementById('prodPrice');
+    var currentStockToggleBeforeSave = document.getElementById('stockSaleEnabled');
+    var hasCurrentItemBeforeSave = !!(currentStockToggleBeforeSave && currentStockToggleBeforeSave.checked) ||
+        !!(currentProductBeforeSave && String(currentProductBeforeSave.value || '').trim()) ||
+        !!(currentDetailBeforeSave && String(currentDetailBeforeSave.value || '').trim()) ||
+        !!(currentPriceBeforeSave && String(currentPriceBeforeSave.value || '').trim());
+    if (!addAnotherItem && pendingCartBeforeSave.length && !hasCurrentItemBeforeSave) {
+        commitSaleItems(pendingCartBeforeSave.slice(), adminDateInput);
+        return;
+    }
+
     var stockSaleEnabled=!!(document.getElementById('stockSaleEnabled')&&document.getElementById('stockSaleEnabled').checked);
     var stockProductSelect=document.getElementById('stockSaleProduct');
     var selectedStockOption=stockProductSelect&&stockProductSelect.selectedIndex>=0?stockProductSelect.options[stockProductSelect.selectedIndex]:null;
@@ -5344,8 +5577,8 @@ function saveSale(addAnotherItem) {
         return;
     }
 
-    if (activePaymentMethod !== 'Раздельная оплата' && ['Карта', 'Наличные с чеком', 'Наличные без чека', 'Перевод', 'СБП'].indexOf(activePaymentMethod) === -1) {
-        alert('Выберите способ оплаты!');
+    if (!addAnotherItem && activePaymentMethod !== 'Раздельная оплата' && ['Карта', 'Наличные с чеком', 'Наличные без чека', 'Перевод', 'СБП'].indexOf(activePaymentMethod) === -1) {
+        alert('Выберите способ оплаты перед сохранением чека!');
         return;
     }
 
@@ -5383,7 +5616,7 @@ function saveSale(addAnotherItem) {
         gender: stockSaleEnabled ? '' : selectedSaleGender,
         genderLabel: stockSaleEnabled ? '' : (selectedSaleGender === 'M' ? 'Мужская (М)' : 'Женская (Ж)'),
         price: price,
-        payment: activePaymentMethod,
+        payment: addAnotherItem ? '' : activePaymentMethod,
         isPromotion: promotionSaleEnabled,
         promotionTier: promotionSaleEnabled ? (price < 1000 ? 'under1000' : 'from1000') : '',
         promotionBonus: promotionSaleEnabled ? (function(){ var employee = currentUser && users.find(function(u){return String(u.id) === String(currentUser.id);}); var key = price < 1000 ? 'salaryPromotionUnder1000' : 'salaryPromotionFrom1000'; return Math.max(0, Number(employee && employee[key]) || 0); })() : 0,
@@ -5398,23 +5631,7 @@ function saveSale(addAnotherItem) {
         backdated: !!useAdminDate
     };
 
-    if (activePaymentMethod === 'Раздельная оплата') {
-        var p1 = document.getElementById('splitPay1') ? document.getElementById('splitPay1').value : '';
-        var p2 = document.getElementById('splitPay2') ? document.getElementById('splitPay2').value : '';
-        var a1 = document.getElementById('splitAmt1') ? Number(document.getElementById('splitAmt1').value) : NaN;
-        var a2 = document.getElementById('splitAmt2') ? Number(document.getElementById('splitAmt2').value) : NaN;
-        if (!isFinite(a1) || !isFinite(a2) || a1 <= 0 || a2 <= 0) { alert('Укажите положительные суммы для обоих способов оплаты!'); return; }
-        a1 = Math.round(a1 * 100) / 100;
-        a2 = Math.round(a2 * 100) / 100;
-        if (Math.round((a1 + a2) * 100) !== Math.round(price * 100)) {
-            alert('Сумма частей (' + (a1 + a2).toFixed(2) + ') не совпадает с ценой (' + price.toFixed(2) + ')!');
-            return;
-        }
-        saleData.splitPayment = true;
-        saleData.payment1 = p1; saleData.amount1 = a1;
-        saleData.payment2 = p2; saleData.amount2 = a2;
-        saleData.payment = p1 + ' + ' + p2;
-    }
+
 
     // Store explicit employee/shift identifiers so analytics never guesses ownership for new sales.
     if (currentUser && currentUser.role === 'seller') {
@@ -5430,93 +5647,22 @@ function saveSale(addAnotherItem) {
 
     if(stockSaleEnabled){var sp=document.getElementById('stockSaleProduct'),ss=document.getElementById('stockSaleSize'),stockProductId=sp?String(sp.value||''):'',stockSize=ss?String(ss.value||'').toUpperCase():'',stockQuantity=1;if(sp&&sp.dataset.storeId!==String(storeId)){refreshStockSaleProducts();alert('Магазин изменился. Выберите карточку склада и размер заново.');return;}var manualSizeInput=document.getElementById('stockSaleManualSize'),manualStockSize=ss&&ss.value==='__manual__'&&manualSizeInput?String(manualSizeInput.value||'').trim().toUpperCase():'';if(manualStockSize)stockSize=manualStockSize;if(!stockProductId||!stockSize||ss&&ss.value==='__manual__'&&!manualStockSize){alert('Выберите карточку склада и укажите размер.');return;}saleData.stockProductId=stockProductId;saleData.stockSize=stockSize;saleData.name=String(stockCardName||name)+' · размер '+stockSize;saleData.itemDetails=String(name||stockCardName)+' · размер '+stockSize;saleData.stockQuantity=1;saleData.stockStoreId=String(storeId);saleData.stockSale=true;}
 
-    saleSaveInProgress = true;
-    var saveSaleButton = document.getElementById('saveSaleButton');
-    if (saveSaleButton) { saveSaleButton.disabled = true; saveSaleButton.setAttribute('aria-busy', 'true'); }
-    var saleId = 'sale_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
-    saleData.id = saleId;
-    var localSaleRecord = Object.assign({}, saleData, { _pendingSync: true });
-    sales.push(localSaleRecord);
-    var saleCacheSaved = saveAllToLocal();
-    updatePendingSalesNotice();
-    var saleDurabilityPromise = stockSaleEnabled
-        ? (typeof window.stockCompleteSale==='function' ? window.stockCompleteSale(Object.assign({},saleData,{id:saleId,_pendingSync:false})).then(function(result){Object.assign(localSaleRecord,result.sale||{}, {_pendingSync:false});return true;}) : Promise.resolve(false))
-        : uploadPendingLocalRecord('sales_data/' + saleId, localSaleRecord);
-    updatePendingSalesNotice();
-
-    function finishSaleFormAfterDurableSave() {
-        // After an admin records a sale for another date, switch history to that exact
-        // local date so the newly saved record is immediately visible instead of hidden
-        // by the previous date filter (often today's date).
-        if (currentUser && currentUser.role === 'admin') {
-            var historyDateInput = document.getElementById('salesHistoryDateFilter');
-            var historyStartInput = document.getElementById('salesHistoryStartDateFilter');
-            var historyEndInput = document.getElementById('salesHistoryEndDateFilter');
-            var savedSaleDate = getRecordDateString(saleData.timestamp);
-            if (historyDateInput && savedSaleDate) historyDateInput.value = savedSaleDate;
-            if (historyStartInput && savedSaleDate) historyStartInput.value = savedSaleDate;
-            if (historyEndInput && savedSaleDate) historyEndInput.value = savedSaleDate;
-            window.salesHistoryAllDates = false;
-            var allDatesButton = document.getElementById('salesHistoryAllDatesButton');
-            if (allDatesButton) allDatesButton.textContent = 'Все даты';
+    if (addAnotherItem) {
+        var pendingCart = getPendingSaleCart();
+        pendingCart.push(saleData);
+        window.pendingSaleCart = pendingCart;
+        resetSaleEntryForNextItem();
+        renderPendingSaleCart();
+        var stagedNotice = document.getElementById('saleSyncNotice');
+        if (stagedNotice) {
+            stagedNotice.textContent = 'Товар добавлен в чек. Добавьте следующий товар или выберите способ оплаты и сохраните весь чек.';
+            stagedNotice.style.display = 'block';
         }
-        addAudit('sale', 'Продажа: ' + historyDisplayName + (saleData.genderLabel ? ' · ' + saleData.genderLabel : '') + ' (' + price + ' руб., ' + saleData.payment + ')');
-        document.getElementById('prodName').value = '';
-        if (document.getElementById('prodDetailName')) document.getElementById('prodDetailName').value = '';
-        clearSaleGender();
-        document.getElementById('prodPrice').value = '';
-        var stockToggle=document.getElementById('stockSaleEnabled');if(stockToggle){stockToggle.checked=false;toggleStockSaleFields();}
-        ['stockSaleProduct','stockSaleSize','stockSaleManualSize'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});var manualWrap=document.getElementById('stockSaleManualWrap');if(manualWrap)manualWrap.style.display='none';
-        document.querySelectorAll('.payment-method').forEach(function(el) { el.classList.remove('active'); });
-        var splitFields = document.getElementById('splitPaymentFields');
-        if (splitFields) splitFields.style.display = 'none';
-        ['splitAmt1', 'splitAmt2'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
-        var totalDisplay = document.getElementById('splitTotalDisplay');
-        if (totalDisplay) totalDisplay.textContent = 'Итого: 0 руб.';
-        activePaymentMethod = '';
-        promotionSaleEnabled = false;
-        updatePromotionSaleToggle();
-        if (adminDateInput) adminDateInput.value = '';
-        saveAllToLocal();
-        renderAll();
-        if (window.stockRefresh) window.stockRefresh();
-        if (typeof drawChart === 'function') drawChart();
-        if (typeof renderPurchaseRecommendations === 'function' && currentUser && currentUser.role === 'admin') renderPurchaseRecommendations();
-        saleSaveInProgress = false;
-        if (saveSaleButton) { saveSaleButton.disabled = false; saveSaleButton.removeAttribute('aria-busy'); }
-        if (addAnotherItem) {
-            var notice = document.getElementById('saleSyncNotice');
-            if (notice) {
-                notice.textContent = 'Позиция добавлена в чек. Внесите следующий товар и нажмите «Добавить ещё товар» или «Сохранить продажу», чтобы завершить чек.';
-                notice.style.display = 'block';
-            }
-        } else {
-            window.activeSaleReceiptId = null;
-            var notice = document.getElementById('saleSyncNotice');
-            if (notice) notice.style.display = 'none';
-        }
-        updatePendingSalesNotice();
-    }
-
-    function failSaleDurability() {
-        sales = (sales || []).filter(function(row) { return !row || String(row.id) !== String(saleId); });
-        saveAllToLocal();
-        saleSaveInProgress = false;
-        if (saveSaleButton) { saveSaleButton.disabled = false; saveSaleButton.removeAttribute('aria-busy'); }
-        updatePendingSalesNotice();
-        alert('Не удалось надёжно сохранить продажу на устройстве. Данные формы оставлены на экране. Проверьте свободное место в браузере и повторите сохранение.');
-    }
-
-    if (!saleCacheSaved) {
-        // If the main local cache is full, wait for the separate durable outbox before
-        // clearing the form. If neither store can persist, keep the seller's entered data.
-        Promise.resolve(saleDurabilityPromise).then(function(saved) {
-            if (saved) finishSaleFormAfterDurableSave();
-            else failSaleDurability();
-        }).catch(failSaleDurability);
         return;
     }
-    if(stockSaleEnabled){Promise.resolve(saleDurabilityPromise).then(function(saved){if(saved)finishSaleFormAfterDurableSave();else failSaleDurability();}).catch(function(err){console.error('Stock sale failed:',err);alert(err&&err.message?err.message:'Не удалось подтвердить списание со склада. Продажа не сохранена.');failSaleDurability();});}else finishSaleFormAfterDurableSave();
+    var itemsToCommit = getPendingSaleCart().slice();
+    itemsToCommit.push(saleData);
+    commitSaleItems(itemsToCommit, adminDateInput);
 }
 
 
