@@ -1276,8 +1276,7 @@
     if(!isAdmin()||!loaded.products||!loaded.balances)return {ready:false,stores:[],categories:[],rows:[],message:'Складские данные ещё загружаются.'};
     var stores=visibleStoreIds().map(String).filter(function(id){return window.STORES&&window.STORES[id]&&!(window.isStoreDeleted&&window.isStoreDeleted(id));});
     var active=allProducts().filter(function(product){return product.status==='active'&&!product.mergedInto;});
-    var categoryMap=Object.create(null),totals=Object.create(null),storeSet=Object.create(null);
-    stores.forEach(function(id){storeSet[id]=true;});
+    var categoryMap=Object.create(null),totals=Object.create(null);
     active.forEach(function(product){
       var category=String(product.category||'').trim()||'Без категории',key=category;
       if(!categoryMap[key])categoryMap[key]={key:key,label:category};
