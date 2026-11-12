@@ -11355,7 +11355,7 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
     if(!keys.length){host.innerHTML='<div class="purchase-journal-empty">В этой организации пока нет доступных магазинов.</div>';updateFormSummary();return;}
     keys.forEach(function(key){
       var oldAlloc=saved[key];var quantity=oldAlloc?Math.max(0,Math.floor(Number(oldAlloc.quantity)||0)):0;
-      var row=document.createElement('div');row.className='purchase-journal-store-row'+(quantity>0?' selected':'');
+      var row=document.createElement('div');row.className='purchase-journal-store-row'+(quantity>0?' selected':'');row.setAttribute('data-store-id',String(key));
       var label=document.createElement('label');label.className='purchase-journal-store-name';label.textContent=storeName(key);
       var qty=document.createElement('input');qty.type='number';qty.className='purchase-journal-store-qty purchase-journal-qty purchase-journal-mutate';qty.min='0';qty.step='1';qty.inputMode='numeric';qty.placeholder='Кол-во';qty.value=quantity>0?String(quantity):'';qty.setAttribute('aria-label','Количество для '+storeName(key));
       qty.addEventListener('input',function(){
@@ -11373,7 +11373,7 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
     host.querySelectorAll('.purchase-journal-store-row').forEach(function(row){
       var q=row.querySelector('.purchase-journal-qty');var raw=String(q&&q.value||'').trim();var quantity=raw===''?0:Number(raw);
       if(q&&raw!==''&&isFinite(quantity)&&Number.isInteger(quantity)&&quantity>0){
-        var label=row.querySelector('.purchase-journal-store-name');var storeKey=storesForCurrentOrg().find(function(key){return storeName(key)===String(label&&label.textContent||'');});
+        var storeKey=row.getAttribute('data-store-id');
         if(storeKey)map[String(storeKey)]={quantity:quantity,manual:true};
       }
     });
