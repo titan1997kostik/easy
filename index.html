@@ -1972,7 +1972,7 @@ function renderStoresManagement() {
     if (!container) return;
     if (!isSuperAdmin(currentUser)) { container.innerHTML = ''; return; }
     if (!canUseStoreData()) {
-        container.innerHTML = '<p style="font-size:13px;color:var(--text-light);">Проверка актуального списка магазинов...</p>';
+        container.innerHTML = '';
         return;
     }
     var visibleKeys = getVisibleStoreKeys();
@@ -8345,7 +8345,7 @@ function renderTasks() {
         var sellerList = document.getElementById('sellerTasksList');
         if (!sellerList) return;
         if (!tasksDataLoaded) {
-            sellerList.innerHTML = '<p class="analytics-help">Загружаем задания с сервера. Перед закрытием смены дождитесь завершения синхронизации.</p>';
+            sellerList.innerHTML = '';
             return;
         }
         var myTasks = (tasks || []).filter(function(t){ return t && String(t.assignedUserId || '') === String(currentUser.id); }).slice();
