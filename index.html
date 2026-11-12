@@ -5371,7 +5371,7 @@ function commitSaleItems(items, adminDateInput) {
             var lineAmount1 = index === items.length - 1
                 ? remainingAmount1
                 : Math.round((amount1 * linePrice / totalPrice) * 100) / 100;
-            lineAmount1 = Math.max(0, Math.min(linePrice, lineAmount1));
+            lineAmount1 = Math.max(0, Math.min(linePrice, remainingAmount1, lineAmount1));
             var lineAmount2 = Math.round((linePrice - lineAmount1) * 100) / 100;
             remainingAmount1 = Math.round((remainingAmount1 - lineAmount1) * 100) / 100;
             item.splitPayment = true;
