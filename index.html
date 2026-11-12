@@ -4869,8 +4869,6 @@ function savePurchaseStockThreshold(input) {
 function renderPurchaseStockControl() {
     var host = document.getElementById('purchaseStockControlContent');
     if (!host) return;
-    if (host.dataset.rendering === '1') return;
-    host.dataset.rendering = '1';
     if (!currentUser || currentUser.role !== 'admin') {
         host.innerHTML = '<div style="padding:12px;color:var(--text-light);">Раздел доступен администратору.</div>';
         return;
@@ -4914,7 +4912,6 @@ function renderPurchaseStockControl() {
         html += '</section>';
     });
     host.innerHTML = html;
-    host.dataset.rendering = '0';
     var statusNode = document.getElementById('purchaseStockControlStatus');
     if (statusNode) statusNode.textContent = 'Срочно: ' + urgentCount + ' · Мало: ' + lowCount + ' · Пороги не заданы: ' + unsetCount + '.';
 }
