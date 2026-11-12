@@ -492,6 +492,38 @@ body.seller-mode #analyticsAdminSummary,body.seller-mode #analyticsProductInsigh
 .stock-sale-empty{grid-column:1/-1;padding:18px;text-align:center;color:var(--text-light);font-size:13px;background:#fff;border:1px dashed var(--border);border-radius:10px;}
 @media(max-width:480px){.stock-sale-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}.stock-sale-photo{height:104px;}}
 
+
+/* Store stock control: selectable store and compact responsive rows. */
+.purchase-stock-store-picker{display:flex;flex-direction:column;gap:6px;max-width:420px;margin:10px 0 12px}
+.purchase-stock-store-picker label{font-size:13px;font-weight:650;margin:0}
+.purchase-stock-store-picker select{width:100%;min-width:0}
+.purchase-stock-empty{padding:14px;border:1px dashed var(--border);border-radius:10px;color:var(--text-light);font-size:13px}
+.purchase-stock-store{border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:10px;min-width:0}
+.purchase-stock-store h4{margin:0 0 10px;overflow-wrap:anywhere}
+.purchase-stock-grid-head,.purchase-stock-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,.75fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.8fr);gap:8px;align-items:center}
+.purchase-stock-grid-head{font-size:11px;color:var(--text-light);padding:0 4px 8px}
+.purchase-stock-row{border-top:1px solid var(--border);padding:9px 4px;font-size:13px;min-width:0}
+.purchase-stock-category{font-weight:650;overflow-wrap:anywhere;min-width:0}
+.purchase-stock-cell{min-width:0}
+.purchase-stock-quantity small{display:block;color:var(--text-light);font-size:10px}
+.purchase-stock-status{font-size:12px;overflow-wrap:anywhere}
+.purchase-stock-cell input{width:100%;min-width:0;padding:8px 6px}
+@media(max-width:680px){
+ .purchase-stock-store-picker{max-width:none}
+ .purchase-stock-store{padding:10px}
+ .purchase-stock-grid-head{display:none}
+ .purchase-stock-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px 10px;padding:11px 2px}
+ .purchase-stock-category{grid-column:1/-1;font-size:14px;padding-bottom:2px}
+ .purchase-stock-cell{display:flex;flex-direction:column;align-items:flex-start;gap:5px;font-size:12px}
+ .purchase-stock-cell:before{content:attr(data-label);font-size:10px;line-height:1.2;color:var(--text-light);font-weight:600}
+ .purchase-stock-cell input{font-size:16px;padding:9px 8px;min-height:40px}
+ .purchase-stock-status{align-self:stretch;justify-content:center}
+}
+@media(max-width:360px){
+ .purchase-stock-store{padding:8px}
+ .purchase-stock-row{gap:8px}
+ .purchase-stock-cell input{padding:8px 5px}
+}
 </style>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -4866,6 +4898,10 @@ function savePurchaseStockThreshold(input) {
         badge.style.color = quantity <= urgentMax ? '#b42318' : quantity <= lowMax ? '#b7791f' : '#16803c';
     }
 }
+function selectPurchaseStockControlStore(storeId) {
+    window.purchaseStockControlSelectedStore = String(storeId || '');
+    renderPurchaseStockControl();
+}
 function renderPurchaseStockControl() {
     var host = document.getElementById('purchaseStockControlContent');
     if (!host) return;
@@ -4890,27 +4926,48 @@ function renderPurchaseStockControl() {
     function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
     var urgentCount = 0, lowCount = 0, unsetCount = 0, html = '';
     var rowsByStore = Object.create(null);
-    result.rows.forEach(function(item) { var key = String(item.storeId); if (!rowsByStore[key]) rowsByStore[key] = []; rowsByStore[key].push(item); });
+    result.rows.forEach(function(item) {
+        var key = String(item.storeId);
+        if (!rowsByStore[key]) rowsByStore[key] = [];
+        rowsByStore[key].push(item);
+        var thresholds = purchaseStockThresholds[purchaseStockSafeKey(item.storeId)];
+        var config = thresholds && thresholds[purchaseStockSafeKey(item.categoryKey)];
+        var configured = config && Number.isInteger(Number(config.urgentMax)) && Number.isInteger(Number(config.lowMax));
+        var state = configured ? (item.quantity <= Number(config.urgentMax) ? 'Срочно' : item.quantity <= Number(config.lowMax) ? 'Мало' : 'Достаточно') : '';
+        if (!configured) unsetCount++; else if (state === 'Срочно') urgentCount++; else if (state === 'Мало') lowCount++;
+    });
+    var selectedStore = String(window.purchaseStockControlSelectedStore || '');
+    if (selectedStore && !result.stores.some(function(store) { return String(store.id) === selectedStore; })) selectedStore = '';
+    html += '<div class="purchase-stock-store-picker"><label for="purchaseStockControlStoreSelect">Магазин</label><select id="purchaseStockControlStoreSelect" onchange="selectPurchaseStockControlStore(this.value)"><option value="">Выберите магазин</option>';
     result.stores.forEach(function(store) {
-        var rows = rowsByStore[String(store.id)] || [];
-        html += '<section style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:12px;"><h4 style="margin:0 0 10px;">' + esc(store.name) + '</h4>';
-        html += '<div style="display:grid;grid-template-columns:minmax(95px,1.2fr) minmax(48px,.6fr) minmax(64px,.7fr) minmax(64px,.7fr) minmax(72px,auto);gap:8px;align-items:center;font-size:12px;color:var(--text-light);padding:0 2px 8px;"><span>Категория</span><span>Остаток</span><span>Срочно до</span><span>Мало до</span><span>Статус</span></div>';
+        html += '<option value="' + esc(store.id) + '"' + (String(store.id) === selectedStore ? ' selected' : '') + '>' + esc(store.name) + '</option>';
+    });
+    html += '</select></div>';
+    if (!selectedStore) {
+        html += '<div class="purchase-stock-empty">Выберите магазин, чтобы посмотреть остатки и настроить пороги.</div>';
+    } else {
+        var store = result.stores.find(function(item) { return String(item.id) === selectedStore; });
+        var rows = rowsByStore[selectedStore] || [];
+        html += '<section class="purchase-stock-store"><h4>' + esc(store.name) + '</h4>';
+        html += '<div class="purchase-stock-grid-head"><span>Категория</span><span>Остаток</span><span>Статус</span><span>Срочно до</span><span>Мало до</span></div>';
         rows.forEach(function(item) {
             var storeThresholds = purchaseStockThresholds[purchaseStockSafeKey(store.id)];
             var config = storeThresholds && storeThresholds[purchaseStockSafeKey(item.categoryKey)];
             var configured = config && Number.isInteger(Number(config.urgentMax)) && Number.isInteger(Number(config.lowMax));
             var status = configured ? (item.quantity <= Number(config.urgentMax) ? 'Срочно' : item.quantity <= Number(config.lowMax) ? 'Мало' : 'Достаточно') : 'Пороги не заданы';
-            if (!configured) unsetCount++; else if (status === 'Срочно') urgentCount++; else if (status === 'Мало') lowCount++;
             var color = status === 'Срочно' ? '#b42318' : status === 'Мало' ? '#b7791f' : status === 'Достаточно' ? '#16803c' : 'var(--text-light)';
             var disabled = typeof window.isVovaPrimaryOrgReadOnly === 'function' && window.isVovaPrimaryOrgReadOnly() ? ' disabled' : '';
-            html += '<div data-stock-threshold-row data-current-quantity="' + Number(item.quantity || 0) + '" style="display:grid;grid-template-columns:minmax(95px,1.2fr) minmax(48px,.6fr) minmax(64px,.7fr) minmax(64px,.7fr) minmax(72px,auto);gap:8px;align-items:center;border-top:1px solid var(--border);padding:9px 2px;font-size:13px;">';
-            html += '<span style="font-weight:600;overflow-wrap:anywhere;">' + esc(item.category) + '</span><span><b>' + Number(item.quantity || 0) + ' шт.</b><small style="display:block;color:var(--text-light);font-size:10px;">' + Number(item.productCount || 0) + ' карточек</small></span>';
-            html += '<input type="number" min="0" step="1" aria-label="Срочно до, ' + esc(store.name) + ', ' + esc(item.category) + '" data-store-id="' + esc(store.id) + '" data-category-key="' + esc(item.categoryKey) + '" data-threshold-field="urgentMax" value="' + (configured ? Number(config.urgentMax) : '') + '" placeholder="—" onchange="savePurchaseStockThreshold(this)" style="width:100%;min-width:0;"' + disabled + '>';
-            html += '<input type="number" min="0" step="1" aria-label="Мало до, ' + esc(store.name) + ', ' + esc(item.category) + '" data-store-id="' + esc(store.id) + '" data-category-key="' + esc(item.categoryKey) + '" data-threshold-field="lowMax" value="' + (configured ? Number(config.lowMax) : '') + '" placeholder="—" onchange="savePurchaseStockThreshold(this)" style="width:100%;min-width:0;"' + disabled + '>';
-            html += '<b data-stock-threshold-status style="color:' + color + ';font-size:12px;">' + status + '</b></div>';
+            var common = 'data-store-id="' + esc(store.id) + '" data-category-key="' + esc(item.categoryKey) + '"';
+            html += '<div class="purchase-stock-row" data-stock-threshold-row data-current-quantity="' + Number(item.quantity || 0) + '">';
+            html += '<span class="purchase-stock-category">' + esc(item.category) + '</span>';
+            html += '<span class="purchase-stock-cell purchase-stock-quantity" data-label="Остаток"><b>' + Number(item.quantity || 0) + ' шт.</b><small>' + Number(item.productCount || 0) + ' карточек</small></span>';
+            html += '<b class="purchase-stock-cell purchase-stock-status" data-label="Статус" data-stock-threshold-status style="color:' + color + ';">' + status + '</b>';
+            html += '<label class="purchase-stock-cell" data-label="Срочно до"><input type="number" min="0" step="1" aria-label="Срочно до, ' + esc(store.name) + ', ' + esc(item.category) + '" ' + common + ' data-threshold-field="urgentMax" value="' + (configured ? Number(config.urgentMax) : '') + '" placeholder="—" onchange="savePurchaseStockThreshold(this)"' + disabled + '></label>';
+            html += '<label class="purchase-stock-cell" data-label="Мало до"><input type="number" min="0" step="1" aria-label="Мало до, ' + esc(store.name) + ', ' + esc(item.category) + '" ' + common + ' data-threshold-field="lowMax" value="' + (configured ? Number(config.lowMax) : '') + '" placeholder="—" onchange="savePurchaseStockThreshold(this)"' + disabled + '></label>';
+            html += '</div>';
         });
         html += '</section>';
-    });
+    }
     host.innerHTML = html;
     var statusNode = document.getElementById('purchaseStockControlStatus');
     if (statusNode) statusNode.textContent = 'Срочно: ' + urgentCount + ' · Мало: ' + lowCount + ' · Пороги не заданы: ' + unsetCount + '.';
