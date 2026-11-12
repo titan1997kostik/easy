@@ -897,8 +897,10 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
             <label>Дата продажи (для админа)</label>
             <input type="datetime-local" id="adminSaleDate">
         </div>
+        <button id="addSaleItemButton" class="btn btn-secondary" type="button" style="width:100%;margin-bottom:8px;" onclick="saveSale(true)">＋ Добавить ещё товар в чек</button>
+        <div id="saleCartContainer" style="display:none;margin:0 0 10px;"></div>
         <div class="form-group">
-            <label>Способ оплаты</label>
+            <label>Способ оплаты всего чека</label>
             <div class="payment-methods">
                 <div class="payment-method" onclick="selectPayment(this, 'Карта')">Карта</div>
                 <div class="payment-method" onclick="selectPayment(this, 'Наличные с чеком')">Нал. с чеком</div>
@@ -936,8 +938,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <div id="splitTotalDisplay" style="margin-top:8px; font-size:13px; color:var(--text-light);">Итого: 0 руб.</div>
             </div>
         </div>
-        <button id="addSaleItemButton" class="btn btn-secondary" type="button" style="width:100%;margin-bottom:8px;" onclick="saveSale(true)">＋ Добавить ещё товар в чек</button>
-        <div id="saleCartContainer" style="display:none;margin:0 0 10px;"></div>
+
         <button id="saveSaleButton" class="btn" style="width: 100%;" onclick="saveSale()">Сохранить продажу</button>
         <p id="saleSyncNotice" role="status" aria-live="polite" style="display:none;margin-top:9px;padding:9px 11px;border-radius:9px;background:#fff7e6;border:1px solid #f4d7a1;color:#805b16;font-size:12px;line-height:1.45;"></p>
         <!-- BREAK BUTTON (sellers only) -->
@@ -5380,6 +5381,17 @@ function commitSaleItems(items, adminDateInput) {
             item.amount2 = lineAmount2;
             item.payment = payment1 + ' + ' + payment2;
         });
+        if (remainingAmount1 > 0) {
+            for (var allocationIndex = items.length - 1; allocationIndex >= 0 && remainingAmount1 > 0; allocationIndex--) {
+                var allocationItem = items[allocationIndex];
+                var allocationCapacity = Math.round(((Number(allocationItem.price) || 0) - (Number(allocationItem.amount1) || 0)) * 100) / 100;
+                var allocationExtra = Math.min(allocationCapacity, remainingAmount1);
+                allocationItem.amount1 = Math.round(((Number(allocationItem.amount1) || 0) + allocationExtra) * 100) / 100;
+                allocationItem.amount2 = Math.round(((Number(allocationItem.price) || 0) - allocationItem.amount1) * 100) / 100;
+                remainingAmount1 = Math.round((remainingAmount1 - allocationExtra) * 100) / 100;
+            }
+        }
+        if (remainingAmount1 > 0) { alert('Не удалось распределить сумму раздельной оплаты по товарам.'); return; }
     } else {
         items.forEach(function(item) {
             item.payment = activePaymentMethod;
