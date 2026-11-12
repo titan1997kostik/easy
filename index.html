@@ -5338,12 +5338,84 @@ function refreshStockSaleProducts(){
     refreshStockSaleSizes();
     renderStockSalePicker();
 }
-function renderStockSalePicker(){var grid=document.getElementById('stockSaleProductGrid'),search=document.getElementById('stockSaleSearch'),category=document.getElementById('stockSaleCategory');if(!grid)return;var q=String(search&&search.value||'').trim().toLowerCase(),tokens=q.split(/[\s,;]+/).filter(Boolean),cat=String(category&&category.value||''),items=stockSalePickerItems.map(function(x){var sizeKeys=Object.keys(x.sizes||{}).map(function(v){return String(v).trim().toLowerCase();}),metadata=Object.keys(x).filter(function(k){return k!=='sizes'&&k!=='photoUrl'&&k!=='id';}).map(function(k){var v=x[k];return v==null?'':Array.isArray(v)?v.join(' '):typeof v==='object'?Object.keys(v).join(' '):String(v);}).join(' ').toLowerCase(),matchedSizes=sizeKeys.filter(function(v){return tokens.some(function(t){return v===t;});}),matches=tokens.every(function(t){return metadata.indexOf(t)>=0||sizeKeys.some(function(v){return v===t||v.indexOf(t)>=0;});});return {item:x,matchedSizes:matchedSizes,matches:matches,hasExactSize:matchedSizes.length>0};}).filter(function(row){return row.matches&&(!cat||String(row.item.category||'')===cat);}).sort(function(a,b){return Number(b.hasExactSize)-Number(a.hasExactSize)||a.item.name.localeCompare(b.item.name,'ru');}).map(function(row){row.item._saleMatchedSizes=row.matchedSizes;return row.item;});grid.innerHTML='';if(!items.length){var empty=document.createElement('div');empty.className='stock-sale-empty';empty.textContent=stockSalePickerItems.length?'По вашему запросу товары не найдены.':'Нет доступных товаров с остатками.';grid.appendChild(empty);return;}items.forEach(function(item){var button=document.createElement('button');button.type='button';button.className='stock-sale-product-card'+(document.getElementById('stockSaleProduct').value===item.id?' selected':'');var photo=document.createElement('div');photo.className='stock-sale-photo';if(item.photoUrl){var img=document.createElement('img');img.src=stockSalePhotoUrl(item.photoUrl);img.alt='';img.loading='lazy';img.decoding='async';img.onerror=function(){photo.textContent='📦';};photo.appendChild(img);}else photo.textContent='📦';var info=document.createElement('div');info.className='stock-sale-product-info';var name=document.createElement('strong');name.textContent=item.name;info.appendChild(name);var meta=document.createElement('span');meta.textContent=[item.brand,item.model,item.article?'арт. '+item.article:''].filter(Boolean).join(' · ');if(meta.textContent)info.appendChild(meta);var sizesLine=document.createElement('span');sizesLine.className='stock-sale-sizes';var availableSizes=Object.keys(item.sizes||{}).sort(function(a,b){return a.localeCompare(b,'ru',{numeric:true});});sizesLine.textContent=(item._saleMatchedSizes&&item._saleMatchedSizes.length?'Размер '+item._saleMatchedSizes.join(', ')+' · ':'Размеры: ')+availableSizes.join(', ');if(availableSizes.length)info.appendChild(sizesLine);var qty=document.createElement('span');qty.className='stock-sale-qty';qty.textContent=item.quantity+' шт. в наличии';info.appendChild(qty);button.appendChild(photo);button.appendChild(info);button.addEventListener('click',function(){selectStockSaleProduct(item.id);});grid.appendChild(button);});}
+function renderStockSalePicker(){
+    var grid=document.getElementById('stockSaleProductGrid'),search=document.getElementById('stockSaleSearch'),category=document.getElementById('stockSaleCategory');
+    if(!grid)return;
+    var sid=getStockSaleStoreId(),q=String(search&&search.value||'').trim().toLowerCase(),tokens=q.split(/[\\s,;]+/).filter(Boolean),cat=String(category&&category.value||'');
+    var items=stockSalePickerItems.map(function(item){
+        var availableSizes=getAvailableStockSaleSizes(sid,item.id,item.sizes||{});
+        var sizeKeys=Object.keys(availableSizes).map(function(value){return String(value).trim().toLowerCase();});
+        var metadata=Object.keys(item).filter(function(key){return key!=='sizes'&&key!=='photoUrl'&&key!=='id';}).map(function(key){
+            var value=item[key];
+            return value==null?'':Array.isArray(value)?value.join(' '):typeof value==='object'?Object.keys(value).join(' '):String(value);
+        }).join(' ').toLowerCase();
+        var matchedSizes=sizeKeys.filter(function(value){return tokens.some(function(token){return value===token;});});
+        var matches=tokens.every(function(token){return metadata.indexOf(token)>=0||sizeKeys.some(function(value){return value===token||value.indexOf(token)>=0;});});
+        return {item:item,availableSizes:availableSizes,matchedSizes:matchedSizes,matches:matches,hasExactSize:matchedSizes.length>0};
+    }).filter(function(row){
+        return row.matches&&Object.keys(row.availableSizes).length>0&&(!cat||String(row.item.category||'')===cat);
+    }).sort(function(a,b){
+        return Number(b.hasExactSize)-Number(a.hasExactSize)||a.item.name.localeCompare(b.item.name,'ru');
+    });
+    grid.innerHTML='';
+    if(!items.length){
+        var empty=document.createElement('div');
+        empty.className='stock-sale-empty';
+        empty.textContent=stockSalePickerItems.length?'По вашему запросу нет товаров со свободными размерами.':'В корзине уже зарезервированы все доступные размеры.';
+        grid.appendChild(empty);
+        return;
+    }
+    items.forEach(function(row){
+        var item=row.item,availableSizes=row.availableSizes;
+        var availableQuantity=Object.keys(availableSizes).reduce(function(sum,size){return sum+availableSizes[size];},0);
+        var button=document.createElement('button');
+        button.type='button';
+        button.className='stock-sale-product-card'+(document.getElementById('stockSaleProduct').value===item.id?' selected':'');
+        var photo=document.createElement('div');photo.className='stock-sale-photo';
+        if(item.photoUrl){
+            var img=document.createElement('img');img.src=stockSalePhotoUrl(item.photoUrl);img.alt='';img.loading='lazy';img.decoding='async';
+            img.onerror=function(){photo.textContent='📦';};photo.appendChild(img);
+        }else photo.textContent='📦';
+        var info=document.createElement('div'),name=document.createElement('strong');
+        info.className='stock-sale-product-info';name.textContent=item.name;info.appendChild(name);
+        var meta=document.createElement('span');
+        meta.textContent=[item.brand,item.model,item.article?'арт. '+item.article:''].filter(Boolean).join(' · ');
+        if(meta.textContent)info.appendChild(meta);
+        var sizesLine=document.createElement('span');sizesLine.className='stock-sale-sizes';
+        sizesLine.textContent=(row.matchedSizes.length?'Размер '+row.matchedSizes.join(', ')+' · ':'Размеры: ')+Object.keys(availableSizes).join(', ');
+        info.appendChild(sizesLine);
+        var qty=document.createElement('span');qty.className='stock-sale-qty';qty.textContent=availableQuantity+' шт. доступно';info.appendChild(qty);
+        button.appendChild(photo);button.appendChild(info);
+        button.addEventListener('click',function(){selectStockSaleProduct(item.id);});
+        grid.appendChild(button);
+    });
+}
 function openStockSaleCatalog(){var overlay=document.getElementById('stockSaleCatalogOverlay');if(!overlay)return;overlay.classList.add('active');document.body.style.overflow='hidden';}
 function closeStockSaleCatalog(cancelIfEmpty){var overlay=document.getElementById('stockSaleCatalogOverlay');if(overlay)overlay.classList.remove('active');document.body.style.overflow='';var select=document.getElementById('stockSaleProduct');if(cancelIfEmpty&&(!select||!select.value)){var enabled=document.getElementById('stockSaleEnabled');if(enabled)enabled.checked=false;var panel=document.getElementById('stockSaleFields');if(panel)panel.style.display='none';var gender=document.getElementById('saleGenderField'),details=document.getElementById('prodDetailName'),chooser=document.getElementById('chooseProductButton');if(gender)gender.style.display='';if(details&&details.closest('.form-group'))details.closest('.form-group').style.display='';if(chooser&&chooser.closest('.form-group'))chooser.closest('.form-group').style.display='';}}
 function selectStockSaleProduct(id){var select=document.getElementById('stockSaleProduct');if(!select)return;select.value=String(id);refreshStockSaleSizes();renderStockSalePicker();var selected=document.getElementById('stockSaleSelected'),item=stockSalePickerItems.find(function(x){return x.id===String(id);});if(selected){selected.innerHTML='';selected.style.display=item?'flex':'none';if(item){var img=document.createElement('img');img.alt='';img.src=item.photoUrl?stockSalePhotoUrl(item.photoUrl):'';img.loading='lazy';img.decoding='async';if(!item.photoUrl)img.style.display='none';var info=document.createElement('div'),title=document.createElement('strong'),sub=document.createElement('span');title.textContent=item.name;sub.textContent=item.quantity+' шт. · '+(item.category||'Без категории');info.appendChild(title);info.appendChild(sub);var change=document.createElement('button');change.type='button';change.className='btn btn-secondary';change.style.marginTop='6px';change.textContent='Выбрать другой товар';change.addEventListener('click',openStockSaleCatalog);info.appendChild(change);selected.appendChild(img);selected.appendChild(info);}}closeStockSaleCatalog(false);var size=document.getElementById('stockSaleSize');if(size)size.focus();}
 function handleStockSaleSizeChange(){var size=document.getElementById('stockSaleSize'),wrap=document.getElementById('stockSaleManualWrap'),input=document.getElementById('stockSaleManualSize');if(!size||!wrap||!input)return;var manual=size.value==='__manual__';wrap.style.display=manual?'block':'none';if(manual){input.focus();}else{input.value='';}}
-function refreshStockSaleSizes(){var product=document.getElementById('stockSaleProduct'),size=document.getElementById('stockSaleSize');if(!product||!size)return;var option=product.options[product.selectedIndex],counts={};try{counts=JSON.parse(option&&option.dataset.sizes||'{}');}catch(e){}var manual=document.getElementById('stockSaleManualSize'),wrap=document.getElementById('stockSaleManualWrap');if(manual)manual.value='';if(wrap)wrap.style.display='none';size.innerHTML='<option value="">Выберите размер</option>';Object.keys(counts).sort(function(a,b){var an=/^\\d+$/.test(a),bn=/^\\d+$/.test(b);if(an&&bn)return Number(a)-Number(b);if(an)return -1;if(bn)return 1;return a.localeCompare(b,'ru');}).forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v+' · '+counts[v]+' шт.';size.appendChild(o);});var manualOption=document.createElement('option');manualOption.value='__manual__';manualOption.textContent='＋ Другой размер…';size.appendChild(manualOption);}
+function refreshStockSaleSizes(){
+    var product=document.getElementById('stockSaleProduct'),size=document.getElementById('stockSaleSize');
+    if(!product||!size)return;
+    var option=product.options[product.selectedIndex],counts={};
+    try{counts=JSON.parse(option&&option.dataset.sizes||'{}');}catch(e){}
+    var manual=document.getElementById('stockSaleManualSize'),wrap=document.getElementById('stockSaleManualWrap');
+    var sid=String(product.dataset.storeId||getStockSaleStoreId());
+    var availableCounts=getAvailableStockSaleSizes(sid,product.value,counts);
+    if(manual)manual.value='';
+    if(wrap)wrap.style.display='none';
+    size.innerHTML='<option value="">'+(Object.keys(availableCounts).length?'Выберите размер':'Нет свободных размеров')+'</option>';
+    Object.keys(availableCounts).sort(function(a,b){
+        var an=/^\\d+$/.test(a),bn=/^\\d+$/.test(b);
+        if(an&&bn)return Number(a)-Number(b);
+        if(an)return -1;
+        if(bn)return 1;
+        return a.localeCompare(b,'ru');
+    }).forEach(function(value){
+        var o=document.createElement('option');o.value=value;o.textContent=value+' · '+availableCounts[value]+' шт.';size.appendChild(o);
+    });
+    var manualOption=document.createElement('option');manualOption.value='__manual__';manualOption.textContent='＋ Другой размер…';size.appendChild(manualOption);
+}
 function refreshStockSaleQuantityLimit(){}
 
 
