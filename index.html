@@ -9366,6 +9366,19 @@ function getEmployeeShiftSales(employee, startDate, endDate, sourceSales) {
     });
 }
 
+// Count unique receipts, not individual product rows. Older single-sale records
+// without receiptId remain separate receipts by their sale ID.
+function countUniqueSaleReceipts(records) {
+    var receiptKeys = Object.create(null);
+    (records || []).forEach(function(sale, index) {
+        if (!sale) return;
+        var receiptId = sale.receiptId != null ? String(sale.receiptId).trim() : '';
+        var fallbackId = sale.id != null ? String(sale.id) : String(index);
+        receiptKeys[receiptId || ('sale:' + fallbackId)] = true;
+    });
+    return Object.keys(receiptKeys).length;
+}
+
 function renderEmployeePerformance() {
     if (!isWorkspacePageActive('staff')) return;
 
@@ -9400,7 +9413,7 @@ function renderEmployeePerformance() {
             return selectedStore === 'all' || String(sale.storeId) === selectedStore;
         });
         var revenue = staffSales.reduce(function(sum, sale) { return sum + (Number(sale.price) || 0); }, 0);
-        var checks = staffSales.length;
+        var checks = countUniqueSaleReceipts(staffSales);
         var average = checks ? revenue / checks : 0;
         var tr = document.createElement('tr');
         [user.name || user.username || '—', formatRubles(roundMoney(revenue)), formatRubles(roundMoney(average)), checks.toLocaleString('ru-RU')].forEach(function(value) {
@@ -9474,14 +9487,8 @@ function renderSellerAnalytics(startDate, endDate, targetStore) {
                 return storeKey === 'all' || String(sale.storeId) === storeKey;
             });
             var revenue = roundMoney(employeeSales.reduce(function(sum, sale) { return sum + (Number(sale.price) || 0); }, 0));
-            var checks = employeeSales.length;
-            var employeeReceiptKeys = Object.create(null);
-            employeeSales.forEach(function(sale) {
-                var receiptId = sale && sale.receiptId != null ? String(sale.receiptId).trim() : '';
-                employeeReceiptKeys[receiptId || ('sale:' + String(sale && sale.id != null ? sale.id : ''))] = true;
-            });
-            var employeeReceiptCount = Object.keys(employeeReceiptKeys).length;
-            var avgCheck = employeeReceiptCount ? roundMoney(revenue / employeeReceiptCount) : 0;
+            var checks = countUniqueSaleReceipts(employeeSales);
+            var avgCheck = checks ? roundMoney(revenue / checks) : 0;
             var storesSold = {};
             employeeSales.forEach(function(sale) { storesSold[String(sale.storeId)] = true; });
             var storeNames = Object.keys(storesSold).map(function(key) { return STORES[key] || key; });
@@ -9933,12 +9940,12 @@ function drawChart() {
         return [{ method: String(sale && sale.payment || ''), amount: Number(sale && sale.price) || 0 }];
     }
     function blankSummary() {
-        return { revenue:0, salesCount:0, avgCheck:0, cash:0, cashCheck:0, cashNoCheck:0, transfer:0, card:0, sbp:0, other:0,
+        return { revenue:0, salesCount:0, receiptCount:0, avgCheck:0, cash:0, cashCheck:0, cashNoCheck:0, transfer:0, card:0, sbp:0, other:0,
             expenses:0, recurringExpenses:0, salaryExpenses:0, allExpenses:0, returns:0, returnedSalesCount:0, returnOperationsCount:0, taxableBase:0, cardAcquiringBase:0, sbpAcquiringBase:0,
             costOfGoods:0, estimatedCostOfGoods:0, costedSalesCount:0, estimatedCostSalesCount:0, costMissingCount:0, costMissingReturnsCount:0, estimatedCostReturnsCount:0, costDataComplete:true, costCalculationAvailable:true, netRevenue:0, grossProfit:null, netProfit:null, averageMarkup:null, grossMargin:null };
     }
     function sumRange(startDate, endDate) {
-        var summaryCacheKey = analyticsDataRevision + '|' + String(currentUser && currentUser.id || '') + '|' + String(currentOrgFilter || '') + '|' + String(targetStore) + '|' + visibleKeys.slice().sort().join(',') + '|' + String(startDate) + '|' + String(endDate) + '|' + (isPurchaseCostOwner() ? 'cost' : 'nocost');
+        var summaryCacheKey = 'receipt-groups-v2|' + analyticsDataRevision + '|' + String(currentUser && currentUser.id || '') + '|' + String(currentOrgFilter || '') + '|' + String(targetStore) + '|' + visibleKeys.slice().sort().join(',') + '|' + String(startDate) + '|' + String(endDate) + '|' + (isPurchaseCostOwner() ? 'cost' : 'nocost');
         if (analyticsSummaryCache[summaryCacheKey]) return Object.assign({}, analyticsSummaryCache[summaryCacheKey]);
         var result = blankSummary();
         // Sales are counted on their original sale date. Returns/cancellations are separate signed events
@@ -9947,13 +9954,8 @@ function drawChart() {
             var date = getRecordDateString(sale.timestamp || sale.createdAt);
             return date >= startDate && date <= endDate;
         });
-        var receiptKeys = Object.create(null);
-        validSales.forEach(function(sale) {
-            var receiptId = sale && sale.receiptId != null ? String(sale.receiptId).trim() : '';
-            var receiptKey = receiptId || ('sale:' + String(sale && sale.id != null ? sale.id : ''));
-            receiptKeys[receiptKey] = true;
-        });
-        var receiptCount = Object.keys(receiptKeys).length;
+        var receiptCount = countUniqueSaleReceipts(validSales);
+        result.receiptCount = receiptCount;
         var salesWithReturnJournal = analyticsScopeData.returnJournalSaleIds;
         var legacyReturnedSales = activeSales.filter(function(sale) {
             if (salesWithReturnJournal[String(sale.id)]) return false;
@@ -10238,7 +10240,7 @@ function drawChart() {
     }
     kpi('analyticsSellerRevenue', money(currentStats.revenue));
     kpi('analyticsSellerAvgCheck', money(currentStats.avgCheck));
-    kpi('analyticsSellerChecks', currentStats.salesCount.toLocaleString('ru-RU') + ' шт.');
+    kpi('analyticsSellerChecks', currentStats.receiptCount.toLocaleString('ru-RU') + ' шт.');
     kpi('analyticsKpiRevenue', money(currentStats.revenue));
     kpi('analyticsKpiSalesCount', currentStats.salesCount.toLocaleString('ru-RU') + ' шт.');
     kpi('analyticsKpiAvgCheck', money(currentStats.avgCheck));
@@ -11074,7 +11076,7 @@ function getStorePlanSalesMetrics(storeId, month) {
         });
     });
     var revenue = planSales.reduce(function(total, sale) { return total + (Number(sale.price) || 0); }, 0);
-    var checks = planSales.length;
+    var checks = countUniqueSaleReceipts(planSales);
     return { revenue:roundMoney(revenue), checks:checks, avgCheck:checks ? roundMoney(revenue / checks) : 0, sales:planSales, startDate:startDate, endDate:endDate };
 }
 function getSalesPlanGoalRows(plan, metrics) {
