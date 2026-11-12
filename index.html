@@ -906,7 +906,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <div class="payment-method" onclick="selectPayment(this, 'Наличные без чека')">Нал. без чека</div>
                 <div class="payment-method" onclick="selectPayment(this, 'Перевод')">Перевод</div>
                 <div class="payment-method" onclick="selectPayment(this, 'СБП')">СБП</div>
-                <div class="payment-method" onclick="selectSplitPayment(this)" style="background: linear-gradient(135deg, #f0f4ff, #e8eeff); border-color: #667eea;">Раздельная оплата</div>
+                <div class="payment-method" onclick="selectSplitPayment(this)">Раздельная оплата</div>
                 <button type="button" id="promotionSaleToggle" role="switch" aria-checked="false" aria-pressed="false" onclick="togglePromotionSale()" style="grid-column:1 / -1;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#f1f5f9;color:#475569;font-size:13px;font-weight:600;cursor:pointer;"><span id="promotionSaleTrack" style="display:inline-flex;align-items:center;width:38px;height:22px;padding:3px;border-radius:20px;background:#94a3b8;transition:background .18s;"><span id="promotionSaleThumb" style="display:block;width:16px;height:16px;border-radius:50%;background:#fff;transform:translateX(0);transition:transform .18s;"></span></span><span id="promotionSaleLabel">Акция выключена</span></button>
             </div>
             <div id="splitPaymentFields" style="display:none; margin-bottom:15px; padding:12px; background:rgba(102,126,234,0.05); border-radius:8px; border:1px solid rgba(102,126,234,0.2);">
@@ -5551,28 +5551,9 @@ function validatePendingStockSaleAvailability(items) {
     return true;
 }
 function tryAutoStageSaleItem() {
-    if(window.saleAutoStageInProgress||saleSaveInProgress)return false;
-    var priceField=document.getElementById('prodPrice'),rawPrice=priceField?String(priceField.value||'').trim():'',price=Number(rawPrice);
-    if(!rawPrice||!isFinite(price)||price<=0)return false;
-    var stockToggle=document.getElementById('stockSaleEnabled'),stockMode=!!(stockToggle&&stockToggle.checked);
-    if(stockMode){
-        var stockProduct=document.getElementById('stockSaleProduct'),stockSize=document.getElementById('stockSaleSize'),manualSize=document.getElementById('stockSaleManualSize');
-        var stockProductId=stockProduct?String(stockProduct.value||''):'',selectedSize=stockSize?String(stockSize.value||''):'';
-        var resolvedSize=selectedSize==='__manual__'?String(manualSize&&manualSize.value||'').trim():selectedSize;
-        if(!stockProductId||!resolvedSize)return false;
-        var selectedOption=stockProduct&&stockProduct.selectedIndex>=0?stockProduct.options[stockProduct.selectedIndex]:null;
-        var stockCategory=selectedOption?String(selectedOption.dataset.category||selectedOption.dataset.name||'').trim().toLowerCase():'';
-        var mappedProduct=getVisibleProductCatalog(false).filter(function(item){return item&&item.active!==false;}).find(function(item){return String(item.name||'').trim().toLowerCase()===stockCategory;});
-        if(!mappedProduct)return false;
-    }else{
-        var productSelect=document.getElementById('prodName'),productId=productSelect?String(productSelect.value||'').trim():'';
-        var chosenProduct=getVisibleProductCatalog(false).filter(function(item){return item&&item.active!==false;}).find(function(item){return String(item.id)===productId;});
-        var detail=document.getElementById('prodDetailName');
-        if(!chosenProduct||(selectedSaleGender!=='M'&&selectedSaleGender!=='F')||!detail||!String(detail.value||'').trim())return false;
-    }
-    window.saleAutoStageInProgress=true;
-    try{saveSale(true);}finally{window.saleAutoStageInProgress=false;}
-    return true;
+    // Automatic cart staging is intentionally disabled: the seller adds each
+    // completed sale item explicitly with the "Добавить позицию в чек" button.
+    return false;
 }
 
 function commitSaleItems(items, adminDateInput) {
