@@ -936,6 +936,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <div id="splitTotalDisplay" style="margin-top:8px; font-size:13px; color:var(--text-light);">Итого: 0 руб.</div>
             </div>
         </div>
+        <button id="addSaleItemButton" class="btn btn-secondary" type="button" style="width:100%;margin-bottom:8px;" onclick="saveSale(true)">＋ Добавить ещё товар в чек</button>
         <button id="saveSaleButton" class="btn" style="width: 100%;" onclick="saveSale()">Сохранить продажу</button>
         <p id="saleSyncNotice" role="status" aria-live="polite" style="display:none;margin-top:9px;padding:9px 11px;border-radius:9px;background:#fff7e6;border:1px solid #f4d7a1;color:#805b16;font-size:12px;line-height:1.45;"></p>
         <!-- BREAK BUTTON (sellers only) -->
@@ -5276,7 +5277,7 @@ function handleStockSaleSizeChange(){var size=document.getElementById('stockSale
 function refreshStockSaleSizes(){var product=document.getElementById('stockSaleProduct'),size=document.getElementById('stockSaleSize');if(!product||!size)return;var option=product.options[product.selectedIndex],counts={};try{counts=JSON.parse(option&&option.dataset.sizes||'{}');}catch(e){}var manual=document.getElementById('stockSaleManualSize'),wrap=document.getElementById('stockSaleManualWrap');if(manual)manual.value='';if(wrap)wrap.style.display='none';size.innerHTML='<option value="">Выберите размер</option>';Object.keys(counts).sort(function(a,b){var an=/^\\d+$/.test(a),bn=/^\\d+$/.test(b);if(an&&bn)return Number(a)-Number(b);if(an)return -1;if(bn)return 1;return a.localeCompare(b,'ru');}).forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v+' · '+counts[v]+' шт.';size.appendChild(o);});var manualOption=document.createElement('option');manualOption.value='__manual__';manualOption.textContent='＋ Другой размер…';size.appendChild(manualOption);}
 function refreshStockSaleQuantityLimit(){}
 
-function saveSale() {
+function saveSale(addAnotherItem) {
     if (isShiftMutating) { alert('Смена сейчас закрывается или открывается. Повторите запись продажи через секунду.'); return; }
     if (saleSaveInProgress) { alert('Продажа уже сохраняется. Подождите завершения операции.'); return; }
     if (!checkSessionBeforeAction()) return;
@@ -5367,7 +5368,11 @@ function saveSale() {
     }
 
     var historyDisplayName = stockSaleEnabled ? stockCardName : (catalogProductName + ' — ' + name);
+    if (!window.activeSaleReceiptId) {
+        window.activeSaleReceiptId = 'receipt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+    }
     var saleData = {
+        receiptId: window.activeSaleReceiptId,
         // History shows both the canonical catalog item and the seller's specific description.
         name: historyDisplayName,
         itemDetails: name,
@@ -5479,6 +5484,17 @@ function saveSale() {
         if (typeof renderPurchaseRecommendations === 'function' && currentUser && currentUser.role === 'admin') renderPurchaseRecommendations();
         saleSaveInProgress = false;
         if (saveSaleButton) { saveSaleButton.disabled = false; saveSaleButton.removeAttribute('aria-busy'); }
+        if (addAnotherItem) {
+            var notice = document.getElementById('saleSyncNotice');
+            if (notice) {
+                notice.textContent = 'Позиция добавлена в чек. Внесите следующий товар и нажмите «Добавить ещё товар» или «Сохранить продажу», чтобы завершить чек.';
+                notice.style.display = 'block';
+            }
+        } else {
+            window.activeSaleReceiptId = null;
+            var notice = document.getElementById('saleSyncNotice');
+            if (notice) notice.style.display = 'none';
+        }
         updatePendingSalesNotice();
     }
 
@@ -9096,7 +9112,13 @@ function renderSellerAnalytics(startDate, endDate, targetStore) {
             });
             var revenue = roundMoney(employeeSales.reduce(function(sum, sale) { return sum + (Number(sale.price) || 0); }, 0));
             var checks = employeeSales.length;
-            var avgCheck = checks ? roundMoney(revenue / checks) : 0;
+            var employeeReceiptKeys = Object.create(null);
+            employeeSales.forEach(function(sale) {
+                var receiptId = sale && sale.receiptId != null ? String(sale.receiptId).trim() : '';
+                employeeReceiptKeys[receiptId || ('sale:' + String(sale && sale.id != null ? sale.id : ''))] = true;
+            });
+            var employeeReceiptCount = Object.keys(employeeReceiptKeys).length;
+            var avgCheck = employeeReceiptCount ? roundMoney(revenue / employeeReceiptCount) : 0;
             var storesSold = {};
             employeeSales.forEach(function(sale) { storesSold[String(sale.storeId)] = true; });
             var storeNames = Object.keys(storesSold).map(function(key) { return STORES[key] || key; });
@@ -9562,6 +9584,13 @@ function drawChart() {
             var date = getRecordDateString(sale.timestamp || sale.createdAt);
             return date >= startDate && date <= endDate;
         });
+        var receiptKeys = Object.create(null);
+        validSales.forEach(function(sale) {
+            var receiptId = sale && sale.receiptId != null ? String(sale.receiptId).trim() : '';
+            var receiptKey = receiptId || ('sale:' + String(sale && sale.id != null ? sale.id : ''));
+            receiptKeys[receiptKey] = true;
+        });
+        var receiptCount = Object.keys(receiptKeys).length;
         var salesWithReturnJournal = analyticsScopeData.returnJournalSaleIds;
         var legacyReturnedSales = activeSales.filter(function(sale) {
             if (salesWithReturnJournal[String(sale.id)]) return false;
@@ -9699,7 +9728,7 @@ function drawChart() {
         result.expenses = roundMoney(result.expenses);
         result.cash = roundMoney(result.cash); result.cashCheck = roundMoney(result.cashCheck); result.cashNoCheck = roundMoney(result.cashNoCheck);
         result.transfer = roundMoney(result.transfer); result.card = roundMoney(result.card); result.sbp = roundMoney(result.sbp); result.other = roundMoney(result.other);
-        result.avgCheck = result.salesCount ? roundMoney(result.revenue / result.salesCount) : 0;
+        result.avgCheck = receiptCount ? roundMoney(result.revenue / receiptCount) : 0;
         result.tax = roundMoney(result.taxableBase * FINANCIAL_RATES.tax);
         result.cardFee = roundMoney(result.cardAcquiringBase * FINANCIAL_RATES.cardAcquiring);
         result.sbpFee = roundMoney(result.sbpAcquiringBase * FINANCIAL_RATES.sbpAcquiring);
