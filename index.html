@@ -847,7 +847,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 </div>
                 <div id="stockSaleSelected" class="stock-sale-selected" style="display:none;"></div>
                 <select id="stockSaleProduct" class="hidden" aria-hidden="true" tabindex="-1"><option value="">Выберите карточку товара</option></select>
-                <div class="form-group" style="margin-top:12px;"><label for="stockSaleSize">Размер</label><select id="stockSaleSize" class="input" style="width:100%;" onchange="handleStockSaleSizeChange()"><option value="">Сначала выберите товар</option></select><div id="stockSaleManualWrap" style="display:none;margin-top:8px;"><label for="stockSaleManualSize" style="display:block;font-size:12px;margin-bottom:5px;">Другой размер</label><input id="stockSaleManualSize" class="input" type="text" maxlength="30" placeholder="Введите размер, например 42 или XL" autocomplete="off" style="width:100%;"></div></div>
+                <div class="form-group" style="margin-top:12px;"><label for="stockSaleSize">Размер</label><select id="stockSaleSize" class="input" style="width:100%;" onchange="handleStockSaleSizeChange();tryAutoStageSaleItem()"<option value="">Сначала выберите товар</option></select><div id="stockSaleManualWrap" style="display:none;margin-top:8px;"><label for="stockSaleManualSize" style="display:block;font-size:12px;margin-bottom:5px;">Другой размер</label><input id="stockSaleManualSize" class="input" type="text" maxlength="30" placeholder="Введите размер, например 42 или XL" autocomplete="off" onblur="tryAutoStageSaleItem()"</div></div>
                 
                 <p id="stockSaleStatus" style="font-size:12px;color:var(--text-light);margin:0;"></p>
             </div>
@@ -884,20 +884,20 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
         </div>
         <div class="form-group">
             <label for="prodDetailName">Наименование товара (бренд, модель, размер)</label>
-            <input type="text" id="prodDetailName" placeholder="Например: Nike Air Max, размер 42" autocomplete="off" onkeydown="if(event.key==='Enter') document.getElementById('prodPrice').focus()">
+            <input type="text" id="prodDetailName" placeholder="Например: Nike Air Max, размер 42" autocomplete="off" onblur="tryAutoStageSaleItem()" onkeydown="if(event.key==='Enter') document.getElementById('prodPrice').focus()"
             
         </div>
             </div>
         </details>
         <div class="form-group">
             <label for="prodPrice">Цена (руб.)</label>
-            <input type="number" id="prodPrice" placeholder="0" onkeydown="if(event.key==='Enter') saveSale()">
+            <input type="number" id="prodPrice" placeholder="0" onchange="tryAutoStageSaleItem()" onblur="tryAutoStageSaleItem()" onkeydown="if(event.key==='Enter'){event.preventDefault();tryAutoStageSaleItem();}"
         </div>
         <div class="form-group" id="adminDateField" style="display:none;">
             <label>Дата продажи (для админа)</label>
             <input type="datetime-local" id="adminSaleDate">
         </div>
-        <button id="addSaleItemButton" class="btn btn-secondary" type="button" style="width:100%;margin-bottom:8px;" onclick="saveSale(true)">＋ Добавить ещё товар в чек</button>
+        <button id="addSaleItemButton" class="btn btn-secondary" type="button" style="width:100%;margin-bottom:8px;" onclick="saveSale(true)">＋ Добавить позицию в чек</button>
         <div id="saleCartContainer" style="display:none;margin:0 0 10px;"></div>
         <div class="form-group">
             <label>Способ оплаты всего чека</label>
@@ -4361,6 +4361,7 @@ function selectSaleGender(gender) {
     var female = document.getElementById('saleGenderF');
     if (male) { male.classList.toggle('active', gender === 'M'); male.setAttribute('aria-pressed', gender === 'M' ? 'true' : 'false'); }
     if (female) { female.classList.toggle('active', gender === 'F'); female.setAttribute('aria-pressed', gender === 'F' ? 'true' : 'false'); }
+    tryAutoStageSaleItem();
 }
 function clearSaleGender() {
     selectedSaleGender = '';
@@ -4563,6 +4564,7 @@ function handleCatalogProductSelection() {
     renderProductCatalogSelect();
     select.value = chosenId;
     updateProductChooserButton();
+    tryAutoStageSaleItem();
 }
 function renderProductCatalogManager() {
     if (!isWorkspacePageActive('sale')) return;
@@ -5341,7 +5343,7 @@ function refreshStockSaleProducts(){
 function renderStockSalePicker(){
     var grid=document.getElementById('stockSaleProductGrid'),search=document.getElementById('stockSaleSearch'),category=document.getElementById('stockSaleCategory');
     if(!grid)return;
-    var sid=getStockSaleStoreId(),q=String(search&&search.value||'').trim().toLowerCase(),tokens=q.split(/[\\s,;]+/).filter(Boolean),cat=String(category&&category.value||'');
+    var sid=getStockSaleStoreId(),q=String(search&&search.value||'').trim().toLowerCase(),tokens=q.split(/[\s,;]+/).filter(Boolean),cat=String(category&&category.value||'');
     var items=stockSalePickerItems.map(function(item){
         var availableSizes=getAvailableStockSaleSizes(sid,item.id,item.sizes||{});
         var sizeKeys=Object.keys(availableSizes).map(function(value){return String(value).trim().toLowerCase();});
@@ -5392,7 +5394,43 @@ function renderStockSalePicker(){
 }
 function openStockSaleCatalog(){var overlay=document.getElementById('stockSaleCatalogOverlay');if(!overlay)return;overlay.classList.add('active');document.body.style.overflow='hidden';}
 function closeStockSaleCatalog(cancelIfEmpty){var overlay=document.getElementById('stockSaleCatalogOverlay');if(overlay)overlay.classList.remove('active');document.body.style.overflow='';var select=document.getElementById('stockSaleProduct');if(cancelIfEmpty&&(!select||!select.value)){var enabled=document.getElementById('stockSaleEnabled');if(enabled)enabled.checked=false;var panel=document.getElementById('stockSaleFields');if(panel)panel.style.display='none';var gender=document.getElementById('saleGenderField'),details=document.getElementById('prodDetailName'),chooser=document.getElementById('chooseProductButton');if(gender)gender.style.display='';if(details&&details.closest('.form-group'))details.closest('.form-group').style.display='';if(chooser&&chooser.closest('.form-group'))chooser.closest('.form-group').style.display='';}}
-function selectStockSaleProduct(id){var select=document.getElementById('stockSaleProduct');if(!select)return;select.value=String(id);refreshStockSaleSizes();renderStockSalePicker();var selected=document.getElementById('stockSaleSelected'),item=stockSalePickerItems.find(function(x){return x.id===String(id);});if(selected){selected.innerHTML='';selected.style.display=item?'flex':'none';if(item){var img=document.createElement('img');img.alt='';img.src=item.photoUrl?stockSalePhotoUrl(item.photoUrl):'';img.loading='lazy';img.decoding='async';if(!item.photoUrl)img.style.display='none';var info=document.createElement('div'),title=document.createElement('strong'),sub=document.createElement('span');title.textContent=item.name;sub.textContent=item.quantity+' шт. · '+(item.category||'Без категории');info.appendChild(title);info.appendChild(sub);var change=document.createElement('button');change.type='button';change.className='btn btn-secondary';change.style.marginTop='6px';change.textContent='Выбрать другой товар';change.addEventListener('click',openStockSaleCatalog);info.appendChild(change);selected.appendChild(img);selected.appendChild(info);}}closeStockSaleCatalog(false);var size=document.getElementById('stockSaleSize');if(size)size.focus();}
+function selectStockSaleProduct(id){
+    var select=document.getElementById('stockSaleProduct');
+    if(!select)return;
+    var item=stockSalePickerItems.find(function(row){return String(row.id)===String(id);});
+    var availableSizes=item?getAvailableStockSaleSizes(getStockSaleStoreId(),item.id,item.sizes||{}):{};
+    if(!item||!Object.keys(availableSizes).length){
+        alert('Свободных размеров этой карточки в текущем чеке больше нет. Выберите другой товар или удалите позицию из корзины.');
+        refreshStockSaleProducts();
+        return;
+    }
+    select.value=String(id);
+    refreshStockSaleSizes();
+    renderStockSalePicker();
+    var selected=document.getElementById('stockSaleSelected');
+    if(selected){
+        selected.innerHTML='';
+        selected.style.display='flex';
+        var img=document.createElement('img');
+        img.alt='';
+        img.src=item.photoUrl?stockSalePhotoUrl(item.photoUrl):'';
+        img.loading='lazy';img.decoding='async';
+        if(!item.photoUrl)img.style.display='none';
+        var info=document.createElement('div'),title=document.createElement('strong'),sub=document.createElement('span');
+        title.textContent=item.name;
+        var availableQuantity=Object.keys(availableSizes).reduce(function(sum,size){return sum+availableSizes[size];},0);
+        sub.textContent=availableQuantity+' шт. доступно · '+(item.category||'Без категории');
+        info.appendChild(title);info.appendChild(sub);
+        var change=document.createElement('button');
+        change.type='button';change.className='btn btn-secondary';change.style.marginTop='6px';
+        change.textContent='Выбрать другой товар';change.addEventListener('click',openStockSaleCatalog);
+        info.appendChild(change);selected.appendChild(img);selected.appendChild(info);
+    }
+    closeStockSaleCatalog(false);
+    var size=document.getElementById('stockSaleSize');
+    if(size)size.focus();
+    tryAutoStageSaleItem();
+}
 function handleStockSaleSizeChange(){var size=document.getElementById('stockSaleSize'),wrap=document.getElementById('stockSaleManualWrap'),input=document.getElementById('stockSaleManualSize');if(!size||!wrap||!input)return;var manual=size.value==='__manual__';wrap.style.display=manual?'block':'none';if(manual){input.focus();}else{input.value='';}}
 function refreshStockSaleSizes(){
     var product=document.getElementById('stockSaleProduct'),size=document.getElementById('stockSaleSize');
@@ -5406,7 +5444,7 @@ function refreshStockSaleSizes(){
     if(wrap)wrap.style.display='none';
     size.innerHTML='<option value="">'+(Object.keys(availableCounts).length?'Выберите размер':'Нет свободных размеров')+'</option>';
     Object.keys(availableCounts).sort(function(a,b){
-        var an=/^\\d+$/.test(a),bn=/^\\d+$/.test(b);
+        var an=/^\d+$/.test(a),bn=/^\d+$/.test(b);
         if(an&&bn)return Number(a)-Number(b);
         if(an)return -1;
         if(bn)return 1;
@@ -5454,6 +5492,8 @@ function removePendingSaleItem(index) {
     items.splice(index, 1);
     if (!items.length) window.activeSaleReceiptId = null;
     renderPendingSaleCart();
+    var stockToggle = document.getElementById('stockSaleEnabled');
+    if (stockToggle && stockToggle.checked) refreshStockSaleProducts();
     var notice = document.getElementById('saleSyncNotice');
     if (notice) notice.style.display = 'none';
 }
@@ -5480,8 +5520,67 @@ function resetSaleEntryForNextItem() {
     promotionSaleEnabled = false;
     if (typeof updatePromotionSaleToggle === 'function') updatePromotionSaleToggle();
 }
+function validatePendingStockSaleAvailability(items) {
+    var stockItems=(items||[]).filter(function(item){return item&&item.stockSale;});
+    if(!stockItems.length)return true;
+    if(typeof window.stockGetSaleOptions!=='function'){
+        alert('Не удалось проверить остатки склада. Обновите страницу и повторите сохранение.');
+        return false;
+    }
+    var required={};
+    stockItems.forEach(function(item){
+        var sid=String(item.stockStoreId||item.storeId||''),pid=String(item.stockProductId||''),size=String(item.stockSize||'').trim().toUpperCase();
+        if(!sid||!pid||!size)return;
+        var key=JSON.stringify([sid,pid,size]),quantity=Number(item.stockQuantity||1);
+        required[key]=(required[key]||0)+(Number.isInteger(quantity)&&quantity>0?quantity:1);
+    });
+    var optionsByStore={},invalid=null;
+    Object.keys(required).some(function(key){
+        var parts=JSON.parse(key),sid=parts[0],pid=parts[1],size=parts[2];
+        if(!optionsByStore[sid])optionsByStore[sid]=window.stockGetSaleOptions(sid)||[];
+        var product=optionsByStore[sid].find(function(row){return String(row.id)===pid;});
+        if(!product){invalid={size:size,available:0,required:required[key],missingProduct:true};return true;}
+        var available=product.sizes?Number(product.sizes[size]||0):0;
+        // A size absent from stock keeps the existing manual-size behavior.
+        if(available>0&&required[key]>available){invalid={size:size,available:available,required:required[key]};return true;}
+        return false;
+    });
+    if(invalid){
+        alert(invalid.missingProduct
+            ? 'Карточка склада для размера '+invalid.size+' больше недоступна. Обновите выбор товара.'
+            : 'Размер '+invalid.size+' нельзя продать в указанном количестве: в наличии '+invalid.available+', а в чеке указано '+invalid.required+'. Удалите лишнюю позицию или выберите другой размер.');
+        return false;
+    }
+    return true;
+}
+function tryAutoStageSaleItem() {
+    if(window.saleAutoStageInProgress||saleSaveInProgress)return false;
+    var priceField=document.getElementById('prodPrice'),rawPrice=priceField?String(priceField.value||'').trim():'',price=Number(rawPrice);
+    if(!rawPrice||!isFinite(price)||price<=0)return false;
+    var stockToggle=document.getElementById('stockSaleEnabled'),stockMode=!!(stockToggle&&stockToggle.checked);
+    if(stockMode){
+        var stockProduct=document.getElementById('stockSaleProduct'),stockSize=document.getElementById('stockSaleSize'),manualSize=document.getElementById('stockSaleManualSize');
+        var stockProductId=stockProduct?String(stockProduct.value||''):'',selectedSize=stockSize?String(stockSize.value||''):'';
+        var resolvedSize=selectedSize==='__manual__'?String(manualSize&&manualSize.value||'').trim():selectedSize;
+        if(!stockProductId||!resolvedSize)return false;
+        var selectedOption=stockProduct&&stockProduct.selectedIndex>=0?stockProduct.options[stockProduct.selectedIndex]:null;
+        var stockCategory=selectedOption?String(selectedOption.dataset.category||selectedOption.dataset.name||'').trim().toLowerCase():'';
+        var mappedProduct=getVisibleProductCatalog(false).filter(function(item){return item&&item.active!==false;}).find(function(item){return String(item.name||'').trim().toLowerCase()===stockCategory;});
+        if(!mappedProduct)return false;
+    }else{
+        var productSelect=document.getElementById('prodName'),productId=productSelect?String(productSelect.value||'').trim():'';
+        var chosenProduct=getVisibleProductCatalog(false).filter(function(item){return item&&item.active!==false;}).find(function(item){return String(item.id)===productId;});
+        var detail=document.getElementById('prodDetailName');
+        if(!chosenProduct||(selectedSaleGender!=='M'&&selectedSaleGender!=='F')||!detail||!String(detail.value||'').trim())return false;
+    }
+    window.saleAutoStageInProgress=true;
+    try{saveSale(true);}finally{window.saleAutoStageInProgress=false;}
+    return true;
+}
+
 function commitSaleItems(items, adminDateInput) {
     if (!items || !items.length) { alert('Добавьте хотя бы один товар в чек.'); return; }
+    if (!validatePendingStockSaleAvailability(items)) return;
     var validMethods = ['Карта', 'Наличные с чеком', 'Наличные без чека', 'Перевод', 'СБП'];
     if (activePaymentMethod !== 'Раздельная оплата' && validMethods.indexOf(activePaymentMethod) === -1) {
         alert('Выберите способ оплаты перед сохранением чека!');
@@ -5681,6 +5780,7 @@ function saveSale(addAnotherItem) {
         !!(currentProductBeforeSave && String(currentProductBeforeSave.value || '').trim()) ||
         !!(currentDetailBeforeSave && String(currentDetailBeforeSave.value || '').trim()) ||
         !!(currentPriceBeforeSave && String(currentPriceBeforeSave.value || '').trim());
+    if (addAnotherItem && pendingCartBeforeSave.length && !hasCurrentItemBeforeSave) return;
     if (!addAnotherItem && pendingCartBeforeSave.length && !hasCurrentItemBeforeSave) {
         commitSaleItems(pendingCartBeforeSave.slice(), adminDateInput);
         return;
@@ -5784,7 +5884,7 @@ function saveSale(addAnotherItem) {
         }
     }
 
-    if(stockSaleEnabled){var sp=document.getElementById('stockSaleProduct'),ss=document.getElementById('stockSaleSize'),stockProductId=sp?String(sp.value||''):'',stockSize=ss?String(ss.value||'').toUpperCase():'',stockQuantity=1;if(sp&&sp.dataset.storeId!==String(storeId)){refreshStockSaleProducts();alert('Магазин изменился. Выберите карточку склада и размер заново.');return;}var manualSizeInput=document.getElementById('stockSaleManualSize'),manualStockSize=ss&&ss.value==='__manual__'&&manualSizeInput?String(manualSizeInput.value||'').trim().toUpperCase():'';if(manualStockSize)stockSize=manualStockSize;if(!stockProductId||!stockSize||ss&&ss.value==='__manual__'&&!manualStockSize){alert('Выберите карточку склада и укажите размер.');return;}saleData.stockProductId=stockProductId;saleData.stockSize=stockSize;saleData.name=String(stockCardName||name)+' · размер '+stockSize;saleData.itemDetails=String(name||stockCardName)+' · размер '+stockSize;saleData.stockQuantity=1;saleData.stockStoreId=String(storeId);saleData.stockSale=true;}
+    if(stockSaleEnabled){var sp=document.getElementById('stockSaleProduct'),ss=document.getElementById('stockSaleSize'),stockProductId=sp?String(sp.value||''):'',stockSize=ss?String(ss.value||'').toUpperCase():'',stockQuantity=1;if(sp&&sp.dataset.storeId!==String(storeId)){refreshStockSaleProducts();alert('Магазин изменился. Выберите карточку склада и размер заново.');return;}var manualSizeInput=document.getElementById('stockSaleManualSize'),manualStockSize=ss&&ss.value==='__manual__'&&manualSizeInput?String(manualSizeInput.value||'').trim().toUpperCase():'';if(manualStockSize)stockSize=manualStockSize;if(!stockProductId||!stockSize||ss&&ss.value==='__manual__'&&!manualStockSize){alert('Выберите карточку склада и укажите размер.');return;}var currentStockProduct=typeof window.stockGetSaleOptions==='function'?(window.stockGetSaleOptions(storeId)||[]).find(function(row){return String(row.id)===stockProductId;}):null;var currentStockCount=currentStockProduct&&currentStockProduct.sizes?Number(currentStockProduct.sizes[stockSize]||0):0;var alreadyReserved=getPendingStockReservationCount(storeId,stockProductId,stockSize);if(currentStockCount>0&&currentStockCount<=alreadyReserved){alert('Этот размер уже добавлен в текущий чек. Выберите другой размер или удалите эту позицию из корзины.');refreshStockSaleProducts();return;}saleData.stockProductId=stockProductId;saleData.stockSize=stockSize;saleData.name=String(stockCardName||name)+' · размер '+stockSize;saleData.itemDetails=String(name||stockCardName)+' · размер '+stockSize;saleData.stockQuantity=1;saleData.stockStoreId=String(storeId);saleData.stockSale=true;}
 
     if (addAnotherItem) {
         var pendingCart = getPendingSaleCart();
@@ -5794,7 +5894,7 @@ function saveSale(addAnotherItem) {
         renderPendingSaleCart();
         var stagedNotice = document.getElementById('saleSyncNotice');
         if (stagedNotice) {
-            stagedNotice.textContent = 'Товар добавлен в чек. Добавьте следующий товар или выберите способ оплаты и сохраните весь чек.';
+            stagedNotice.textContent = 'Позиция добавлена в чек автоматически. Заполните следующую позицию или выберите способ оплаты и сохраните чек.';
             stagedNotice.style.display = 'block';
         }
         return;
