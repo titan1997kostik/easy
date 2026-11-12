@@ -696,7 +696,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
         </div>
         <section id="employeePerformancePanel" style="margin-top:24px;padding:16px;background:#fff;border:1px solid var(--border);border-radius:12px;">
             <h3>Показатели сотрудников по сменам</h3>
-            <p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">Учитываются только продажи, совершённые в сменах конкретного сотрудника. Выберите период и нажмите «Показать».</p>
+            
             <div class="filter-bar" style="align-items:flex-end;">
                 <div class="form-group"><label for="employeePerfStartDate">С</label><input type="date" id="employeePerfStartDate"></div>
                 <div class="form-group"><label for="employeePerfEndDate">По</label><input type="date" id="employeePerfEndDate"></div>
@@ -733,24 +733,12 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <tbody id="salaryManageTable"></tbody>
             </table>
         </div>
-        <div id="customRateEditor" class="hidden" style="margin-top: 15px; padding: 15px; border: 1px solid var(--border); border-radius: 8px; background: var(--card);">
-            <h4 style="margin-top:0;">Особые ставки для: <span id="customRateUserName"></span></h4>
-            <p style="font-size:13px;color:var(--text-light);margin-bottom:10px;">Укажите ключевое слово или фразу и ставку. Особая ставка применяется, если это слово или фраза встречается в названии товара или карточки склада (без учёта регистра). Если подходят несколько правил, применяется самое длинное и конкретное. При переименовании товара правило продолжит действовать, пока ключевое слово или фраза есть в названии.</p>
-            <table id="customRateTable" style="margin-bottom:10px;">
-                <thead><tr><th>Название карточки / товара</th><th>Ставка (руб)</th><th>Действие</th></tr></thead>
-                <tbody id="customRateBody"></tbody>
-            </table>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <input type="text" id="newRateKeyword" placeholder="Ключевое слово или фраза товара" style="flex:1; min-width:120px;">
-                <input type="number" id="newRateAmount" placeholder="Ставка" style="width:100px;">
-                <button class="btn btn-success" onclick="addCustomRate()">Добавить</button>
-                <button class="btn btn-secondary" onclick="closeCustomRateEditor()">Закрыть</button>
-            </div>
+        
         </div>
 
         <section id="storeSalesPlanManager" class="sales-plan-manager">
             <h3 style="margin-bottom:6px;">Месячные планы продаж магазинов</h3>
-            <p style="font-size:13px;color:var(--text-light);line-height:1.55;">Настраивайте отдельный план для каждого магазина и месяца. Прогресс учитывает только продажи, попавшие в смены сотрудников этого магазина.</p>
+            
             <div class="sales-plan-controls">
                 <div class="form-group" style="margin:0;"><label for="salesPlanStoreSelect">Магазин</label><select id="salesPlanStoreSelect" onchange="renderStoreSalesPlans(true)"><option value="">Загрузка магазинов…</option></select></div>
                 <div class="form-group" style="margin:0;"><label for="salesPlanMonthSelect">Месяц плана</label><input type="month" id="salesPlanMonthSelect" onchange="renderStoreSalesPlans(true)"></div>
@@ -760,7 +748,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <div class="sales-plan-field"><label for="salesPlanChecksTarget">План количества чеков</label><input type="number" id="salesPlanChecksTarget" min="0" step="1" placeholder="Например, 120"></div>
             </div>
             <h4 style="margin:15px 0 5px;">Поощрения за достижение целей</h4>
-            <p style="font-size:12px;color:var(--text-light);">Укажите вознаграждение для каждой цели. Оно отобразится как достигнутое, когда магазин выполнит соответствующий показатель.</p>
+            
             <div class="sales-plan-rewards">
                 <div class="sales-plan-field"><label for="salesPlanRevenueReward">За выручку</label><input type="text" id="salesPlanRevenueReward" maxlength="180" placeholder="Например, премия 3000 ₽"></div>
                 <div class="sales-plan-field"><label for="salesPlanChecksReward">За количество чеков</label><input type="text" id="salesPlanChecksReward" maxlength="180" placeholder="Например, бонус команде"></div>
@@ -816,7 +804,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <div id="stockSaleSelected" class="stock-sale-selected" style="display:none;"></div>
                 <select id="stockSaleProduct" class="hidden" aria-hidden="true" tabindex="-1"><option value="">Выберите карточку товара</option></select>
                 <div class="form-group" style="margin-top:12px;"><label for="stockSaleSize">Размер</label><select id="stockSaleSize" class="input" style="width:100%;" onchange="handleStockSaleSizeChange()"><option value="">Сначала выберите товар</option></select><div id="stockSaleManualWrap" style="display:none;margin-top:8px;"><label for="stockSaleManualSize" style="display:block;font-size:12px;margin-bottom:5px;">Другой размер</label><input id="stockSaleManualSize" class="input" type="text" maxlength="30" placeholder="Введите размер, например 42 или XL" autocomplete="off" style="width:100%;"></div></div>
-                <p style="font-size:11px;color:var(--text-light);margin:-3px 0 8px;">Если нужного размера нет в остатках, выберите «Другой размер…». Такая продажа не спишет отсутствующий остаток.</p>
+                
                 <p id="stockSaleStatus" style="font-size:12px;color:var(--text-light);margin:0;"></p>
             </div>
         </div>
@@ -850,11 +838,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 </details>
             </div>
         </div>
-        <div class="form-group">
-            <label for="prodDetailName">Наименование товара (бренд, модель, размер)</label>
-            <input type="text" id="prodDetailName" placeholder="Например: Nike Air Max, размер 42" autocomplete="off" onkeydown="if(event.key==='Enter') document.getElementById('prodPrice').focus()">
-            <p style="font-size:12px;color:var(--text-light);margin-top:5px;">Уточнение для истории продаж. На план закупки влияет только выбранная выше позиция из каталога.</p>
-        </div>
+        
             </div>
         </details>
         <div class="form-group">
@@ -932,10 +916,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
             <div id="salaryBlockContent"></div>
         </div>
 
-        <div class="card">
-            <h3>Календарь операций</h3>
-            <p style="font-size:12px;color:var(--text-light);margin:-6px 0 12px;">Выберите день для просмотра истории операций. Финансовые показатели и расчёт «Налоги и эквайринг» собраны в одном разделе «Касса магазинов».</p>
-            <div class="calendar" id="calendarWidget"></div>
+        
             <div id="calendarDetail" class="calendar-detail hidden"></div>
         </div>
     </div>
@@ -975,17 +956,17 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
             <div class="analytics-kpi analytics-kpi-primary">
                 <div class="analytics-kpi-label">Ваша выручка за месяц</div>
                 <div class="analytics-kpi-value" id="analyticsSellerRevenue">0 руб.</div>
-                <div class="analytics-kpi-note">Только ваши подтверждённые смены с 1-го числа</div>
+                
             </div>
             <div class="analytics-kpi">
                 <div class="analytics-kpi-label">Ваш средний чек</div>
                 <div class="analytics-kpi-value" id="analyticsSellerAvgCheck">0 руб.</div>
-                <div class="analytics-kpi-note">По вашим продажам за текущий месяц</div>
+                
             </div>
             <div class="analytics-kpi">
                 <div class="analytics-kpi-label">Количество чеков</div>
                 <div class="analytics-kpi-value" id="analyticsSellerChecks">0</div>
-                <div class="analytics-kpi-note">Только чеки за ваши смены с 1-го числа</div>
+                
             </div>
         </div>
 
@@ -994,22 +975,22 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <div class="analytics-kpi analytics-kpi-primary"><div class="analytics-kpi-label">Выручка</div><div class="analytics-kpi-value" id="analyticsKpiRevenue">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiRevenueChange">К предыдущему периоду: —</div></div>
                 <div class="analytics-kpi"><div class="analytics-kpi-label">Количество продаж</div><div class="analytics-kpi-value" id="analyticsKpiSalesCount">0</div><div class="analytics-kpi-note" id="analyticsKpiSalesChange">К предыдущему периоду: —</div></div>
                 <div class="analytics-kpi"><div class="analytics-kpi-label">Средний чек</div><div class="analytics-kpi-value" id="analyticsKpiAvgCheck">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiAvgChange">К предыдущему периоду: —</div></div>
-                <div class="analytics-kpi analytics-hide-card"><div class="analytics-kpi-label">Налоги</div><div class="analytics-kpi-value" id="analyticsKpiTaxes">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiTaxesChange">Расчёт по ставке 8%</div></div>
-                <div class="analytics-kpi"><div class="analytics-kpi-label">Расходы на ЗП</div><div class="analytics-kpi-value" id="analyticsKpiSalaryExpenses">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiSalaryExpensesChange">Фактически выплаченная зарплата</div></div>
+                <div class="analytics-kpi analytics-hide-card"><div class="analytics-kpi-label">Налоги</div><div class="analytics-kpi-value" id="analyticsKpiTaxes">0 руб.</div></div>
+                <div class="analytics-kpi"><div class="analytics-kpi-label">Расходы на ЗП</div><div class="analytics-kpi-value" id="analyticsKpiSalaryExpenses">0 руб.</div></div>
                 <div class="analytics-kpi"><div class="analytics-kpi-label">Возвраты</div><div class="analytics-kpi-value" id="analyticsKpiReturns">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiReturnsChange">К предыдущему периоду: —</div></div>
-                <div class="analytics-kpi analytics-kpi-primary analytics-calculation-trigger" id="analyticsAllExpensesKpiCard" role="button" tabindex="0" aria-label="Открыть подробный расчёт всех расходов" title="Нажмите для подробного расчёта" onclick="showAnalyticsCalculation('expenses')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showAnalyticsCalculation('expenses')}"><div class="analytics-kpi-label">Все расходы</div><div class="analytics-kpi-value" id="analyticsKpiAllExpenses">0 руб.</div><div class="analytics-kpi-note" id="analyticsKpiAllExpensesChange">Нажмите для подробного расчёта</div></div>
-                <div class="analytics-kpi analytics-kpi-primary analytics-calculation-trigger" id="analyticsNetProfitKpiCard" role="button" tabindex="0" aria-label="Открыть подробный расчёт чистой прибыли" title="Нажмите для подробного расчёта" onclick="showAnalyticsCalculation('profit')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showAnalyticsCalculation('profit')}" style="display:none;"><div class="analytics-kpi-label">Чистая прибыль</div><div class="analytics-kpi-value" id="analyticsKpiNetProfit">—</div><div class="analytics-kpi-note" id="analyticsKpiNetProfitNote">Нажмите для подробного расчёта</div></div>
-                <div class="analytics-kpi" id="analyticsMarkupKpiCard" style="display:none;"><div class="analytics-kpi-label">Средняя наценка</div><div class="analytics-kpi-value" id="analyticsKpiMarkup">—</div><div class="analytics-kpi-note">По фактическим закупкам; используется для оценки незаполненных продаж</div></div>
-                <div class="analytics-kpi" id="analyticsCostCoverageKpiCard" style="display:none;"><div class="analytics-kpi-label">Заполнение себестоимости</div><div class="analytics-kpi-value" id="analyticsKpiCostCoverage">—</div><div class="analytics-kpi-note" id="analyticsKpiCostCoverageNote">—</div></div>
+                <div class="analytics-kpi analytics-kpi-primary analytics-calculation-trigger" id="analyticsAllExpensesKpiCard" role="button" tabindex="0" aria-label="Открыть подробный расчёт всех расходов" title="Нажмите для подробного расчёта" onclick="showAnalyticsCalculation('expenses')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showAnalyticsCalculation('expenses')}"><div class="analytics-kpi-label">Все расходы</div><div class="analytics-kpi-value" id="analyticsKpiAllExpenses">0 руб.</div></div>
+                <div class="analytics-kpi analytics-kpi-primary analytics-calculation-trigger" id="analyticsNetProfitKpiCard" role="button" tabindex="0" aria-label="Открыть подробный расчёт чистой прибыли" title="Нажмите для подробного расчёта" onclick="showAnalyticsCalculation('profit')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showAnalyticsCalculation('profit')}" style="display:none;"><div class="analytics-kpi-label">Чистая прибыль</div><div class="analytics-kpi-value" id="analyticsKpiNetProfit">—</div></div>
+                <div class="analytics-kpi" id="analyticsMarkupKpiCard" style="display:none;"><div class="analytics-kpi-label">Средняя наценка</div><div class="analytics-kpi-value" id="analyticsKpiMarkup">—</div></div>
+                <div class="analytics-kpi" id="analyticsCostCoverageKpiCard" style="display:none;"><div class="analytics-kpi-label">Заполнение себестоимости</div><div class="analytics-kpi-value" id="analyticsKpiCostCoverage">—</div></div>
             </div>
-            <p id="analyticsCostProfitWarning" class="analytics-help" style="display:none;margin:12px 0 16px;">Показатели прибыли сначала рассчитываются предварительно по средней наценке, затем уточняются после ввода фактических закупочных цен.</p>
+            
 
             <section class="analytics-detail-card" id="analyticsStockValuationCard" style="margin:0 0 14px;">
                 <div class="analytics-section-heading"><h4>Финансовая оценка складских остатков</h4><span>Все магазины и склад хранения</span></div>
                 <div class="analytics-kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin:0;">
                     <div class="analytics-kpi"><div class="analytics-kpi-label">Закупочная стоимость остатков</div><div class="analytics-kpi-value" id="analyticsStockPurchaseValue">—</div><div class="analytics-kpi-note" id="analyticsStockPurchaseNote">Загрузка складских данных</div></div>
-                    <div class="analytics-kpi analytics-kpi-primary"><div class="analytics-kpi-label">Стоимость остатков при реализации</div><div class="analytics-kpi-value" id="analyticsStockRealizationValue">—</div><div class="analytics-kpi-note" id="analyticsStockRealizationNote">Средняя фактическая цена или средняя наценка</div></div>
-                    <div class="analytics-kpi"><div class="analytics-kpi-label">Количество товаров в остатках</div><div class="analytics-kpi-value" id="analyticsStockUnits">—</div><div class="analytics-kpi-note">По всем местам хранения</div></div>
+                    <div class="analytics-kpi analytics-kpi-primary"><div class="analytics-kpi-label">Стоимость остатков при реализации</div><div class="analytics-kpi-value" id="analyticsStockRealizationValue">—</div></div>
+                    <div class="analytics-kpi"><div class="analytics-kpi-label">Количество товаров в остатках</div><div class="analytics-kpi-value" id="analyticsStockUnits">—</div></div>
                 </div>
             </section>
 
@@ -1021,7 +1002,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 </section>
                 <section class="analytics-detail-card" id="analyticsPaymentCard">
                     <div class="analytics-section-heading"><h4>Продажи по способам оплаты</h4><span>за период</span></div>
-                    <p class="analytics-help">Показаны действующие продажи за выбранный период, с учётом отметок возврата.</p>
+                    
                     <div id="analyticsPaymentBreakdown"></div>
                 </section>
             </div>
@@ -1034,7 +1015,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                     <div><div class="analytics-kpi-label">Эквайринг СБП · 0,5%</div><div class="analytics-tax-value" id="analyticsSbpFeeValue">0 руб.</div></div>
                     <div class="analytics-tax-total"><div class="analytics-kpi-label">Всего налогов и комиссий</div><div class="analytics-tax-value" id="analyticsTaxFeeTotal">0 руб.</div></div>
                 </div>
-                <p class="analytics-help">Расчёт по правилам системы: налогом облагаются все способы оплаты, кроме наличных без чека и переводов. Значение информационное и не уменьшает показатель выручки.</p>
+                
             </section>
 
 
@@ -1045,7 +1026,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <h4>Аналитика по продавцам</h4>
                 <span id="analyticsSellerPerformancePeriod">За выбранный период</span>
             </div>
-            <p class="analytics-help">Выручка и количество чеков считаются по продажам в зарегистрированных сменах. Зарплата рассчитывается по ставкам продавца за смены выбранного периода.</p>
+            
             <div class="analytics-controls" style="margin:10px 0 14px;">
                 <label for="analyticsSellerMetric" style="margin:0;white-space:nowrap;font-size:12px;">Показатель на графике</label>
                 <select id="analyticsSellerMetric" onchange="renderSellerAnalyticsCurrent()" aria-label="Показатель для сравнения продавцов">
@@ -1069,7 +1050,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <h4>Что продаётся лучше</h4>
                 <span id="analyticsBestSellingPeriod">За выбранный период</span>
             </div>
-            <p class="analytics-help" id="analyticsBestSellingHelp">Топ‑10 товарных позиций по выбранному показателю. Возвращённые продажи не учитываются.</p>
+            
             <div class="analytics-controls" style="margin:10px 0 14px;">
                 <label for="analyticsBestSellingMetric" style="margin:0;white-space:nowrap;font-size:12px;">Сортировать</label>
                 <select id="analyticsBestSellingMetric" onchange="renderBestSellingProductsCurrent()" aria-label="Сортировка лучших продаж">
@@ -1157,7 +1138,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
         </div>
             <section class="analytics-detail-card" id="recurringExpenseManager" style="display:none;margin-top:13px;">
                 <div class="analytics-section-heading"><h4>Регулярные ежемесячные расходы</h4><span>Аренда, коммунальные услуги и другое</span></div>
-                <p class="analytics-help">Укажите месячную сумму и дату начала учёта. В аналитике расход распределяется пропорционально календарным дням каждого месяца внутри выбранного периода; за 7 дней учитывается только доля за эти дни.</p>
+                
                 <p class="analytics-help" id="analyticsRecurringExpensePeriodSummary" style="font-weight:700;margin-bottom:12px;">Регулярные расходы за период: 0 руб.</p>
                 <div class="recurring-expense-form">
                     <div class="form-group"><label for="recurringExpenseName">Название расхода</label><input id="recurringExpenseName" type="text" maxlength="100" placeholder="Например, аренда"></div>
@@ -1185,15 +1166,8 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                     Данные за смену: <strong id="cashStoresShiftLabel" style="color:var(--text);">—</strong>
                 </div>
             </div>
-            <div style="overflow-x:auto;">
-                <table>
-                    <thead>
-                        <tr><th>Магазин</th><th>Сейчас в кассе</th><th id="cashCollectionActionHeader" style="display:none;">Движение наличных</th><th>Нал с чеком</th><th>Нал без чека</th><th>Переводы</th><th>Карта+СБП</th><th>Расходы</th><th>Возвраты</th><th>Итог</th><th id="cashTaxAcquiringHeader" style="display:none;">Налоги и эквайринг</th></tr>
-                    </thead>
-                    <tbody id="storeCashTable"></tbody>
-                </table>
-            </div>
-            <p id="cashStoresHelp" style="font-size:12px;color:var(--text-light);margin-top:10px;">* «Сейчас в кассе» — расчётный остаток после наличных продаж, возвратов, расходов и ручных движений наличных. Внесение и изъятие меняют только остаток кассы, не расходы и не «Итог».</p>
+            
+            
         </div>
     </div>
 
@@ -1222,13 +1196,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 </div>
 
 <!-- TASKS ROOT (moved into the Tasks workspace page on initialization) -->
-<div id="tasksRoot" style="width:100%;display:block;">
-  <section id="adminTasksPanel" style="display:none;">
-    <div class="card admin-personal-tasks-card" id="adminPersonalTasksPanel">
-      <h3>Задания для Админов</h3>
-      <p class="analytics-help" style="margin-bottom:12px;">Общий список задач для всех администраторов этой организации. Любой администратор может добавить задание, отметить его выполненным или удалить. Эти задания не назначаются сотрудникам и не влияют на закрытие смен.</p>
-      <div class="admin-personal-task-form">
-        <div class="form-group"><label for="adminPersonalTaskTitle">Что нужно сделать</label><input id="adminPersonalTaskTitle" type="text" maxlength="220" placeholder="Например: заправить автомобиль, позвонить поставщику"></div>
+
         <div class="form-group"><label for="adminPersonalTaskDueDate">Срок (необязательно)</label><input id="adminPersonalTaskDueDate" type="date"></div>
         <button type="button" class="btn btn-success" onclick="addAdminPersonalTask()">Добавить задачу</button>
       </div>
@@ -1242,7 +1210,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
       <div class="form-group"><label for="taskAssigneeInput">Сотрудник</label><select id="taskAssigneeInput"><option value="">Загрузка сотрудников…</option></select></div>
       <div class="form-group"><label for="taskDueAtInput">Срок выполнения</label><input id="taskDueAtInput" type="datetime-local"></div>
       <button class="btn btn-success" type="button" onclick="createTask()">Назначить задание</button>
-      <p class="analytics-help" style="margin-top:10px;">Новые задания сразу появляются у выбранного сотрудника. Перед закрытием смены продавец должен выбрать ответ по каждому открытому заданию.</p>
+      
     </div>
     <div class="card">
       <h3>Задания и ответы сотрудников</h3>
@@ -1250,10 +1218,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
     </div>
   </section>
   <section id="sellerTasksPanel" style="display:none;">
-    <div class="card">
-      <h3>Мои задания</h3>
-      <p class="analytics-help">По каждому открытому заданию выберите результат и при необходимости оставьте комментарий. Пока остаются задания без ответа, закрыть смену нельзя.</p>
-      <div id="sellerTasksList"></div>
+    
     </div>
   </section>
 </div>
@@ -1271,17 +1236,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 </div>
 
 <!-- PAYMENT RATE EDITOR MODAL -->
-<div id="paymentRateModal" class="modal-overlay hidden" onclick="if(event.target===this)closePaymentRateEditor()">
-    <div class="modal">
-        <h3>Ставки по способу оплаты для: <span id="paymentRateUserName"></span></h3>
-        <p style="font-size:13px;color:var(--text-light);margin-bottom:10px;">Укажите вознаграждение за продажу для каждого способа оплаты. Если значение 0, используется стандартная ставка.</p>
-        <table id="paymentRateTable" style="margin-bottom:10px;">
-            <thead><tr><th>Способ оплаты</th><th>Ставка (руб)</th></tr></thead>
-            <tbody id="paymentRateBody"></tbody>
-        </table>
-        <div style="display:flex; gap:10px; margin-top:15px;">
-            <button class="btn btn-success" onclick="closePaymentRateEditor()">Готово</button>
-        </div>
+
     </div>
 </div>
 
@@ -5079,7 +5034,7 @@ function renderPurchaseCardAntiRanking(result,periodLabel,storeIsAll,selectedSto
                 metric('Почему нет в рейтинге',h(row.reason));
             return '<article style="border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:12px;min-width:0;"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;min-width:0;"><div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--surface,#f3f4f6);font-size:11px;font-weight:800;flex:0 0 28px;">—</div>'+photo+'<div style="font-size:14px;font-weight:700;min-width:0;overflow-wrap:anywhere;">'+h(row.productName)+'</div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:7px;">'+metrics+'</div></article>';
         }).join('');
-        list.insertAdjacentHTML('beforeend','<details style="margin-top:14px;border:1px solid var(--border);border-radius:12px;padding:12px;"><summary style="cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;">Недостаточно данных · '+insufficient.length+' карточек <span style="font-size:12px;color:var(--text-light);font-weight:400;">Показать</span></summary><p style="font-size:12px;color:var(--text-light);margin:8px 0 10px;">Эти товары не включены в антирейтинг: пока недостаточно подтверждённого наличия, чтобы честно оценить спрос.</p><div style="display:flex;flex-direction:column;gap:10px;">'+insufficientCards+'</div>'+(insufficient.length>insufficientVisible.length?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseCardAntiInsufficient()" style="width:100%;margin-top:10px;">Показать ещё 10 · осталось '+(insufficient.length-insufficientVisible.length)+'</button>':'')+'</details>');
+        list.insertAdjacentHTML('beforeend','<details style="margin-top:14px;border:1px solid var(--border);border-radius:12px;padding:12px;"><summary style="cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;">Недостаточно данных · '+insufficient.length+' карточек <span style="font-size:12px;color:var(--text-light);font-weight:400;">Показать</span></summary><div style="display:flex;flex-direction:column;gap:10px;">'+insufficientCards+'</div>'+(insufficient.length>insufficientVisible.length?'<button type="button" class="btn btn-secondary" onclick="showMorePurchaseCardAntiInsufficient()" style="width:100%;margin-top:10px;">Показать ещё 10 · осталось '+(insufficient.length-insufficientVisible.length)+'</button>':'')+'</details>');
     }
     if(more){
         var remaining=rows.length-visible.length;
@@ -8258,11 +8213,11 @@ function renderAdminPersonalTasks(statusOverride) {
     else if (!adminPersonalTasksLoaded) status.textContent = 'Подключаем общий список заданий к Firebase…';
     else status.textContent = adminPersonalTasks.length ? ('Заданий: ' + adminPersonalTasks.length + ' · общий список для администраторов организации') : 'Пока нет заданий для администраторов.';
     if (!adminPersonalTasksLoaded) {
-        list.innerHTML = '<p class="analytics-help">Дождитесь загрузки общего списка, прежде чем добавлять или отмечать задания.</p>';
+        list.innerHTML = '';
         return;
     }
     if (!adminPersonalTasks.length) {
-        list.innerHTML = '<p class="admin-personal-task-empty">Пока нет заданий. Добавьте первое — оно будет видно всем администраторам этой организации.</p>';
+        list.innerHTML = '';
         return;
     }
     var html = '';
@@ -8367,7 +8322,7 @@ function renderTasks() {
         var scoped = (tasks || []).filter(function(t) { return t && (!t.org || String(t.org) === String(adminOrg)); }).slice();
         scoped.sort(function(a,b){ return Number(b.createdAt || 0) - Number(a.createdAt || 0); });
         if (!scoped.length) {
-            list.innerHTML = '<p class="analytics-help">Заданий пока нет. Создайте первое задание выше.</p>';
+            list.innerHTML = '';
             return;
         }
         var html = '<div class="task-admin-table-wrap"><table class="task-admin-table"><thead><tr><th>Задание</th><th>Сотрудник</th><th>Срок</th><th>Ответ</th><th>Комментарий</th><th>Действие</th></tr></thead><tbody>';
@@ -8399,7 +8354,7 @@ function renderTasks() {
             return aOpen - bOpen || Number(a.dueAtMs || (a.dueAt ? new Date(a.dueAt).getTime() : 0)) - Number(b.dueAtMs || (b.dueAt ? new Date(b.dueAt).getTime() : 0));
         });
         if (!myTasks.length) {
-            sellerList.innerHTML = '<p class="analytics-help">У вас пока нет заданий.</p>';
+            sellerList.innerHTML = '';
             return;
         }
         function sellerTaskCardMarkup(t) {
@@ -8737,7 +8692,7 @@ function renderRecurringExpenseManager() {
     }, 0);
     var totalLine = '<p id="recurringExpensesMonthlyTotal" class="analytics-help" style="font-weight:800;font-size:14px;color:var(--text);background:#fff7fa;border:1px solid var(--border);border-radius:10px;padding:12px;margin:0 0 12px;">Итого ежемесячных расходов в списке: ' + formatRubles(monthlyTotal) + '</p>';
     if (!records.length) {
-        container.innerHTML = totalLine + '<p class="analytics-help" style="padding:4px 0 12px;">Регулярные расходы ещё не добавлены для выбранного магазина.</p>';
+        container.innerHTML = totalLine + '';
         return;
     }
     var html = totalLine + '<table><thead><tr><th>Расход</th><th>Магазин</th><th>Сумма в месяц</th><th>Начало учёта</th><th>Окончание</th><th>Действие</th></tr></thead><tbody>';
@@ -10399,13 +10354,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseStoreStockControlCard" style="margin-top:14px;"><div><h3 style="margin-bottom:4px;">Контроль остатков по магазинам</h3></div><p id="purchaseStockControlStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-light);margin:12px 0 8px;">Загрузка настроек…</p><div id="purchaseStockControlContent"><div style="padding:12px;color:var(--text-light);">Загрузка остатков…</div></div></section>');
 
     costsPage.insertAdjacentHTML('beforeend', `
-      <div class="card sale-cost-manager-card">
-        <h3>Закупочная стоимость каждой продажи</h3>
-        <p style="font-size:13px;color:var(--text-light);line-height:1.55;margin-bottom:12px;">Раздел доступен всем супер-администраторам. Указывайте фактическую закупочную стоимость отдельно для каждой проданной позиции. Пока цена не введена, аналитика предварительно оценивает себестоимость по средней наценке продаж с известной закупочной ценой. Оценка не сохраняется как факт и заменяется фактической ценой после ввода. Эти суммы используются только в аналитике и не уменьшают кассу. В Организации 1 для Вовы действует режим только просмотра.</p>
-        <div class="sale-cost-manager-summary">
-          <strong id="saleCostMissingSummary">Без себестоимости: —</strong>
-          <span id="saleCostSyncState">Загрузка данных…</span>
-        </div>
+      
         <div class="sale-cost-filters">
           <div class="form-group"><label for="saleCostStoreFilter">Магазин</label><select id="saleCostStoreFilter" onchange="renderPurchaseCosts()"><option value="all">Все магазины</option></select></div>
           <div class="form-group"><label for="saleCostStartDate">Дата с</label><input id="saleCostStartDate" type="date" onchange="renderPurchaseCosts()"></div>
@@ -10421,7 +10370,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     `);
     var saleCostStoreFilter = document.getElementById('saleCostStoreFilter');
     if (saleCostStoreFilter) saleCostStoreFilter.value = 'all';
-    expensePage.insertAdjacentHTML('beforeend', '<div id="expensesPageEntryCard" class="card expense-entry-card"><h3>Записать расход</h3><p style="font-size:13px;color:var(--text-light);margin:-5px 0 14px;">Добавьте сумму и причину расхода. Запись попадёт в общую историю расходов.</p><div class="form-group"><label for="expenseAmountExpensesPage">Сумма (руб.)</label><input type="number" id="expenseAmountExpensesPage" min="0" step="0.01" placeholder="0"></div><div class="form-group"><label for="expenseReasonExpensesPage">Причина</label><input type="text" id="expenseReasonExpensesPage" placeholder="Аренда, закупка, хозяйственные расходы"></div><button type="button" id="saveExpenseButtonExpensesPage" class="btn btn-warning" style="width:100%;">Записать расход</button></div>');
+    expensePage.insertAdjacentHTML('beforeend', '<div class="form-group"><label for="expenseReasonExpensesPage">Причина</label><input type="text" id="expenseReasonExpensesPage" placeholder="Аренда, закупка, хозяйственные расходы"></div><button type="button" id="saveExpenseButtonExpensesPage" class="btn btn-warning" style="width:100%;">Записать расход</button></div>');
     var expensesPageAmountInput = document.getElementById('expenseAmountExpensesPage');
     var expensesPageReasonInput = document.getElementById('expenseReasonExpensesPage');
     var expensesPageSaveButton = document.getElementById('saveExpenseButtonExpensesPage');
@@ -10444,13 +10393,13 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       dashboard.appendChild(sellerBreakContainer);
     }
     move(original[7],analyticsPage); // chart
-    analyticsPage.insertAdjacentHTML('beforeend', '<section class="card analytics-product-insights" id="analyticsProductInsights" style="margin-top:18px;"><div style="margin-bottom:12px;"><h3 style="margin:0 0 5px;">Аналитика товаров</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Сравнение продаж и популярности товарных карточек.</p></div><div class="analytics-product-tabs" role="tablist" aria-label="Аналитика товаров" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"><button type="button" class="btn btn-success" id="analyticsProductBestTab" role="tab" aria-selected="true" onclick="switchAnalyticsProductSection(\'best\')">Что продаётся лучше</button><button type="button" class="btn btn-secondary" id="analyticsProductRankingTab" role="tab" aria-selected="false" onclick="switchAnalyticsProductSection(\'ranking\')">Рейтинг карточек</button></div><div id="analyticsProductBestPane" role="tabpanel"></div><div id="analyticsProductRankingPane" role="tabpanel" style="display:none;"></div></section>');
+    analyticsPage.insertAdjacentHTML('beforeend', '<section class="card analytics-product-insights" id="analyticsProductInsights" style="margin-top:18px;"><div class="analytics-product-tabs" role="tablist" aria-label="Аналитика товаров" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"><button type="button" class="btn btn-success" id="analyticsProductBestTab" role="tab" aria-selected="true" onclick="switchAnalyticsProductSection(\'best\')">Что продаётся лучше</button><button type="button" class="btn btn-secondary" id="analyticsProductRankingTab" role="tab" aria-selected="false" onclick="switchAnalyticsProductSection(\'ranking\')">Рейтинг карточек</button></div><div id="analyticsProductBestPane" role="tabpanel"></div><div id="analyticsProductRankingPane" role="tabpanel" style="display:none;"></div></section>');
     var analyticsBestPane=document.getElementById('analyticsProductBestPane');
     var analyticsBestPanel=document.getElementById('analyticsBestSellingPanel');
     if(analyticsBestPane&&analyticsBestPanel){analyticsBestPane.appendChild(analyticsBestPanel);analyticsBestPanel.style.marginTop='0';}
     var analyticsProductInsights=document.getElementById('analyticsProductInsights');
     if(analyticsProductInsights&&currentUser&&currentUser.role!=='admin')analyticsProductInsights.style.display='none';
-    document.getElementById('analyticsProductRankingPane').insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseCardRankingCard"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">Рейтинг карточек по продажам</h3><p id="purchaseRankingDescription" style="font-size:13px;color:var(--text-light);margin:0;">Рейтинг по количеству проданных единиц. Учитываются продажи, привязанные к карточкам склада; возвраты исключаются.</p><div role="group" aria-label="Режим рейтинга карточек" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn btn-success" id="purchaseRankingLeadersMode" aria-pressed="true" onclick="switchPurchaseCardRankingMode(&quot;leaders&quot;)">Лидеры продаж</button><button type="button" class="btn btn-secondary" id="purchaseRankingAntiMode" aria-pressed="false" onclick="switchPurchaseCardRankingMode(&quot;anti&quot;)">Антирейтинг</button></div></div><button type="button" class="btn btn-secondary" onclick="renderPurchaseCardRanking()">Обновить рейтинг</button></div><div class="purchase-plan-filters" style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingPeriod">Период</label><select id="purchaseRankingPeriod" onchange="renderPurchaseCardRanking()"><option value="7">Последние 7 дней</option><option value="30" selected>Последние 30 дней</option><option value="90">Последние 90 дней</option><option value="all">Всё время</option><option value="custom">Выбрать даты</option></select></div><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingStore">Магазин</label><select id="purchaseRankingStore" onchange="renderPurchaseCardRanking()"><option value="all">Все магазины</option></select></div></div><div id="purchaseRankingCustomDates" style="display:none;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingStartDate">С даты</label><input type="date" id="purchaseRankingStartDate" onchange="renderPurchaseCardRanking()"></div><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingEndDate">По дату</label><input type="date" id="purchaseRankingEndDate" onchange="renderPurchaseCardRanking()"></div></div><div id="purchaseRankingStatus" style="font-size:13px;color:var(--text-light);margin:12px 0;">Загружаем рейтинг…</div><div id="purchaseCardRankingList" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRankingMore" style="margin-top:10px;"></div></section>');
+    document.getElementById('analyticsProductRankingPane').insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseCardRankingCard"></div><button type="button" class="btn btn-secondary" onclick="renderPurchaseCardRanking()">Обновить рейтинг</button></div><div class="purchase-plan-filters" style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingPeriod">Период</label><select id="purchaseRankingPeriod" onchange="renderPurchaseCardRanking()"><option value="7">Последние 7 дней</option><option value="30" selected>Последние 30 дней</option><option value="90">Последние 90 дней</option><option value="all">Всё время</option><option value="custom">Выбрать даты</option></select></div><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingStore">Магазин</label><select id="purchaseRankingStore" onchange="renderPurchaseCardRanking()"><option value="all">Все магазины</option></select></div></div><div id="purchaseRankingCustomDates" style="display:none;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingStartDate">С даты</label><input type="date" id="purchaseRankingStartDate" onchange="renderPurchaseCardRanking()"></div><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingEndDate">По дату</label><input type="date" id="purchaseRankingEndDate" onchange="renderPurchaseCardRanking()"></div></div><div id="purchaseRankingStatus" style="font-size:13px;color:var(--text-light);margin:12px 0;">Загружаем рейтинг…</div><div id="purchaseCardRankingList" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRankingMore" style="margin-top:10px;"></div></section>');
      analyticsPage.insertAdjacentHTML('beforeend', '<div class="card" id="analyticsForceRefreshCard" style="margin-top:18px;text-align:center;"><button type="button" class="btn btn-secondary" onclick="forceRefreshAnalytics()" style="min-width:220px;">↻ Пересчитать аналитику</button><p id="analyticsForceRefreshStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-light);margin:9px 0 0;">Сбросить локальный кэш и пересчитать показатели по уже загруженным данным</p></div>');
     move(original[8],salesPage); // legacy tab strip (kept for compatibility, visually hidden)
     move(original[9],salesPage);move(original[10],expensePage);move(original[11],cashPage);move(original[12],breaksPage);move(original[13],auditPage);
@@ -10846,7 +10795,7 @@ window.addEventListener('focus', function() { if (currentUser) renderStoreSalesP
             <input type="search" id="productCatalogSearch" placeholder="Начните вводить название…" autocomplete="off" aria-label="Поиск товара по названию" oninput="renderProductSearchResults();" onkeydown="handleProductSearchKeydown(event)">
         </div>
         <div id="productSearchResults" class="product-search-results" role="listbox" aria-label="Результаты поиска"></div>
-        <p id="productSearchResultsHint" style="margin-top:10px;font-size:12px;color:var(--text-light);">Выберите товар из списка.</p>
+        
     </div>
 </div>
 <style>
@@ -11619,12 +11568,12 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
     var page=node('workspacePage-purchase');if(!page)return;
     if(!node('purchaseJournalPlanMirror')){
       var mirror=document.createElement('section');mirror.id='purchaseJournalPlanMirror';mirror.className='card';
-      mirror.innerHTML='<h3>Журнал закупок по магазинам</h3><div id="purchasePlanJournalAccessNote" class="purchase-journal-readonly" hidden>Режим просмотра: в Организации 1 Вова может видеть записи, но не изменять их.</div><div id="purchasePlanJournalStats" class="purchase-journal-summary purchase-journal-summary-two"></div><div class="purchase-journal-list-controls"><input id="purchasePlanJournalSearch" type="search" placeholder="Поиск по товару или поставщику" aria-label="Поиск журнала закупок"><select id="purchasePlanJournalCategory" aria-label="Категория журнала закупок"><option value="all">Обувь и одежда</option><option value="shoes">Только обувь</option><option value="clothing">Только одежда</option></select><select id="purchasePlanJournalStore" aria-label="Магазин журнала закупок"><option value="all">Все магазины</option></select></div><div id="purchasePlanJournalRecords" class="purchase-journal-records"></div>';
+      mirror.innerHTML='<h3>Журнал закупок по магазинам</h3><div id="purchasePlanJournalStats" class="purchase-journal-summary purchase-journal-summary-two"></div><div class="purchase-journal-list-controls"><input id="purchasePlanJournalSearch" type="search" placeholder="Поиск по товару или поставщику" aria-label="Поиск журнала закупок"><select id="purchasePlanJournalCategory" aria-label="Категория журнала закупок"><option value="all">Обувь и одежда</option><option value="shoes">Только обувь</option><option value="clothing">Только одежда</option></select><select id="purchasePlanJournalStore" aria-label="Магазин журнала закупок"><option value="all">Все магазины</option></select></div><div id="purchasePlanJournalRecords" class="purchase-journal-records"></div>';
       page.appendChild(mirror);
     }
     if(!node('purchaseSupplierManager')){
       var manager=document.createElement('section');manager.id='purchaseSupplierManager';manager.className='card';
-      manager.innerHTML='<h3>Справочник поставщиков</h3><p class="purchase-journal-intro">Сохраняй поставщиков и что они продают. При следующей закупке имя поставщика будет доступно в подсказках.</p><div id="purchaseSupplierAccessNote" class="purchase-journal-readonly" hidden>Режим просмотра: в Организации 1 Вова может видеть поставщиков, но не добавлять и не изменять их.</div><form id="purchaseSupplierForm" autocomplete="off"><div class="supplier-form-grid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:10px;"><div class="form-group"><label for="purchaseSupplierName">Поставщик *</label><input id="purchaseSupplierName" type="text" maxlength="140" placeholder="Название или номер павильона" required></div><div class="form-group"><label for="purchaseSupplierSells">Что продаёт *</label><textarea id="purchaseSupplierSells" maxlength="800" placeholder="Например: мужские кроссовки, спортивная одежда, размеры 36–45" required></textarea></div></div><div class="supplier-form-actions" style="display:flex;gap:8px;flex-wrap:wrap;"><button id="purchaseSupplierSaveButton" class="btn btn-success" type="submit">＋ Добавить поставщика</button><button id="purchaseSupplierCancelButton" class="btn btn-secondary" type="button" hidden>Отмена</button></div></form><datalist id="purchaseSupplierSuggestions"></datalist><p id="purchaseSupplierStatus" class="purchase-journal-status" role="status" aria-live="polite">Загрузка поставщиков…</p><div id="purchaseSupplierRecords"></div>';
+      manager.innerHTML='<h3>Справочник поставщиков</h3><form id="purchaseSupplierForm" autocomplete="off"><div class="supplier-form-grid" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:10px;"><div class="form-group"><label for="purchaseSupplierName">Поставщик *</label><input id="purchaseSupplierName" type="text" maxlength="140" placeholder="Название или номер павильона" required></div><div class="form-group"><label for="purchaseSupplierSells">Что продаёт *</label><textarea id="purchaseSupplierSells" maxlength="800" placeholder="Например: мужские кроссовки, спортивная одежда, размеры 36–45" required></textarea></div></div><div class="supplier-form-actions" style="display:flex;gap:8px;flex-wrap:wrap;"><button id="purchaseSupplierSaveButton" class="btn btn-success" type="submit">＋ Добавить поставщика</button><button id="purchaseSupplierCancelButton" class="btn btn-secondary" type="button" hidden>Отмена</button></div></form><datalist id="purchaseSupplierSuggestions"></datalist><p id="purchaseSupplierStatus" class="purchase-journal-status" role="status" aria-live="polite">Загрузка поставщиков…</p><div id="purchaseSupplierRecords"></div>';
       page.appendChild(manager);
     }
   }
@@ -11673,7 +11622,7 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
   function saveSupplier(event){if(event)event.preventDefault();if(!canEdit()){alert('У вас нет прав на изменение справочника поставщиков.');return;}if(typeof window.checkSessionBeforeAction==='function'&&!window.checkSessionBeforeAction())return;var name=String(node('purchaseSupplierName').value||'').trim(),sells=String(node('purchaseSupplierSells').value||'').trim();if(!name){alert('Введите имя или название поставщика.');node('purchaseSupplierName').focus();return;}if(!sells){alert('Укажите, что продаёт поставщик.');node('purchaseSupplierSells').focus();return;}var current=editingSupplierId?supplierRecords.find(function(x){return x&&String(x.id)===String(editingSupplierId);}):null;var now=Date.now(),id=current?String(current.id):('supplier_'+now.toString(36)+'_'+Math.random().toString(36).slice(2,9));var item={id:id,org:supplierScope||currentScope||scopeKey(),name:name,sells:sells,createdAt:current?Number(current.createdAt)||now:now,createdBy:current?String(current.createdBy||''):String(window.currentUser.username||window.currentUser.name||''),updatedAt:now,updatedBy:String(window.currentUser.username||window.currentUser.name||''),_pendingSync:true};cacheSupplier(item);renderSupplierList();setSupplierStatus(syncConnected?'Сохранено локально. Синхронизация с Firebase…':'Сохранено на этом устройстве. Будет отправлено при восстановлении связи.',false);syncSupplierOne(item);try{if(typeof window.addAudit==='function')window.addAudit(current?'purchase_supplier_edit':'purchase_supplier_add',(current?'Изменён поставщик: ':'Добавлен поставщик: ')+name+'; ассортимент: '+sells);}catch(e){}resetSupplierForm();}
   function deleteSupplier(id){if(!canEdit()){alert('У вас нет прав на удаление поставщиков.');return;}var item=supplierRecords.find(function(x){return x&&String(x.id)===String(id)&&!x._deletePending;});if(!item)return;if(!confirm('Удалить поставщика «'+String(item.name||'')+'»?'))return;item._deletePending=true;item._pendingSync=false;item.updatedAt=Date.now();saveSupplierCache();renderSupplierList();setSupplierStatus(syncConnected?'Удаление синхронизируется…':'Удаление сохранено локально и будет завершено после восстановления связи.',false);syncSupplierOne(item);try{if(typeof window.addAudit==='function')window.addAudit('purchase_supplier_delete','Удалён поставщик: '+String(item.name||''));}catch(e){}}
 
-  function buildCard(){var page=node('workspacePage-dashboard');if(!page||node('purchaseJournalCard'))return;var card=document.createElement('section');card.id='purchaseJournalCard';card.className='card';card.innerHTML='<h3 style="margin-bottom:7px;">Журнал закупок по магазинам</h3><div id="purchaseJournalAccessNote" class="purchase-journal-readonly" hidden>Режим просмотра: в Организации 1 Вова может видеть записи, но не добавлять, изменять или удалять их.</div><form id="purchaseJournalForm" autocomplete="off"><div class="purchase-journal-date-top"><div class="form-group"><label for="purchaseJournalDate">Дата закупки *</label><input id="purchaseJournalDate" class="purchase-journal-mutate" type="date" required></div><span class="purchase-journal-budget-date-caption">Бюджет на <strong id="purchaseJournalBudgetDateLabel">сегодня</strong></span></div><section id="purchaseJournalBudgetPanel" class="purchase-journal-budget-panel"><div class="purchase-journal-budget-entry"><div class="form-group"><label for="purchaseJournalBudgetAmount">Денег на закупку, ₽</label><input id="purchaseJournalBudgetAmount" class="purchase-journal-mutate" type="text" inputmode="decimal" placeholder="Например, 100000" autocomplete="off"></div><button id="purchaseJournalBudgetSave" type="button" class="btn btn-secondary purchase-journal-budget-save purchase-journal-mutate">Задать сумму</button></div><div class="purchase-journal-budget-stats"><div class="purchase-journal-budget-stat"><span>Было</span><strong id="purchaseJournalBudgetInitial">Не задано</strong></div><div class="purchase-journal-budget-stat"><span>Куплено</span><strong id="purchaseJournalBudgetSpent">0 ₽</strong></div><div class="purchase-journal-budget-stat purchase-journal-budget-remaining"><span>Осталось</span><strong id="purchaseJournalBudgetRemaining">—</strong></div></div><p id="purchaseJournalBudgetHint" class="purchase-journal-budget-hint">Укажи доступную сумму на выбранную дату.</p></section><h4 style="margin:2px 0 7px;font-size:15px;">Новая позиция</h4><div class="purchase-journal-category"><button type="button" id="purchaseJournalCategoryClothing" class="purchase-journal-mutate">👕 Одежда</button><button type="button" id="purchaseJournalCategoryShoes" class="active purchase-journal-mutate">👟 Обувь</button></div><div class="purchase-journal-grid"><div class="form-group"><label for="purchaseJournalName">Наименование / модель *</label><input id="purchaseJournalName" class="purchase-journal-mutate" type="text" maxlength="180" placeholder="Например, кроссовки белые" required></div><div class="form-group"><label for="purchaseJournalUnitCost">Цена закупки за 1 шт., ₽ *</label><input id="purchaseJournalUnitCost" class="purchase-journal-mutate" type="text" inputmode="decimal" placeholder="1800" required></div><div class="form-group"><label for="purchaseJournalSupplier">Поставщик (необязательно)</label><input id="purchaseJournalSupplier" class="purchase-journal-mutate" type="text" list="purchaseSupplierSuggestions" maxlength="140" placeholder="Выберите или введите поставщика"></div></div><h4 style="font-size:15px;margin:4px 0 4px;">В какие магазины распределить?</h4><div id="purchaseJournalStorePicker" class="purchase-journal-store-list"></div><div class="purchase-journal-summary"><div class="purchase-journal-summary-item"><div class="purchase-journal-summary-label">Магазинов</div><div id="purchaseJournalSelectedStores" class="purchase-journal-summary-value">0</div></div><div class="purchase-journal-summary-item"><div class="purchase-journal-summary-label">Всего штук</div><div id="purchaseJournalSelectedQty" class="purchase-journal-summary-value">0</div></div><div class="purchase-journal-summary-item"><div class="purchase-journal-summary-label">Общая сумма</div><div id="purchaseJournalSelectedCost" class="purchase-journal-summary-value">0 ₽</div></div></div><div id="purchaseJournalBudgetSticky" class="purchase-journal-budget-sticky"><span>Остаток на закупку</span><strong id="purchaseJournalBudgetRemainingSticky">—</strong></div><button id="purchaseJournalSaveButton" class="btn btn-success purchase-journal-save purchase-journal-mutate" type="submit">＋ Добавить закупку</button></form><p id="purchaseJournalStatus" class="purchase-journal-status" role="status" aria-live="polite">Загрузка журнала…</p><div class="purchase-journal-latest-heading"><strong>Последняя закупка</strong><span id="purchaseJournalLatestDateLabel">Нет записей</span></div><div class="purchase-journal-summary purchase-journal-summary-two"><div class="purchase-journal-summary-item"><div class="purchase-journal-summary-label">Позиций / штук за дату</div><div id="purchaseJournalOverallRecords" class="purchase-journal-summary-value">0 поз. · 0 шт.</div></div><div class="purchase-journal-summary-item"><div class="purchase-journal-summary-label">Сумма за дату</div><div id="purchaseJournalOverallCost" class="purchase-journal-summary-value">0 ₽</div></div></div><div class="purchase-journal-list-controls"><input id="purchaseJournalSearch" type="search" placeholder="Поиск по наименованию или поставщику" aria-label="Поиск закупок"><select id="purchaseJournalFilterCategory" aria-label="Фильтр по категории"><option value="all">Обувь и одежда</option><option value="shoes">Только обувь</option><option value="clothing">Только одежда</option></select><select id="purchaseJournalFilterStore" aria-label="Фильтр по магазину"><option value="all">Все магазины</option></select></div><div id="purchaseJournalRecords" class="purchase-journal-records"></div>';
+  function buildCard(){var page=node('workspacePage-dashboard');if(!page||node('purchaseJournalCard'))return;var card=document.createElement('section');card.id='purchaseJournalCard';card.className='card';card.innerHTML='<h3 style="margin-bottom:7px;">Журнал закупок по магазинам</h3><form id="purchaseJournalForm" autocomplete="off"><div class="purchase-journal-date-top"><div class="form-group"><label for="purchaseJournalDate">Дата закупки *</label><input id="purchaseJournalDate" class="purchase-journal-mutate" type="date" required></div><span class="purchase-journal-budget-date-caption">Бюджет на <strong id="purchaseJournalBudgetDateLabel">сегодня</strong></span></div><section id="purchaseJournalBudgetPanel" class="purchase-journal-budget-panel"><div class="purchase-journal-budget-entry"><div class="form-group"><label for="purchaseJournalBudgetAmount">Денег на закупку, ₽</label><input id="purchaseJournalBudgetAmount" class="purchase-journal-mutate" type="text" inputmode="decimal" placeholder="Например, 100000" autocomplete="off"></div><button id="purchaseJournalBudgetSave" type="button" class="btn btn-secondary purchase-journal-budget-save purchase-journal-mutate">Задать сумму</button></div><div class="purchase-journal-budget-stats"><div class="purchase-journal-budget-stat"><span>Было</span><strong id="purchaseJournalBudgetInitial">Не задано</strong></div><div class="purchase-journal-budget-stat"><span>Куплено</span><strong id="purchaseJournalBudgetSpent">0 ₽</strong></div><div class="purchase-journal-budget-stat purchase-journal-budget-remaining"><span>Осталось</span><strong id="purchaseJournalBudgetRemaining">—</strong></div></div></section><h4 style="margin:2px 0 7px;font-size:15px;">Новая позиция</h4><div class="purchase-journal-category"><button type="button" id="purchaseJournalCategoryClothing" class="purchase-journal-mutate">👕 Одежда</button><button type="button" id="purchaseJournalCategoryShoes" class="active purchase-journal-mutate">👟 Обувь</button></div><div class="purchase-journal-grid"><div class="form-group"><label for="purchaseJournalName">Наименование / модель *</label><input id="purchaseJournalName" class="purchase-journal-mutate" type="text" maxlength="180" placeholder="Например, кроссовки белые" required></div><div class="form-group"><label for="purchaseJournalUnitCost">Цена закупки за 1 шт., ₽ *</label><input id="purchaseJournalUnitCost" class="purchase-journal-mutate" type="text" inputmode="decimal" placeholder="1800" required></div><div class="form-group"><label for="purchaseJournalSupplier">Поставщик (необязательно)</label><input id="purchaseJournalSupplier" class="purchase-journal-mutate" type="text" list="purchaseSupplierSuggestions" maxlength="140" placeholder="Выберите или введите поставщика"></div></div><h4 style="font-size:15px;margin:4px 0 4px;">В какие магазины распределить?</h4><div id="purchaseJournalStorePicker" class="purchase-journal-store-list"></div><div class="purchase-journal-summary"><div class="purchase-journal-summary-item"><div class="purchase-journal-summary-label">Магазинов</div><div id="purchaseJournalSelectedStores" class="purchase-journal-summary-value">0</div></div><div class="purchase-journal-summary-item"><div class="purchase-journal-summary-label">Всего штук</div><div id="purchaseJournalSelectedQty" class="purchase-journal-summary-value">0</div></div><div class="purchase-journal-summary-item"><div class="purchase-journal-summary-label">Общая сумма</div><div id="purchaseJournalSelectedCost" class="purchase-journal-summary-value">0 ₽</div></div></div><div id="purchaseJournalBudgetSticky" class="purchase-journal-budget-sticky"><span>Остаток на закупку</span><strong id="purchaseJournalBudgetRemainingSticky">—</strong></div><button id="purchaseJournalSaveButton" class="btn btn-success purchase-journal-save purchase-journal-mutate" type="submit">＋ Добавить закупку</button></form><p id="purchaseJournalStatus" class="purchase-journal-status" role="status" aria-live="polite">Загрузка журнала…</p><div class="purchase-journal-latest-heading"><strong>Последняя закупка</strong><span id="purchaseJournalLatestDateLabel">Нет записей</span></div><div class="purchase-journal-summary purchase-journal-summary-two"><div class="purchase-journal-summary-item"><div class="purchase-journal-summary-label">Позиций / штук за дату</div><div id="purchaseJournalOverallRecords" class="purchase-journal-summary-value">0 поз. · 0 шт.</div></div><div class="purchase-journal-summary-item"><div class="purchase-journal-summary-label">Сумма за дату</div><div id="purchaseJournalOverallCost" class="purchase-journal-summary-value">0 ₽</div></div></div><div class="purchase-journal-list-controls"><input id="purchaseJournalSearch" type="search" placeholder="Поиск по наименованию или поставщику" aria-label="Поиск закупок"><select id="purchaseJournalFilterCategory" aria-label="Фильтр по категории"><option value="all">Обувь и одежда</option><option value="shoes">Только обувь</option><option value="clothing">Только одежда</option></select><select id="purchaseJournalFilterStore" aria-label="Фильтр по магазину"><option value="all">Все магазины</option></select></div><div id="purchaseJournalRecords" class="purchase-journal-records"></div>';
     var before=page.querySelector('.quick-actions');if(before&&before.nextSibling)page.insertBefore(card,before.nextSibling);else if(before)page.appendChild(card);else page.insertBefore(card,page.firstChild);
     var mainStoreFilter=document.getElementById('storeFilter');var mainStoreFilterCard=mainStoreFilter&&mainStoreFilter.closest('.card');if(mainStoreFilterCard&&mainStoreFilterCard!==card)page.insertBefore(mainStoreFilterCard,card);
     buildPlanPanels();
