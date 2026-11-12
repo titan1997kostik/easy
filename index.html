@@ -5308,9 +5308,7 @@ function refreshStockSaleProducts(){
         return;
     }
     var previous=select.value,allOptions=window.stockGetSaleOptions(sid)||[];
-    var options=allOptions.filter(function(item){
-        return Object.keys(getAvailableStockSaleSizes(sid,item.id,item.sizes||{})).length>0;
-    });
+    var options=allOptions;
     stockSalePickerItems=options;
     select.innerHTML='<option value="">Выберите карточку товара</option>';
     options.forEach(function(item){
@@ -5355,7 +5353,7 @@ function renderStockSalePicker(){
         var matches=tokens.every(function(token){return metadata.indexOf(token)>=0||sizeKeys.some(function(value){return value===token||value.indexOf(token)>=0;});});
         return {item:item,availableSizes:availableSizes,matchedSizes:matchedSizes,matches:matches,hasExactSize:matchedSizes.length>0};
     }).filter(function(row){
-        return row.matches&&Object.keys(row.availableSizes).length>0&&(!cat||String(row.item.category||'')===cat);
+        return row.matches&&(!cat||String(row.item.category||'')===cat);
     }).sort(function(a,b){
         return Number(b.hasExactSize)-Number(a.hasExactSize)||a.item.name.localeCompare(b.item.name,'ru');
     });
@@ -5363,7 +5361,7 @@ function renderStockSalePicker(){
     if(!items.length){
         var empty=document.createElement('div');
         empty.className='stock-sale-empty';
-        empty.textContent=stockSalePickerItems.length?'По вашему запросу нет товаров со свободными размерами.':'В корзине уже зарезервированы все доступные размеры.';
+        empty.textContent=stockSalePickerItems.length?'По вашему запросу товары не найдены.':'В выбранном магазине нет карточек с размерами.';
         grid.appendChild(empty);
         return;
     }
@@ -5384,9 +5382,9 @@ function renderStockSalePicker(){
         meta.textContent=[item.brand,item.model,item.article?'арт. '+item.article:''].filter(Boolean).join(' · ');
         if(meta.textContent)info.appendChild(meta);
         var sizesLine=document.createElement('span');sizesLine.className='stock-sale-sizes';
-        sizesLine.textContent=(row.matchedSizes.length?'Размер '+row.matchedSizes.join(', ')+' · ':'Размеры: ')+Object.keys(availableSizes).join(', ');
+        sizesLine.textContent=Object.keys(availableSizes).length?(row.matchedSizes.length?'Размер '+row.matchedSizes.join(', ')+' · ':'Доступные размеры: ')+Object.keys(availableSizes).join(', '):'Нет свободных размеров в этом чеке · можно указать другой размер';
         info.appendChild(sizesLine);
-        var qty=document.createElement('span');qty.className='stock-sale-qty';qty.textContent=availableQuantity+' шт. доступно';info.appendChild(qty);
+        var qty=document.createElement('span');qty.className='stock-sale-qty';qty.textContent=availableQuantity+' шт. свободно';info.appendChild(qty);
         button.appendChild(photo);button.appendChild(info);
         button.addEventListener('click',function(){selectStockSaleProduct(item.id);});
         grid.appendChild(button);
@@ -5399,8 +5397,8 @@ function selectStockSaleProduct(id){
     if(!select)return;
     var item=stockSalePickerItems.find(function(row){return String(row.id)===String(id);});
     var availableSizes=item?getAvailableStockSaleSizes(getStockSaleStoreId(),item.id,item.sizes||{}):{};
-    if(!item||!Object.keys(availableSizes).length){
-        alert('Свободных размеров этой карточки в текущем чеке больше нет. Выберите другой товар или удалите позицию из корзины.');
+    if(!item){
+        alert('Карточка товара больше недоступна. Обновите список склада.');
         refreshStockSaleProducts();
         return;
     }
@@ -5419,7 +5417,7 @@ function selectStockSaleProduct(id){
         var info=document.createElement('div'),title=document.createElement('strong'),sub=document.createElement('span');
         title.textContent=item.name;
         var availableQuantity=Object.keys(availableSizes).reduce(function(sum,size){return sum+availableSizes[size];},0);
-        sub.textContent=availableQuantity+' шт. доступно · '+(item.category||'Без категории');
+        sub.textContent=availableQuantity>0?availableQuantity+' шт. свободно · '+(item.category||'Без категории'):'Нет свободных размеров · можно указать другой размер';
         info.appendChild(title);info.appendChild(sub);
         var change=document.createElement('button');
         change.type='button';change.className='btn btn-secondary';change.style.marginTop='6px';
