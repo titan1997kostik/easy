@@ -733,7 +733,19 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <tbody id="salaryManageTable"></tbody>
             </table>
         </div>
-        
+        <div id="customRateEditor" class="hidden" style="margin-top: 15px; padding: 15px; border: 1px solid var(--border); border-radius: 8px; background: var(--card);">
+            <h4 style="margin-top:0;">Особые ставки для: <span id="customRateUserName"></span></h4>
+            
+            <table id="customRateTable" style="margin-bottom:10px;">
+                <thead><tr><th>Название карточки / товара</th><th>Ставка (руб)</th><th>Действие</th></tr></thead>
+                <tbody id="customRateBody"></tbody>
+            </table>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <input type="text" id="newRateKeyword" placeholder="Ключевое слово или фраза товара" style="flex:1; min-width:120px;">
+                <input type="number" id="newRateAmount" placeholder="Ставка" style="width:100px;">
+                <button class="btn btn-success" onclick="addCustomRate()">Добавить</button>
+                <button class="btn btn-secondary" onclick="closeCustomRateEditor()">Закрыть</button>
+            </div>
         </div>
 
         <section id="storeSalesPlanManager" class="sales-plan-manager">
@@ -838,7 +850,11 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 </details>
             </div>
         </div>
-        
+        <div class="form-group">
+            <label for="prodDetailName">Наименование товара (бренд, модель, размер)</label>
+            <input type="text" id="prodDetailName" placeholder="Например: Nike Air Max, размер 42" autocomplete="off" onkeydown="if(event.key==='Enter') document.getElementById('prodPrice').focus()">
+            
+        </div>
             </div>
         </details>
         <div class="form-group">
@@ -916,7 +932,10 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
             <div id="salaryBlockContent"></div>
         </div>
 
-        
+        <div class="card">
+            <h3>Календарь операций</h3>
+            
+            <div class="calendar" id="calendarWidget"></div>
             <div id="calendarDetail" class="calendar-detail hidden"></div>
         </div>
     </div>
@@ -1166,7 +1185,14 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                     Данные за смену: <strong id="cashStoresShiftLabel" style="color:var(--text);">—</strong>
                 </div>
             </div>
-            
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr><th>Магазин</th><th>Сейчас в кассе</th><th id="cashCollectionActionHeader" style="display:none;">Движение наличных</th><th>Нал с чеком</th><th>Нал без чека</th><th>Переводы</th><th>Карта+СБП</th><th>Расходы</th><th>Возвраты</th><th>Итог</th><th id="cashTaxAcquiringHeader" style="display:none;">Налоги и эквайринг</th></tr>
+                    </thead>
+                    <tbody id="storeCashTable"></tbody>
+                </table>
+            </div>
             
         </div>
     </div>
@@ -1196,7 +1222,13 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 </div>
 
 <!-- TASKS ROOT (moved into the Tasks workspace page on initialization) -->
-
+<div id="tasksRoot" style="width:100%;display:block;">
+  <section id="adminTasksPanel" style="display:none;">
+    <div class="card admin-personal-tasks-card" id="adminPersonalTasksPanel">
+      <h3>Задания для Админов</h3>
+      
+      <div class="admin-personal-task-form">
+        <div class="form-group"><label for="adminPersonalTaskTitle">Что нужно сделать</label><input id="adminPersonalTaskTitle" type="text" maxlength="220" placeholder="Например: заправить автомобиль, позвонить поставщику"></div>
         <div class="form-group"><label for="adminPersonalTaskDueDate">Срок (необязательно)</label><input id="adminPersonalTaskDueDate" type="date"></div>
         <button type="button" class="btn btn-success" onclick="addAdminPersonalTask()">Добавить задачу</button>
       </div>
@@ -1218,7 +1250,10 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
     </div>
   </section>
   <section id="sellerTasksPanel" style="display:none;">
-    
+    <div class="card">
+      <h3>Мои задания</h3>
+      
+      <div id="sellerTasksList"></div>
     </div>
   </section>
 </div>
@@ -1236,7 +1271,17 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 </div>
 
 <!-- PAYMENT RATE EDITOR MODAL -->
-
+<div id="paymentRateModal" class="modal-overlay hidden" onclick="if(event.target===this)closePaymentRateEditor()">
+    <div class="modal">
+        <h3>Ставки по способу оплаты для: <span id="paymentRateUserName"></span></h3>
+        
+        <table id="paymentRateTable" style="margin-bottom:10px;">
+            <thead><tr><th>Способ оплаты</th><th>Ставка (руб)</th></tr></thead>
+            <tbody id="paymentRateBody"></tbody>
+        </table>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button class="btn btn-success" onclick="closePaymentRateEditor()">Готово</button>
+        </div>
     </div>
 </div>
 
@@ -8217,7 +8262,7 @@ function renderAdminPersonalTasks(statusOverride) {
         return;
     }
     if (!adminPersonalTasks.length) {
-        list.innerHTML = '';
+        list.innerHTML = '<p class="admin-personal-task-empty">Пока нет заданий. Добавьте первое — оно будет видно всем администраторам этой организации.</p>';
         return;
     }
     var html = '';
@@ -8322,7 +8367,7 @@ function renderTasks() {
         var scoped = (tasks || []).filter(function(t) { return t && (!t.org || String(t.org) === String(adminOrg)); }).slice();
         scoped.sort(function(a,b){ return Number(b.createdAt || 0) - Number(a.createdAt || 0); });
         if (!scoped.length) {
-            list.innerHTML = '';
+            list.innerHTML = '<p class="analytics-help">Заданий пока нет. Создайте первое задание выше.</p>';
             return;
         }
         var html = '<div class="task-admin-table-wrap"><table class="task-admin-table"><thead><tr><th>Задание</th><th>Сотрудник</th><th>Срок</th><th>Ответ</th><th>Комментарий</th><th>Действие</th></tr></thead><tbody>';
@@ -8354,7 +8399,7 @@ function renderTasks() {
             return aOpen - bOpen || Number(a.dueAtMs || (a.dueAt ? new Date(a.dueAt).getTime() : 0)) - Number(b.dueAtMs || (b.dueAt ? new Date(b.dueAt).getTime() : 0));
         });
         if (!myTasks.length) {
-            sellerList.innerHTML = '';
+            sellerList.innerHTML = '<p class="analytics-help">У вас пока нет заданий.</p>';
             return;
         }
         function sellerTaskCardMarkup(t) {
@@ -8692,7 +8737,7 @@ function renderRecurringExpenseManager() {
     }, 0);
     var totalLine = '<p id="recurringExpensesMonthlyTotal" class="analytics-help" style="font-weight:800;font-size:14px;color:var(--text);background:#fff7fa;border:1px solid var(--border);border-radius:10px;padding:12px;margin:0 0 12px;">Итого ежемесячных расходов в списке: ' + formatRubles(monthlyTotal) + '</p>';
     if (!records.length) {
-        container.innerHTML = totalLine + '';
+        container.innerHTML = totalLine + '<p class="analytics-help" style="padding:4px 0 12px;">Регулярные расходы ещё не добавлены для выбранного магазина.</p>';
         return;
     }
     var html = totalLine + '<table><thead><tr><th>Расход</th><th>Магазин</th><th>Сумма в месяц</th><th>Начало учёта</th><th>Окончание</th><th>Действие</th></tr></thead><tbody>';
@@ -10354,7 +10399,13 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseStoreStockControlCard" style="margin-top:14px;"><div><h3 style="margin-bottom:4px;">Контроль остатков по магазинам</h3></div><p id="purchaseStockControlStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-light);margin:12px 0 8px;">Загрузка настроек…</p><div id="purchaseStockControlContent"><div style="padding:12px;color:var(--text-light);">Загрузка остатков…</div></div></section>');
 
     costsPage.insertAdjacentHTML('beforeend', `
-      
+      <div class="card sale-cost-manager-card">
+        <h3>Закупочная стоимость каждой продажи</h3>
+        
+        <div class="sale-cost-manager-summary">
+          <strong id="saleCostMissingSummary">Без себестоимости: —</strong>
+          <span id="saleCostSyncState">Загрузка данных…</span>
+        </div>
         <div class="sale-cost-filters">
           <div class="form-group"><label for="saleCostStoreFilter">Магазин</label><select id="saleCostStoreFilter" onchange="renderPurchaseCosts()"><option value="all">Все магазины</option></select></div>
           <div class="form-group"><label for="saleCostStartDate">Дата с</label><input id="saleCostStartDate" type="date" onchange="renderPurchaseCosts()"></div>
@@ -10370,7 +10421,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     `);
     var saleCostStoreFilter = document.getElementById('saleCostStoreFilter');
     if (saleCostStoreFilter) saleCostStoreFilter.value = 'all';
-    expensePage.insertAdjacentHTML('beforeend', '<div class="form-group"><label for="expenseReasonExpensesPage">Причина</label><input type="text" id="expenseReasonExpensesPage" placeholder="Аренда, закупка, хозяйственные расходы"></div><button type="button" id="saveExpenseButtonExpensesPage" class="btn btn-warning" style="width:100%;">Записать расход</button></div>');
+    expensePage.insertAdjacentHTML('beforeend', '<div id="expensesPageEntryCard" class="card expense-entry-card"><h3>Записать расход</h3><div class="form-group"><label for="expenseAmountExpensesPage">Сумма (руб.)</label><input type="number" id="expenseAmountExpensesPage" min="0" step="0.01" placeholder="0"></div><div class="form-group"><label for="expenseReasonExpensesPage">Причина</label><input type="text" id="expenseReasonExpensesPage" placeholder="Аренда, закупка, хозяйственные расходы"></div><button type="button" id="saveExpenseButtonExpensesPage" class="btn btn-warning" style="width:100%;">Записать расход</button></div>');
     var expensesPageAmountInput = document.getElementById('expenseAmountExpensesPage');
     var expensesPageReasonInput = document.getElementById('expenseReasonExpensesPage');
     var expensesPageSaveButton = document.getElementById('saveExpenseButtonExpensesPage');
@@ -10393,13 +10444,13 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       dashboard.appendChild(sellerBreakContainer);
     }
     move(original[7],analyticsPage); // chart
-    analyticsPage.insertAdjacentHTML('beforeend', '<section class="card analytics-product-insights" id="analyticsProductInsights" style="margin-top:18px;"><div class="analytics-product-tabs" role="tablist" aria-label="Аналитика товаров" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"><button type="button" class="btn btn-success" id="analyticsProductBestTab" role="tab" aria-selected="true" onclick="switchAnalyticsProductSection(\'best\')">Что продаётся лучше</button><button type="button" class="btn btn-secondary" id="analyticsProductRankingTab" role="tab" aria-selected="false" onclick="switchAnalyticsProductSection(\'ranking\')">Рейтинг карточек</button></div><div id="analyticsProductBestPane" role="tabpanel"></div><div id="analyticsProductRankingPane" role="tabpanel" style="display:none;"></div></section>');
+    analyticsPage.insertAdjacentHTML('beforeend', '<section class="card analytics-product-insights" id="analyticsProductInsights" style="margin-top:18px;"><div style="margin-bottom:12px;"><h3 style="margin:0 0 5px;">Аналитика товаров</h3></div><div class="analytics-product-tabs" role="tablist" aria-label="Аналитика товаров" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"><button type="button" class="btn btn-success" id="analyticsProductBestTab" role="tab" aria-selected="true" onclick="switchAnalyticsProductSection(\'best\')">Что продаётся лучше</button><button type="button" class="btn btn-secondary" id="analyticsProductRankingTab" role="tab" aria-selected="false" onclick="switchAnalyticsProductSection(\'ranking\')">Рейтинг карточек</button></div><div id="analyticsProductBestPane" role="tabpanel"></div><div id="analyticsProductRankingPane" role="tabpanel" style="display:none;"></div></section>');
     var analyticsBestPane=document.getElementById('analyticsProductBestPane');
     var analyticsBestPanel=document.getElementById('analyticsBestSellingPanel');
     if(analyticsBestPane&&analyticsBestPanel){analyticsBestPane.appendChild(analyticsBestPanel);analyticsBestPanel.style.marginTop='0';}
     var analyticsProductInsights=document.getElementById('analyticsProductInsights');
     if(analyticsProductInsights&&currentUser&&currentUser.role!=='admin')analyticsProductInsights.style.display='none';
-    document.getElementById('analyticsProductRankingPane').insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseCardRankingCard"></div><button type="button" class="btn btn-secondary" onclick="renderPurchaseCardRanking()">Обновить рейтинг</button></div><div class="purchase-plan-filters" style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingPeriod">Период</label><select id="purchaseRankingPeriod" onchange="renderPurchaseCardRanking()"><option value="7">Последние 7 дней</option><option value="30" selected>Последние 30 дней</option><option value="90">Последние 90 дней</option><option value="all">Всё время</option><option value="custom">Выбрать даты</option></select></div><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingStore">Магазин</label><select id="purchaseRankingStore" onchange="renderPurchaseCardRanking()"><option value="all">Все магазины</option></select></div></div><div id="purchaseRankingCustomDates" style="display:none;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingStartDate">С даты</label><input type="date" id="purchaseRankingStartDate" onchange="renderPurchaseCardRanking()"></div><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingEndDate">По дату</label><input type="date" id="purchaseRankingEndDate" onchange="renderPurchaseCardRanking()"></div></div><div id="purchaseRankingStatus" style="font-size:13px;color:var(--text-light);margin:12px 0;">Загружаем рейтинг…</div><div id="purchaseCardRankingList" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRankingMore" style="margin-top:10px;"></div></section>');
+    document.getElementById('analyticsProductRankingPane').insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseCardRankingCard"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">Рейтинг карточек по продажам</h3><div role="group" aria-label="Режим рейтинга карточек" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn btn-success" id="purchaseRankingLeadersMode" aria-pressed="true" onclick="switchPurchaseCardRankingMode(&quot;leaders&quot;)">Лидеры продаж</button><button type="button" class="btn btn-secondary" id="purchaseRankingAntiMode" aria-pressed="false" onclick="switchPurchaseCardRankingMode(&quot;anti&quot;)">Антирейтинг</button></div></div><button type="button" class="btn btn-secondary" onclick="renderPurchaseCardRanking()">Обновить рейтинг</button></div><div class="purchase-plan-filters" style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingPeriod">Период</label><select id="purchaseRankingPeriod" onchange="renderPurchaseCardRanking()"><option value="7">Последние 7 дней</option><option value="30" selected>Последние 30 дней</option><option value="90">Последние 90 дней</option><option value="all">Всё время</option><option value="custom">Выбрать даты</option></select></div><div class="form-group" style="flex:1;min-width:145px;"><label for="purchaseRankingStore">Магазин</label><select id="purchaseRankingStore" onchange="renderPurchaseCardRanking()"><option value="all">Все магазины</option></select></div></div><div id="purchaseRankingCustomDates" style="display:none;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingStartDate">С даты</label><input type="date" id="purchaseRankingStartDate" onchange="renderPurchaseCardRanking()"></div><div class="form-group" style="flex:1;min-width:135px;"><label for="purchaseRankingEndDate">По дату</label><input type="date" id="purchaseRankingEndDate" onchange="renderPurchaseCardRanking()"></div></div><div id="purchaseRankingStatus" style="font-size:13px;color:var(--text-light);margin:12px 0;">Загружаем рейтинг…</div><div id="purchaseCardRankingList" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRankingMore" style="margin-top:10px;"></div></section>');
      analyticsPage.insertAdjacentHTML('beforeend', '<div class="card" id="analyticsForceRefreshCard" style="margin-top:18px;text-align:center;"><button type="button" class="btn btn-secondary" onclick="forceRefreshAnalytics()" style="min-width:220px;">↻ Пересчитать аналитику</button><p id="analyticsForceRefreshStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-light);margin:9px 0 0;">Сбросить локальный кэш и пересчитать показатели по уже загруженным данным</p></div>');
     move(original[8],salesPage); // legacy tab strip (kept for compatibility, visually hidden)
     move(original[9],salesPage);move(original[10],expensePage);move(original[11],cashPage);move(original[12],breaksPage);move(original[13],auditPage);
