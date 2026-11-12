@@ -847,7 +847,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 </div>
                 <div id="stockSaleSelected" class="stock-sale-selected" style="display:none;"></div>
                 <select id="stockSaleProduct" class="hidden" aria-hidden="true" tabindex="-1"><option value="">Выберите карточку товара</option></select>
-                <div class="form-group" style="margin-top:12px;"><label for="stockSaleSize">Размер</label><select id="stockSaleSize" class="input" style="width:100%;" onchange="handleStockSaleSizeChange();tryAutoStageSaleItem()"<option value="">Сначала выберите товар</option></select><div id="stockSaleManualWrap" style="display:none;margin-top:8px;"><label for="stockSaleManualSize" style="display:block;font-size:12px;margin-bottom:5px;">Другой размер</label><input id="stockSaleManualSize" class="input" type="text" maxlength="30" placeholder="Введите размер, например 42 или XL" autocomplete="off" onblur="tryAutoStageSaleItem()"</div></div>
+                <div class="form-group" style="margin-top:12px;"><label for="stockSaleSize">Размер</label><select id="stockSaleSize" class="input" style="width:100%;" onchange="handleStockSaleSizeChange();tryAutoStageSaleItem()"><option value="">Сначала выберите товар</option></select><div id="stockSaleManualWrap" style="display:none;margin-top:8px;"><label for="stockSaleManualSize" style="display:block;font-size:12px;margin-bottom:5px;">Другой размер</label><input id="stockSaleManualSize" class="input" type="text" maxlength="30" placeholder="Введите размер, например 42 или XL" autocomplete="off" onblur="tryAutoStageSaleItem()" style="width:100%;"></div></div>
                 
                 <p id="stockSaleStatus" style="font-size:12px;color:var(--text-light);margin:0;"></p>
             </div>
@@ -885,13 +885,13 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
         <div class="form-group">
             <label for="prodDetailName">Наименование товара (бренд, модель, размер)</label>
             <input type="text" id="prodDetailName" placeholder="Например: Nike Air Max, размер 42" autocomplete="off" onblur="tryAutoStageSaleItem()" onkeydown="if(event.key==='Enter') document.getElementById('prodPrice').focus()"
-            
+            >
         </div>
             </div>
         </details>
         <div class="form-group">
             <label for="prodPrice">Цена (руб.)</label>
-            <input type="number" id="prodPrice" placeholder="0" onchange="tryAutoStageSaleItem()" onblur="tryAutoStageSaleItem()" onkeydown="if(event.key==='Enter'){event.preventDefault();tryAutoStageSaleItem();}"
+            <input type="number" id="prodPrice" placeholder="0" onchange="tryAutoStageSaleItem()" onblur="tryAutoStageSaleItem()" onkeydown="if(event.key==='Enter'){event.preventDefault();tryAutoStageSaleItem();}">
         </div>
         <div class="form-group" id="adminDateField" style="display:none;">
             <label>Дата продажи (для админа)</label>
