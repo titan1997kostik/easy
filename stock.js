@@ -1236,10 +1236,12 @@
         var rawCurrent=footwear&&Array.isArray(balance.sizes)?balance.sizes.length:qty(pid,sid);
         var current=Math.max(0,Number(rawCurrent)||0);
         var priorityStatus;
+        // Остатки с нулевым количеством не показываем в рекомендациях.
+        if(current<=0)return;
         if(footwear){
-          priorityStatus=current<=1?'urgent':current<=3?'soon':'sufficient';
+          priorityStatus=current<=2?'urgent':current===3?'soon':'sufficient';
         }else{
-          priorityStatus=current<=0?'urgent':current<=2?'soon':'sufficient';
+          priorityStatus=current===1?'urgent':current===2?'soon':'sufficient';
         }
         rows.push({
           productId:pid,

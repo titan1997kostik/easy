@@ -11354,32 +11354,31 @@ body.vova-org-readonly #workspacePage-sale .sale-entry-card .payment-method{poin
     var old=getSelectedStoreQuantities();var saved=(typeof prefill!=='undefined'&&prefill!==null)?prefill:old;var keys=storesForCurrentOrg();host.innerHTML='';
     if(!keys.length){host.innerHTML='<div class="purchase-journal-empty">В этой организации пока нет доступных магазинов.</div>';updateFormSummary();return;}
     keys.forEach(function(key){
-      var oldAlloc=saved[key];var isChecked=!!oldAlloc;var quantity=isChecked?Number(oldAlloc.quantity)||0:0;
-      var manuallySet=!!(oldAlloc&&oldAlloc.manual)||!!(editingId&&isChecked);
-      var row=document.createElement('div');row.className='purchase-journal-store-row'+(isChecked?' selected':'');row.setAttribute('data-qty-manual',manuallySet?'1':'0');
-      var label=document.createElement('label');label.className='purchase-journal-store-name';
-      var check=document.createElement('input');check.type='checkbox';check.className='purchase-journal-store-check purchase-journal-mutate';check.value=key;check.checked=isChecked;check.setAttribute('aria-label','Выбрать магазин '+storeName(key));
-      var title=document.createElement('span');title.textContent=storeName(key);label.appendChild(check);label.appendChild(title);
-      var qty=document.createElement('input');qty.type='number';qty.className='purchase-journal-store-qty purchase-journal-qty purchase-journal-mutate';qty.min='1';qty.step='1';qty.inputMode='numeric';qty.placeholder='Кол-во';qty.value=isChecked?String(quantity):'';qty.disabled=!isChecked;qty.setAttribute('aria-label','Количество для '+storeName(key));
-      check.addEventListener('change',function(){row.classList.toggle('selected',check.checked);qty.disabled=!check.checked;if(check.checked){qty.value='';row.setAttribute('data-qty-manual','0');}else{qty.value='';row.setAttribute('data-qty-manual','0');}updateFormSummary();});
+      var oldAlloc=saved[key];var quantity=oldAlloc?Math.max(0,Math.floor(Number(oldAlloc.quantity)||0)):0;
+      var row=document.createElement('div');row.className='purchase-journal-store-row'+(quantity>0?' selected':'');row.setAttribute('data-store-id',String(key));
+      var label=document.createElement('label');label.className='purchase-journal-store-name';label.textContent=storeName(key);
+      var qty=document.createElement('input');qty.type='number';qty.className='purchase-journal-store-qty purchase-journal-qty purchase-journal-mutate';qty.min='0';qty.step='1';qty.inputMode='numeric';qty.placeholder='Кол-во';qty.value=quantity>0?String(quantity):'';qty.setAttribute('aria-label','Количество для '+storeName(key));
       qty.addEventListener('input',function(){
-        row.setAttribute('data-qty-manual','1');
-        var raw=String(qty.value||'').trim();var parsed=Number(raw);
-        if(raw!==''&&isFinite(parsed)&&parsed>0&&Math.floor(parsed)===parsed){
-          lastQuantityDefault=String(parsed);
-          host.querySelectorAll('.purchase-journal-store-row').forEach(function(other){
-            if(other===row||other.getAttribute('data-qty-manual')==='1')return;
-            var otherCheck=other.querySelector('.purchase-journal-store-check');var otherQty=other.querySelector('.purchase-journal-qty');
-            if(otherCheck&&otherCheck.checked&&otherQty){otherQty.value=String(parsed);}
-          });
-        }
+        var raw=String(qty.value||'').trim();var parsed=raw===''?0:Number(raw);
+        var active=raw!==''&&isFinite(parsed)&&parsed>0&&Math.floor(parsed)===parsed;
+        row.classList.toggle('selected',active);
         updateFormSummary();
       });
       row.appendChild(label);row.appendChild(qty);host.appendChild(row);
     });
     updateFormSummary();
   }
-  function getSelectedStoreQuantities(){var map={};var host=node('purchaseJournalStorePicker');if(!host)return map;host.querySelectorAll('.purchase-journal-store-row').forEach(function(row){var c=row.querySelector('.purchase-journal-store-check');var q=row.querySelector('.purchase-journal-qty');if(c&&c.checked&&q)map[String(c.value)]={quantity:Number(q.value)||0,manual:row.getAttribute('data-qty-manual')==='1'};});return map;}
+  function getSelectedStoreQuantities(){
+    var map={};var host=node('purchaseJournalStorePicker');if(!host)return map;
+    host.querySelectorAll('.purchase-journal-store-row').forEach(function(row){
+      var q=row.querySelector('.purchase-journal-qty');var raw=String(q&&q.value||'').trim();var quantity=raw===''?0:Number(raw);
+      if(q&&raw!==''&&isFinite(quantity)&&Number.isInteger(quantity)&&quantity>0){
+        var storeKey=row.getAttribute('data-store-id');
+        if(storeKey)map[String(storeKey)]={quantity:quantity,manual:true};
+      }
+    });
+    return map;
+  }
   function getAllocations(){var map=getSelectedStoreQuantities();return Object.keys(map).map(function(id){return {storeId:id,quantity:Math.floor(Number(map[id].quantity)||0)};});}
   function updateFormSummary(){var alloc=getAllocations();var quantity=alloc.reduce(function(s,a){return s+a.quantity;},0);var cost=currencyInput(node('purchaseJournalUnitCost')?node('purchaseJournalUnitCost').value:'');if(!isFinite(cost))cost=0;var amount=Math.round(quantity*cost*100)/100;var a=node('purchaseJournalSelectedStores');var b=node('purchaseJournalSelectedQty');var c=node('purchaseJournalSelectedCost');if(a)a.textContent=String(alloc.length);if(b)b.textContent=String(quantity);if(c)c.textContent=money(amount);}
   function activePurchaseDate(){var el=node('purchaseJournalDate');return String(el&&el.value||today()).slice(0,10);}
