@@ -1272,6 +1272,32 @@
     if(cacheKeys.length>12)delete replenishmentCache[cacheKeys[0]];
     return result;
   }
+  function getStoreCategoryStockSummary(){
+    if(!isAdmin()||!loaded.products||!loaded.balances)return {ready:false,stores:[],categories:[],rows:[],message:'Складские данные ещё загружаются.'};
+    var stores=visibleStoreIds().map(String).filter(function(id){return window.STORES&&window.STORES[id]&&!(window.isStoreDeleted&&window.isStoreDeleted(id));});
+    var active=allProducts().filter(function(product){return product.status==='active'&&!product.mergedInto;});
+    var categoryMap=Object.create(null),totals=Object.create(null);
+    active.forEach(function(product){
+      var category=String(product.category||'').trim()||'Без категории',key=category;
+      if(!categoryMap[key])categoryMap[key]={key:key,label:category};
+      var classification=norm([product.direction,product.category,product.name,product.brand,product.model].join(' '));
+      var footwear=/krossy|обuv|обув|крос|ботин|сандал|туфл|shoe|sneaker/.test(classification);
+      stores.forEach(function(storeId){
+        var balance=balances[storeId]&&balances[storeId][String(product.id)]||{};
+        var raw=footwear&&Array.isArray(balance.sizes)?balance.sizes.length:qty(product.id,storeId);
+        var count=Math.max(0,Number(raw)||0),slot=storeId+'|'+key;
+        if(!totals[slot])totals[slot]={storeId:storeId,categoryKey:key,category:category,quantity:0,productCount:0};
+        totals[slot].quantity+=count;
+        if(count>0)totals[slot].productCount++;
+      });
+    });
+    var categories=Object.keys(categoryMap).sort(function(a,b){return categoryMap[a].label.localeCompare(categoryMap[b].label,'ru');}).map(function(key){return categoryMap[key];});
+    var rows=[];
+    stores.forEach(function(storeId){categories.forEach(function(category){
+      rows.push(totals[storeId+'|'+category.key]||{storeId:storeId,categoryKey:category.key,category:category.label,quantity:0,productCount:0});
+    });});
+    return {ready:true,stores:stores.map(function(id){return {id:id,name:stockLocationName(id)};}),categories:categories,rows:rows};
+  }
   function getCardSalesRanking(startDate,endDate,selectedStore,previousStartDate,previousEndDate){
     if(!isAdmin()||!loaded.products||!loaded.balances)return {ready:false,rows:[],message:'Складские данные ещё загружаются.'};
     var now=Date.now(),salesRows=window.sales||[];
@@ -1526,7 +1552,7 @@
   }
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;window.stockGetReplenishmentRecommendations=getReplenishmentRecommendations;window.stockGetCardSalesRanking=getCardSalesRanking;window.stockGetCardSalesAntiRanking=getCardSalesAntiRanking;window.stockGetStockConsolidationRecommendations=getStockConsolidationRecommendations;window.stockInvalidateReplenishmentCache=invalidateReplenishmentCache;
+    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;window.stockGetReplenishmentRecommendations=getReplenishmentRecommendations;window.stockGetStoreCategoryStockSummary=getStoreCategoryStockSummary;window.stockGetCardSalesRanking=getCardSalesRanking;window.stockGetCardSalesAntiRanking=getCardSalesAntiRanking;window.stockGetStockConsolidationRecommendations=getStockConsolidationRecommendations;window.stockInvalidateReplenishmentCache=invalidateReplenishmentCache;
   }
   function start(){
     expose();load();initPage();

@@ -4787,7 +4787,134 @@ function populatePurchaseCategoryOptions(rows) {
     return select.value||'all';
 }
 
+var purchaseStockThresholds = Object.create(null);
+var purchaseStockThresholdScope = '';
+var purchaseStockThresholdLoadPending = false;
+function purchaseStockScopeKey() {
+    if (currentUser && typeof isSuperAdmin === 'function' && isSuperAdmin(currentUser)) return String(currentOrgFilter || 'mine');
+    return String((currentUser && currentUser.org) || 'mine');
+}
+function purchaseStockSafeKey(value) {
+    return encodeURIComponent(String(value == null ? '' : value)).replace(/\./g, '%2E');
+}
+function purchaseStockThresholdStorageKey(scope) {
+    return 'easy_store_category_stock_thresholds_v1_' + purchaseStockSafeKey(scope);
+}
+function loadPurchaseStockThresholds() {
+    var scope = purchaseStockScopeKey();
+    if (purchaseStockThresholdScope === scope) return;
+    purchaseStockThresholdScope = scope;
+    purchaseStockThresholds = Object.create(null);
+    try {
+        var cached = JSON.parse(localStorage.getItem(purchaseStockThresholdStorageKey(scope)) || '{}');
+        if (cached && typeof cached === 'object' && !Array.isArray(cached)) purchaseStockThresholds = cached;
+    } catch (e) { purchaseStockThresholds = Object.create(null); }
+    if (purchaseStockThresholdLoadPending || !window.db || typeof window.db.ref !== 'function') return;
+    purchaseStockThresholdLoadPending = true;
+    window.db.ref('store_category_stock_thresholds/' + purchaseStockSafeKey(scope)).once('value').then(function(snapshot) {
+        if (purchaseStockThresholdScope !== scope) return;
+        var value = snapshot && typeof snapshot.val === 'function' ? snapshot.val() : null;
+        purchaseStockThresholds = value && typeof value === 'object' && !Array.isArray(value) ? value : Object.create(null);
+        try { localStorage.setItem(purchaseStockThresholdStorageKey(scope), JSON.stringify(purchaseStockThresholds)); } catch (e) {}
+        renderPurchaseStockControl();
+    }).catch(function(error) {
+        console.warn('Не удалось загрузить пороги остатков:', error);
+        var status = document.getElementById('purchaseStockControlStatus');
+        if (status) status.textContent = 'Не удалось загрузить общие настройки порогов. Проверьте подключение.';
+    }).finally(function() { purchaseStockThresholdLoadPending = false; });
+}
+function savePurchaseStockThreshold(input) {
+    if (!input || !currentUser || currentUser.role !== 'admin') return;
+    if (typeof window.isVovaPrimaryOrgReadOnly === 'function' && window.isVovaPrimaryOrgReadOnly()) return;
+    var storeId = String(input.getAttribute('data-store-id') || '');
+    var categoryKey = String(input.getAttribute('data-category-key') || '');
+    var field = String(input.getAttribute('data-threshold-field') || '');
+    if (!storeId || !categoryKey || (field !== 'urgentMax' && field !== 'lowMax')) return;
+    var row = input.closest('[data-stock-threshold-row]');
+    if (!row) return;
+    var urgentInput = row.querySelector('[data-threshold-field="urgentMax"]');
+    var lowInput = row.querySelector('[data-threshold-field="lowMax"]');
+    var urgentMax = Number(urgentInput && urgentInput.value);
+    var lowMax = Number(lowInput && lowInput.value);
+    if (!urgentInput || !lowInput || urgentInput.value.trim() === '' || lowInput.value.trim() === '' ||
+        !Number.isInteger(urgentMax) || !Number.isInteger(lowMax) || urgentMax < 0 || lowMax < urgentMax) {
+        var status = document.getElementById('purchaseStockControlStatus');
+        if (status) status.textContent = 'Укажите целые неотрицательные значения. Порог «Мало» должен быть не меньше порога «Срочно».';
+        return;
+    }
+    var scope = purchaseStockScopeKey();
+    var entry = { urgentMax: urgentMax, lowMax: lowMax, updatedAt: Date.now(), updatedBy: String(currentUser.username || currentUser.id || '') };
+    var storeKey = purchaseStockSafeKey(storeId), categoryStorageKey = purchaseStockSafeKey(categoryKey);
+    if (!purchaseStockThresholds[storeKey]) purchaseStockThresholds[storeKey] = Object.create(null);
+    purchaseStockThresholds[storeKey][categoryStorageKey] = entry;
+    try { localStorage.setItem(purchaseStockThresholdStorageKey(scope), JSON.stringify(purchaseStockThresholds)); } catch (e) {}
+    var statusNode = document.getElementById('purchaseStockControlStatus');
+    if (!window.db || typeof window.db.ref !== 'function') {
+        if (statusNode) statusNode.textContent = 'Пороги сохранены на этом устройстве. Общая синхронизация пока недоступна.';
+        return;
+    }
+    window.db.ref('store_category_stock_thresholds/' + purchaseStockSafeKey(scope) + '/' + purchaseStockSafeKey(storeId) + '/' + purchaseStockSafeKey(categoryKey)).set(entry).then(function() {
+        if (statusNode) statusNode.textContent = 'Пороги сохранены и синхронизированы.';
+    }).catch(function(error) {
+        console.warn('Не удалось синхронизировать пороги остатков:', error);
+        if (statusNode) statusNode.textContent = 'Пороги сохранены локально, но не синхронизированы. Проверьте доступ к Firebase.';
+    });
+    var quantity = Number(row.getAttribute('data-current-quantity') || 0);
+    var badge = row.querySelector('[data-stock-threshold-status]');
+    if (badge) {
+        badge.textContent = quantity <= urgentMax ? 'Срочно' : quantity <= lowMax ? 'Мало' : 'Достаточно';
+        badge.style.color = quantity <= urgentMax ? '#b42318' : quantity <= lowMax ? '#b7791f' : '#16803c';
+    }
+}
+function renderPurchaseStockControl() {
+    var host = document.getElementById('purchaseStockControlContent');
+    if (!host) return;
+    if (!currentUser || currentUser.role !== 'admin') {
+        host.innerHTML = '<div style="padding:12px;color:var(--text-light);">Раздел доступен администратору.</div>';
+        return;
+    }
+    loadPurchaseStockThresholds();
+    if (typeof window.stockGetStoreCategoryStockSummary !== 'function') {
+        host.innerHTML = '<div style="padding:12px;color:var(--text-light);">Загружаем складские данные…</div>';
+        return;
+    }
+    var result = window.stockGetStoreCategoryStockSummary();
+    if (!result || !result.ready) {
+        host.innerHTML = '<div style="padding:12px;color:var(--text-light);">' + String(result && result.message || 'Загружаем складские данные…') + '</div>';
+        return;
+    }
+    if (!result.stores.length || !result.categories.length) {
+        host.innerHTML = '<div style="padding:12px;color:var(--text-light);">Нет активных магазинов или категорий товаров.</div>';
+        return;
+    }
+    function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
+    var urgentCount = 0, lowCount = 0, unsetCount = 0, html = '';
+    result.stores.forEach(function(store) {
+        var rows = result.rows.filter(function(item) { return String(item.storeId) === String(store.id); });
+        html += '<section style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:12px;"><h4 style="margin:0 0 10px;">' + esc(store.name) + '</h4>';
+        html += '<div style="display:grid;grid-template-columns:minmax(95px,1.2fr) minmax(48px,.6fr) minmax(64px,.7fr) minmax(64px,.7fr) minmax(72px,auto);gap:8px;align-items:center;font-size:12px;color:var(--text-light);padding:0 2px 8px;"><span>Категория</span><span>Остаток</span><span>Срочно до</span><span>Мало до</span><span>Статус</span></div>';
+        rows.forEach(function(item) {
+            var storeThresholds = purchaseStockThresholds[purchaseStockSafeKey(store.id)];
+            var config = storeThresholds && storeThresholds[purchaseStockSafeKey(item.categoryKey)];
+            var configured = config && Number.isInteger(Number(config.urgentMax)) && Number.isInteger(Number(config.lowMax));
+            var status = configured ? (item.quantity <= Number(config.urgentMax) ? 'Срочно' : item.quantity <= Number(config.lowMax) ? 'Мало' : 'Достаточно') : 'Пороги не заданы';
+            if (!configured) unsetCount++; else if (status === 'Срочно') urgentCount++; else if (status === 'Мало') lowCount++;
+            var color = status === 'Срочно' ? '#b42318' : status === 'Мало' ? '#b7791f' : status === 'Достаточно' ? '#16803c' : 'var(--text-light)';
+            var disabled = typeof window.isVovaPrimaryOrgReadOnly === 'function' && window.isVovaPrimaryOrgReadOnly() ? ' disabled' : '';
+            html += '<div data-stock-threshold-row data-current-quantity="' + Number(item.quantity || 0) + '" style="display:grid;grid-template-columns:minmax(95px,1.2fr) minmax(48px,.6fr) minmax(64px,.7fr) minmax(64px,.7fr) minmax(72px,auto);gap:8px;align-items:center;border-top:1px solid var(--border);padding:9px 2px;font-size:13px;">';
+            html += '<span style="font-weight:600;overflow-wrap:anywhere;">' + esc(item.category) + '</span><span><b>' + Number(item.quantity || 0) + ' шт.</b><small style="display:block;color:var(--text-light);font-size:10px;">' + Number(item.productCount || 0) + ' карточек</small></span>';
+            html += '<input type="number" min="0" step="1" aria-label="Срочно до, ' + esc(store.name) + ', ' + esc(item.category) + '" data-store-id="' + esc(store.id) + '" data-category-key="' + esc(item.categoryKey) + '" data-threshold-field="urgentMax" value="' + (configured ? Number(config.urgentMax) : '') + '" placeholder="—" onchange="savePurchaseStockThreshold(this)" style="width:100%;min-width:0;"' + disabled + '>';
+            html += '<input type="number" min="0" step="1" aria-label="Мало до, ' + esc(store.name) + ', ' + esc(item.category) + '" data-store-id="' + esc(store.id) + '" data-category-key="' + esc(item.categoryKey) + '" data-threshold-field="lowMax" value="' + (configured ? Number(config.lowMax) : '') + '" placeholder="—" onchange="savePurchaseStockThreshold(this)" style="width:100%;min-width:0;"' + disabled + '>';
+            html += '<b data-stock-threshold-status style="color:' + color + ';font-size:12px;">' + status + '</b></div>';
+        });
+        html += '</section>';
+    });
+    host.innerHTML = html;
+    var statusNode = document.getElementById('purchaseStockControlStatus');
+    if (statusNode) statusNode.textContent = 'Срочно: ' + urgentCount + ' · Мало: ' + lowCount + ' · Пороги не заданы: ' + unsetCount + '. Для каждой категории в каждом магазине задайте границы статусов.';
+}
 function renderPurchaseRecommendations(skipRankingRefresh) {
+    renderPurchaseStockControl();
     if (!isWorkspacePageActive('purchase')) return;
     var table=document.getElementById('purchaseRecommendationTable');
     var status=document.getElementById('purchaseRecommendationStatus');
@@ -10263,7 +10390,12 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var sellerPlanWidget=document.createElement('section');sellerPlanWidget.id='sellerStoreSalesPlanWidget';sellerPlanWidget.className='card seller-plan-widget';sellerPlanWidget.innerHTML='<button id="sellerPlanToggle" class="seller-plan-toggle" type="button" onclick="toggleSellerSalesPlanDetails()" aria-expanded="false" aria-controls="sellerPlanProgress"><span class="seller-plan-toggle-row"><span><span class="seller-plan-toggle-title">План продаж</span><span id="sellerPlanStoreMonth" class="seller-plan-toggle-subtitle">Текущий месяц</span></span><span class="seller-plan-toggle-score"><span id="sellerPlanCompactPercent">—</span><span class="seller-plan-toggle-chevron" aria-hidden="true">⌄</span></span></span><span class="seller-plan-toggle-track" aria-hidden="true"><span id="sellerPlanCompactBar" class="seller-plan-toggle-fill" style="display:block;width:0%"></span></span></button><div id="sellerPlanProgress" class="seller-plan-details" hidden><div class="sales-plan-progress-list"><div class="sales-plan-empty">Загружаем план магазина…</div></div></div>';dashboard.appendChild(sellerPlanWidget);
     if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(true);
     var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации');
-    purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Простая оценка только по текущему остатку. Выберите карточки, которые нужно закупить, — они появятся в отдельном списке ниже.</p></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Город / магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все города и магазины</option></select></div><div class="form-group"><label for="purchaseCategorySelect">Категория товара</label><select id="purchaseCategorySelect" onchange="renderPurchaseRecommendations()"><option value="all">Все категории</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div><p id="purchaseRecommendationFootnote" style="font-size:12px;color:var(--text-light);margin:10px 0 0;">Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.</p></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Город: <b id="purchaseQueueCityLabel">Все города</b>. Выбранные товары для этого города; при переключении города список меняется. Отметки сохраняются в этом браузере.</p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
+    purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Простая оценка только по текущему остатку. Выберите карточки, которые нужно закупить, — они появятся в отдельном списке ниже.</p></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все магазины</option></select></div><div class="form-group"><label for="purchaseCategorySelect">Категория товара</label><select id="purchaseCategorySelect" onchange="renderPurchaseRecommendations()"><option value="all">Все категории</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div><p id="purchaseRecommendationFootnote" style="font-size:12px;color:var(--text-light);margin:10px 0 0;">Обувь: 0–1 шт. — срочно, 2–3 шт. — скоро, от 4 шт. — достаточно. Остальные товары: 0 шт. — срочно, 1–2 шт. — скоро, от 3 шт. — достаточно.</p></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Магазин: <b id="purchaseQueueCityLabel">Все магазины</b>. Выбранные товары для этого магазина; при переключении магазина список меняется. Отметки сохраняются в этом браузере.</p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
+    var purchaseQueueCardNode=document.getElementById('purchaseQueueCard');
+    var purchaseRecommendationsNode=document.getElementById('purchaseRecommendationsCard');
+    if(purchaseQueueCardNode&&purchaseRecommendationsNode)purchasePage.insertBefore(purchaseQueueCardNode,purchaseRecommendationsNode);
+    purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseStoreStockControlCard" style="margin-top:14px;"><div><h3 style="margin-bottom:4px;">Контроль остатков по магазинам</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Фактические остатки считаются автоматически по карточкам склада. Администратор задаёт границы статусов отдельно для каждой категории в каждом магазине: «Срочно до» и «Мало до», выше второго порога — «Достаточно».</p></div><p id="purchaseStockControlStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-light);margin:12px 0 8px;">Загрузка настроек…</p><div id="purchaseStockControlContent"><div style="padding:12px;color:var(--text-light);">Загрузка остатков…</div></div></section>');
+
     costsPage.insertAdjacentHTML('beforeend', `
       <div class="card sale-cost-manager-card">
         <h3>Закупочная стоимость каждой продажи</h3>
