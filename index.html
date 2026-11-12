@@ -4912,6 +4912,7 @@ function renderPurchaseStockControl() {
     if (statusNode) statusNode.textContent = 'Срочно: ' + urgentCount + ' · Мало: ' + lowCount + ' · Пороги не заданы: ' + unsetCount + '. Для каждой категории в каждом магазине задайте границы статусов.';
 }
 function renderPurchaseRecommendations(skipRankingRefresh) {
+    renderPurchaseStockControl();
     if (!isWorkspacePageActive('purchase')) return;
     var table=document.getElementById('purchaseRecommendationTable');
     var status=document.getElementById('purchaseRecommendationStatus');
