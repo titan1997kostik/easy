@@ -5641,7 +5641,26 @@ function commitSaleItems(items, adminDateInput) {
         if (saleData.stockSale) {
             var stockPromise = typeof window.stockCompleteSale === 'function'
                 ? window.stockCompleteSale(Object.assign({}, saleData, { _pendingSync: false })).then(function(result) {
-                    Object.assign(localRecord, result.sale || {}, { _pendingSync: false });
+                    // The Firebase stock transaction also creates sales_data/<id>. Reconcile
+                    // that confirmed record into the current in-memory sales array explicitly:
+                    // the realtime listener may have replaced the array while the stock write
+                    // was in flight, leaving localRecord detached from the active collection.
+                    var confirmedSale = Object.assign({}, localRecord, result.sale || {}, {
+                        id: String(localRecord.id),
+                        _pendingSync: false
+                    });
+                    var currentSales = Array.isArray(sales) ? sales : [];
+                    var currentIndex = currentSales.findIndex(function(row) {
+                        return row && String(row.id) === String(confirmedSale.id);
+                    });
+                    if (currentIndex >= 0) {
+                        currentSales[currentIndex] = Object.assign({}, currentSales[currentIndex], confirmedSale);
+                    } else {
+                        currentSales.push(confirmedSale);
+                    }
+                    sales = currentSales;
+                    Object.assign(localRecord, confirmedSale);
+                    invalidateAnalyticsCache();
                     return true;
                 })
                 : Promise.resolve(false);
