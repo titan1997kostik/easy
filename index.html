@@ -572,6 +572,20 @@ body.seller-mode #analyticsAdminSummary,body.seller-mode #analyticsProductInsigh
 .sales-plan-city-head span{display:block;font-size:11px;color:var(--text-light);margin-top:3px;}.sales-plan-city-head > .sales-plan-month-chip{display:inline-block;color:#a83f70;margin-top:0;}
 .sales-plan-city-card .sales-plan-progress-list{margin-top:10px;gap:9px;}
 .sales-plan-city-card .sales-plan-progress-item{padding:10px;}
+.sales-plan-unified-progress{margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:11px;background:linear-gradient(180deg,#fff 0%,#fff8fb 100%);}
+.sales-plan-unified-progress-head{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;font-weight:750;}
+.sales-plan-unified-progress-head strong{font-size:20px;color:#a83f70;font-variant-numeric:tabular-nums;}
+.sales-plan-unified-track{height:14px;margin:9px 0 5px;border-radius:99px;background:#f1e3e9;overflow:hidden;}
+.sales-plan-unified-fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#d75d8a,#e99bbc);transition:width .25s ease;}
+.sales-plan-unified-fill.is-complete{background:linear-gradient(90deg,#259b69,#54c69a);}
+.sales-plan-unified-scale{display:flex;justify-content:space-between;font-size:10px;color:var(--text-light);font-variant-numeric:tabular-nums;}
+.sales-plan-unified-goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px;}
+.sales-plan-unified-metric{padding:10px;border:1px solid var(--border);border-radius:9px;background:#fff;min-width:0;}
+.sales-plan-unified-metric-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;font-size:12px;}
+.sales-plan-unified-metric-head strong{font-size:13px;}
+.sales-plan-unified-metric-status{font-size:10px;font-weight:750;color:var(--text-light);text-align:right;}
+.sales-plan-unified-metric-status.is-earned{color:#168252;}
+@media(max-width:680px){.sales-plan-unified-goals{grid-template-columns:minmax(0,1fr);}.sales-plan-unified-progress{padding:10px;}}
 @media(max-width:680px){.sales-plan-manager{padding:13px}.sales-plan-manager .sales-plan-controls,.sales-plan-manager .sales-plan-targets,.sales-plan-manager .sales-plan-rewards{grid-template-columns:minmax(0,1fr)}.sales-plan-progress-top{font-size:12px}.seller-plan-toggle{padding:11px 12px}.seller-plan-toggle-title{font-size:13px}.seller-plan-toggle-score{font-size:13px}.sales-plan-city-grid{grid-template-columns:minmax(0,1fr)}.analytics-store-sales-plans .analytics-section-heading{align-items:flex-start!important;flex-direction:column;}}
 .best-selling-chart{display:grid;gap:10px;margin-top:12px;min-width:0;}
 .best-selling-chart-row{display:grid;grid-template-columns:minmax(100px,1fr) minmax(90px,2fr) auto;align-items:center;gap:10px;min-width:0;font-size:12px;}
@@ -1011,22 +1025,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
             </div>
         </div>
 
-        <section class="analytics-detail-card analytics-store-sales-plans" id="analyticsStoreSalesPlanCard" style="margin:0 0 14px;">
-            <div class="analytics-section-heading" style="align-items:center;">
-                <div>
-                    <h4>Выполнение плана продаж по магазинам</h4>
-                    <span>Все магазины организации · выручка и количество чеков</span>
-                </div>
-                <div class="analytics-controls" style="margin-left:auto;">
-                    <label for="analyticsSalesPlanMonthSelect" style="margin:0;white-space:nowrap;font-size:12px;">Месяц</label>
-                    <input type="month" id="analyticsSalesPlanMonthSelect" aria-label="Месяц плана продаж" onchange="renderSalesPlanAnalytics()" style="width:auto;min-width:150px;max-width:100%;">
-                </div>
-            </div>
-            <p id="analyticsStoreSalesPlanSummary" class="analytics-help" style="margin:8px 0;">Загрузка планов продаж…</p>
-            <div id="analyticsStoreSalesPlanGrid" class="sales-plan-city-grid">
-                <div class="sales-plan-empty">Загрузка планов продаж…</div>
-            </div>
-        </section>
+
 
         <div id="analyticsSellerSummary" class="analytics-kpi-grid" style="display:none;">
             <div class="analytics-kpi analytics-kpi-primary">
@@ -1136,6 +1135,23 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
             </div>
             <div id="analyticsBestSellingChart" class="best-selling-chart" aria-label="График наиболее продаваемых товаров"></div>
             <p id="analyticsBestSellingStatus" class="analytics-help" style="margin-top:9px;"></p>
+        </section>
+
+        <section class="analytics-detail-card analytics-store-sales-plans" id="analyticsStoreSalesPlanCard" style="margin:14px 0 0;">
+            <div class="analytics-section-heading" style="align-items:center;">
+                <div>
+                    <h4>Выполнение плана продаж по магазинам</h4>
+                    <span>Все магазины организации · выручка и количество чеков</span>
+                </div>
+                <div class="analytics-controls" style="margin-left:auto;">
+                    <label for="analyticsSalesPlanMonthSelect" style="margin:0;white-space:nowrap;font-size:12px;">Месяц</label>
+                    <input type="month" id="analyticsSalesPlanMonthSelect" aria-label="Месяц плана продаж" onchange="renderSalesPlanAnalytics()" style="width:auto;min-width:150px;max-width:100%;">
+                </div>
+            </div>
+            <p id="analyticsStoreSalesPlanSummary" class="analytics-help" style="margin:8px 0;">Загрузка планов продаж…</p>
+            <div id="analyticsStoreSalesPlanGrid" class="sales-plan-city-grid">
+                <div class="sales-plan-empty">Загрузка планов продаж…</div>
+            </div>
         </section>
     </div>
 
@@ -11065,39 +11081,29 @@ function getStoreSalesPlan(storeId, month) {
 }
 function getStorePlanSalesMetrics(storeId, month) {
     var parts = String(month || '').split('-');
-    if (parts.length !== 2 || !/^\d{4}$/.test(parts[0]) || !/^\d{2}$/.test(parts[1])) return { revenue:0, checks:0, avgCheck:0, sales:[] };
+    if (parts.length !== 2 || !/^\\d{4}$/.test(parts[0]) || !/^\\d{2}$/.test(parts[1])) return { revenue:0, checks:0, avgCheck:0, sales:[] };
     var year = Number(parts[0]), monthNum = Number(parts[1]);
     if (monthNum < 1 || monthNum > 12) return { revenue:0, checks:0, avgCheck:0, sales:[] };
     var startDate = year + '-' + pad2(monthNum) + '-01';
     var endDate = getLocalDateString(new Date(year, monthNum, 0));
-    var startMs = new Date(year, monthNum - 1, 1).getTime();
-    var endMs = new Date(year, monthNum, 0, 23, 59, 59, 999).getTime();
+    // For the current month, use the same "through today" range as Sales History.
+    var todayDate = getTodayStr();
+    if (String(month) === todayDate.slice(0, 7) && todayDate < endDate) endDate = todayDate;
+
     var shopId = String(storeId);
-    var shopEmployees = (users || []).filter(function(user) {
-        return user && user.role === 'seller' && String(user.store || '') === shopId && isUserVisibleForUser(user);
-    });
-    var employeeIntervals = shopEmployees.map(function(employee) {
-        return { employee:employee, intervals:getEmployeeShiftIntervals(employee) };
-    });
+    var visibleKeys = typeof getVisibleStoreKeys === 'function'
+        ? getVisibleStoreKeys().map(String)
+        : [shopId];
     var planSales = (sales || []).filter(function(sale) {
         if (!sale || sale.returned || isSaleRecordDeleted(sale.id) || isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale)) return false;
+        if (visibleKeys.indexOf(String(sale.storeId)) === -1) return false;
         if (String(sale.storeId || '') !== shopId) return false;
-        var timestamp = parseTimestampMs(sale.timestamp || sale.createdAt);
-        if (!timestamp || timestamp < startMs || timestamp > endMs) return false;
-        // Historical imports and administrator-entered sales are store-level records, not seller-shift records.
-        if (sale.historicalImport || sale.historicalImportToday || String(sale.recordedByRole || '') === 'admin') return true;
-        var recorderId = String(sale.recordedById || '');
-        var recorderName = String(sale.seller || sale.sellerName || '');
-        var enteredByAdmin = (users || []).some(function(person) {
-            if (!person || person.role !== 'admin') return false;
-            if (recorderId) return String(person.id || '') === recorderId;
-            return recorderName && (recorderName === String(person.name || '') || recorderName === String(person.username || ''));
-        });
-        if (enteredByAdmin) return true;
-        // Regular seller sales count only when they fall inside a seller's recorded shift.
-        return employeeIntervals.some(function(group) {
-            return saleBelongsToEmployeeShift(sale, group.employee, group.intervals);
-        });
+        // Match Sales History exactly: filter by the sale's displayed timestamp date.
+        // Do not require a seller-to-shift match; valid store sales must count even
+        // when the shift record is missing, archived, or does not contain legacy metadata.
+        var saleDateKey = getRecordDateString(sale.timestamp);
+        if (!saleDateKey || saleDateKey < startDate || saleDateKey > endDate) return false;
+        return true;
     });
     var revenue = planSales.reduce(function(total, sale) { return total + (Number(sale.price) || 0); }, 0);
     var checks = countUniqueSaleReceipts(planSales);
@@ -11197,19 +11203,44 @@ function renderSalesPlanAnalytics() {
                 ? completedRows.length + ' из ' + configuredRows.length + ' целей выполнено'
                 : 'Цели не заполнены');
         var score = averageProgress === null ? '—' : averageProgress + '%';
-        var label = 'Прогресс за ' + monthLabel;
+        var progressWidth = averageProgress === null ? 0 : averageProgress;
+        var label = 'Общий прогресс за ' + monthLabel;
+        var goalsHtml = rows.map(function(row) {
+            var hasTarget = row.target > 0;
+            var met = hasTarget && row.actual >= row.target;
+            var metricStatus = !hasTarget ? 'План не задан' : (met ? '✓ Выполнено' : 'В процессе');
+            var rewardHtml = '';
+            if (row.reward) {
+                rewardHtml = met
+                    ? '<div class="sales-plan-reward is-earned">✓ Поощрение: ' + salesPlanEscape(row.reward) + '</div>'
+                    : '<div class="sales-plan-reward">Поощрение за выполнение: ' + salesPlanEscape(row.reward) + '</div>';
+            } else if (met) {
+                rewardHtml = '<div class="sales-plan-reward is-earned">✓ Цель выполнена</div>';
+            }
+            return '<div class="sales-plan-unified-metric">' +
+                '<div class="sales-plan-unified-metric-head"><strong>' + row.title + '</strong><span class="sales-plan-unified-metric-status ' + (met ? 'is-earned' : '') + '">' + metricStatus + '</span></div>' +
+                '<div class="sales-plan-progress-meta">Факт: ' + formatSalesPlanValue(row.actual,row.format) +
+                (hasTarget ? ' · План: ' + formatSalesPlanValue(row.target,row.format) : '') + '</div>' +
+                rewardHtml + '</div>';
+        }).join('');
+
         return '<article class="sales-plan-city-card">' +
-            '<div class="sales-plan-city-head"><div><strong>' + salesPlanEscape(STORES[storeId] || ('Магазин ' + storeId)) + '</strong><span>' + salesPlanEscape(status) + '</span></div>' +
-            '<span class="sales-plan-month-chip">' + salesPlanEscape(score) + '</span></div>' +
-            '<div class="sales-plan-progress-list">' + renderSalesPlanProgressMarkup(plan, metrics, label) + '</div>' +
+            '<div class="sales-plan-city-head"><div><strong>' + salesPlanEscape(STORES[storeId] || ('Магазин ' + storeId)) + '</strong><span>' + salesPlanEscape(status) + '</span></div></div>' +
+            '<div class="sales-plan-unified-progress" role="group" aria-label="' + salesPlanEscape(label) + '">' +
+                '<div class="sales-plan-unified-progress-head"><span>Общий прогресс по всем заданным целям</span><strong>' + salesPlanEscape(score) + '</strong></div>' +
+                '<div class="sales-plan-unified-track" role="progressbar" aria-label="' + salesPlanEscape(label) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + progressWidth + '">' +
+                    '<div class="sales-plan-unified-fill ' + (averageProgress === 100 ? 'is-complete' : '') + '" style="width:' + progressWidth + '%"></div>' +
+                '</div>' +
+                '<div class="sales-plan-unified-scale"><span>0%</span><span>100%</span></div>' +
+            '</div>' +
+            '<div class="sales-plan-unified-goals">' + goalsHtml + '</div>' +
             '</article>';
     });
     summary.textContent = monthLabel.charAt(0).toLocaleUpperCase('ru-RU') + monthLabel.slice(1) +
         ' · магазинов: ' + storeIds.length + ' · планы заданы: ' + configuredPlans +
-        '. Продажи учитываются по дате продажи; продажи администратора относятся к магазину, продажи продавцов — к их зарегистрированным сменам.';
+        '. Общий прогресс — среднее выполнение заданных целей по выручке и количеству чеков, каждая цель учитывается максимум до 100%.';
     grid.innerHTML = cards.join('');
 }
-
 function populateSalesPlanStoreOptions() {
     var select = document.getElementById('salesPlanStoreSelect');
     if (!select || !currentUser || currentUser.role !== 'admin') return;
