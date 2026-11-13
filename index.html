@@ -569,7 +569,7 @@ body.seller-mode #analyticsAdminSummary,body.seller-mode #analyticsProductInsigh
 .sales-plan-city-card{border:1px solid var(--border);border-radius:12px;background:#fff;padding:13px;min-width:0;}
 .sales-plan-city-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 .sales-plan-city-head strong{display:block;font-size:14px;overflow-wrap:anywhere;}
-.sales-plan-city-head span{display:block;font-size:11px;color:var(--text-light);margin-top:3px;}
+.sales-plan-city-head span{display:block;font-size:11px;color:var(--text-light);margin-top:3px;}.sales-plan-city-head > .sales-plan-month-chip{display:inline-block;color:#a83f70;margin-top:0;}
 .sales-plan-city-card .sales-plan-progress-list{margin-top:10px;gap:9px;}
 .sales-plan-city-card .sales-plan-progress-item{padding:10px;}
 @media(max-width:680px){.sales-plan-manager{padding:13px}.sales-plan-manager .sales-plan-controls,.sales-plan-manager .sales-plan-targets,.sales-plan-manager .sales-plan-rewards{grid-template-columns:minmax(0,1fr)}.sales-plan-progress-top{font-size:12px}.seller-plan-toggle{padding:11px 12px}.seller-plan-toggle-title{font-size:13px}.seller-plan-toggle-score{font-size:13px}.sales-plan-city-grid{grid-template-columns:minmax(0,1fr)}.analytics-store-sales-plans .analytics-section-heading{align-items:flex-start!important;flex-direction:column;}}
@@ -11154,7 +11154,7 @@ function renderSalesPlanAnalytics() {
 
     var monthInput = document.getElementById('analyticsSalesPlanMonthSelect');
     var month = monthInput ? String(monthInput.value || '').trim() : '';
-    if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
         month = getSalesPlanCurrentMonth();
         if (monthInput) monthInput.value = month;
     }
