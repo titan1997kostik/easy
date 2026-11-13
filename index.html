@@ -11081,39 +11081,29 @@ function getStoreSalesPlan(storeId, month) {
 }
 function getStorePlanSalesMetrics(storeId, month) {
     var parts = String(month || '').split('-');
-    if (parts.length !== 2 || !/^\d{4}$/.test(parts[0]) || !/^\d{2}$/.test(parts[1])) return { revenue:0, checks:0, avgCheck:0, sales:[] };
+    if (parts.length !== 2 || !/^\\d{4}$/.test(parts[0]) || !/^\\d{2}$/.test(parts[1])) return { revenue:0, checks:0, avgCheck:0, sales:[] };
     var year = Number(parts[0]), monthNum = Number(parts[1]);
     if (monthNum < 1 || monthNum > 12) return { revenue:0, checks:0, avgCheck:0, sales:[] };
     var startDate = year + '-' + pad2(monthNum) + '-01';
     var endDate = getLocalDateString(new Date(year, monthNum, 0));
-    var startMs = new Date(year, monthNum - 1, 1).getTime();
-    var endMs = new Date(year, monthNum, 0, 23, 59, 59, 999).getTime();
+    // For the current month, use the same "through today" range as Sales History.
+    var todayDate = getTodayStr();
+    if (String(month) === todayDate.slice(0, 7) && todayDate < endDate) endDate = todayDate;
+
     var shopId = String(storeId);
-    var shopEmployees = (users || []).filter(function(user) {
-        return user && user.role === 'seller' && String(user.store || '') === shopId && isUserVisibleForUser(user);
-    });
-    var employeeIntervals = shopEmployees.map(function(employee) {
-        return { employee:employee, intervals:getEmployeeShiftIntervals(employee) };
-    });
+    var visibleKeys = typeof getVisibleStoreKeys === 'function'
+        ? getVisibleStoreKeys().map(String)
+        : [shopId];
     var planSales = (sales || []).filter(function(sale) {
         if (!sale || sale.returned || isSaleRecordDeleted(sale.id) || isStoreDeleted(sale.storeId) || isRecordBeforeStoreReset(sale)) return false;
+        if (visibleKeys.indexOf(String(sale.storeId)) === -1) return false;
         if (String(sale.storeId || '') !== shopId) return false;
-        var timestamp = parseTimestampMs(sale.timestamp || sale.createdAt);
-        if (!timestamp || timestamp < startMs || timestamp > endMs) return false;
-        // Historical imports and administrator-entered sales are store-level records, not seller-shift records.
-        if (sale.historicalImport || sale.historicalImportToday || String(sale.recordedByRole || '') === 'admin') return true;
-        var recorderId = String(sale.recordedById || '');
-        var recorderName = String(sale.seller || sale.sellerName || '');
-        var enteredByAdmin = (users || []).some(function(person) {
-            if (!person || person.role !== 'admin') return false;
-            if (recorderId) return String(person.id || '') === recorderId;
-            return recorderName && (recorderName === String(person.name || '') || recorderName === String(person.username || ''));
-        });
-        if (enteredByAdmin) return true;
-        // Regular seller sales count only when they fall inside a seller's recorded shift.
-        return employeeIntervals.some(function(group) {
-            return saleBelongsToEmployeeShift(sale, group.employee, group.intervals);
-        });
+        // Match Sales History exactly: filter by the sale's displayed timestamp date.
+        // Do not require a seller-to-shift match; valid store sales must count even
+        // when the shift record is missing, archived, or does not contain legacy metadata.
+        var saleDateKey = getRecordDateString(sale.timestamp);
+        if (!saleDateKey || saleDateKey < startDate || saleDateKey > endDate) return false;
+        return true;
     });
     var revenue = planSales.reduce(function(total, sale) { return total + (Number(sale.price) || 0); }, 0);
     var checks = countUniqueSaleReceipts(planSales);
