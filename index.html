@@ -2172,7 +2172,7 @@ function scheduleWorkspaceRender() {
 function attachIncrementalCollectionListener(ref, collectionName) {
     var isSalesCollection = collectionName === 'sales';
     var getArray = function() { return isSalesCollection ? sales : expenses; };
-    var setArray = function(next) { if (isSalesCollection) { sales = next; if (typeof window.stockInvalidateReplenishmentCache === 'function') window.stockInvalidateReplenishmentCache(); } else expenses = next; };
+    var setArray = function(next) { if (isSalesCollection) { sales = next; invalidateAnalyticsCache(); if (typeof window.stockInvalidateReplenishmentCache === 'function') window.stockInvalidateReplenishmentCache(); } else expenses = next; };
     var isValid = function(item, key) {
         if (!item || (isSalesCollection ? isSaleRecordDeleted(key) : isExpenseRecordDeleted(key))) return false;
         return !isStoreDeleted(item.storeId) && !isRecordBeforeStoreReset(item);
@@ -5633,6 +5633,8 @@ function commitSaleItems(items, adminDateInput) {
         sales.push(localRecord);
         localRecords.push(localRecord);
     });
+    // Local sale rows must invalidate derived analytics before Firebase confirms the write.
+    invalidateAnalyticsCache();
     var saleCacheSaved = saveAllToLocal();
     updatePendingSalesNotice();
     var stockPromises = [];
@@ -5641,7 +5643,14 @@ function commitSaleItems(items, adminDateInput) {
         if (saleData.stockSale) {
             var stockPromise = typeof window.stockCompleteSale === 'function'
                 ? window.stockCompleteSale(Object.assign({}, saleData, { _pendingSync: false })).then(function(result) {
-                    Object.assign(localRecord, result.sale || {}, { _pendingSync: false });
+                    // Reconcile the authoritative stock-sale record with the shared sales list.
+                    // The realtime listener can race this write or be between its initial read
+                    // and incremental subscription, so do not rely on the listener alone.
+                    Object.assign(localRecord, (result && result.sale) || {}, { _pendingSync: false });
+                    var savedIndex = (sales || []).findIndex(function(row) { return row && String(row.id) === String(localRecord.id); });
+                    if (savedIndex < 0) sales.push(localRecord);
+                    else if (sales[savedIndex] !== localRecord) Object.assign(sales[savedIndex], localRecord);
+                    invalidateAnalyticsCache();
                     return true;
                 })
                 : Promise.resolve(false);
