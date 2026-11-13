@@ -11081,7 +11081,7 @@ function getStoreSalesPlan(storeId, month) {
 }
 function getStorePlanSalesMetrics(storeId, month) {
     var parts = String(month || '').split('-');
-    if (parts.length !== 2 || !/^\\d{4}$/.test(parts[0]) || !/^\\d{2}$/.test(parts[1])) return { revenue:0, checks:0, avgCheck:0, sales:[] };
+    if (parts.length !== 2 || !/^\d{4}$/.test(parts[0]) || !/^\d{2}$/.test(parts[1])) return { revenue:0, checks:0, avgCheck:0, sales:[] };
     var year = Number(parts[0]), monthNum = Number(parts[1]);
     if (monthNum < 1 || monthNum > 12) return { revenue:0, checks:0, avgCheck:0, sales:[] };
     var startDate = year + '-' + pad2(monthNum) + '-01';
