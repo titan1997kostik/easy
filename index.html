@@ -11170,7 +11170,7 @@ function renderSalesPlanAnalytics() {
 
     var monthInput = document.getElementById('analyticsSalesPlanMonthSelect');
     var month = monthInput ? String(monthInput.value || '').trim() : '';
-    if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
         month = getSalesPlanCurrentMonth();
         if (monthInput) monthInput.value = month;
     }
@@ -11235,8 +11235,7 @@ function renderSalesPlanAnalytics() {
         }).join('');
 
         return '<article class="sales-plan-city-card">' +
-            '<div class="sales-plan-city-head"><div><strong>' + salesPlanEscape(STORES[storeId] || ('Магазин ' + storeId)) + '</strong><span>' + salesPlanEscape(status) + '</span></div>' +
-            '<span class="sales-plan-month-chip">' + salesPlanEscape(score) + '</span></div>' +
+            '<div class="sales-plan-city-head"><div><strong>' + salesPlanEscape(STORES[storeId] || ('Магазин ' + storeId)) + '</strong><span>' + salesPlanEscape(status) + '</span></div></div>' +
             '<div class="sales-plan-unified-progress" role="group" aria-label="' + salesPlanEscape(label) + '">' +
                 '<div class="sales-plan-unified-progress-head"><span>Общий прогресс по всем заданным целям</span><strong>' + salesPlanEscape(score) + '</strong></div>' +
                 '<div class="sales-plan-unified-track" role="progressbar" aria-label="' + salesPlanEscape(label) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + progressWidth + '">' +
