@@ -4862,7 +4862,6 @@ function startPurchaseQueueSync(){
     if(purchaseQueueListenerRef&&purchaseQueueListenerScope===scope)return;
     stopPurchaseQueueSync();
     purchaseQueueListenerScope=scope;
-    purchaseQueueStorageKey=getPurchaseQueueStorageKey();
     getPurchaseQueueItems();
     var ref=db.ref(getPurchaseQueueRemotePath(scope));
     purchaseQueueListenerRef=ref;
