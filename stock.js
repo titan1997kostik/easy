@@ -129,6 +129,7 @@
         else if(name==='movements') movements=v;
         else storeDirections=v;
         loaded[name]=true;
+        startMoveQueueSync();
         invalidateReplenishmentCache();
         render();
         var analyticsPage=document.getElementById('workspacePage-analytics'),rankingPane=document.getElementById('analyticsProductRankingPane');
