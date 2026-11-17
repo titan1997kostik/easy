@@ -4795,6 +4795,11 @@ function applyPurchaseQueueRemoteSnapshot(snapshot,scope){
     }
     var localItems=getPurchaseQueueItems();
     var remoteItems=normalizePurchaseQueueRemoteItems(value);
+    // Keep legacy local data intact until Firebase is actually connected and can accept migration.
+    if(localItems.length&&!syncConnected&&!remoteItems.length){
+        purchaseQueueRemoteReady=false;
+        return;
+    }
     if(remoteItems.length){
         purchaseQueueItems=remoteItems;
         purchaseQueueRemoteReady=true;
