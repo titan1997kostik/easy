@@ -2930,7 +2930,6 @@ function switchOrg(orgKey) {
     refreshOrgSwitcher();
     if (typeof renderProductCatalogSelect === 'function') renderProductCatalogSelect();
     if (typeof renderProductCatalogManager === 'function') renderProductCatalogManager();
-    if (typeof startPurchaseQueueSync === 'function') startPurchaseQueueSync();
     if (typeof renderPurchaseRecommendations === 'function') renderPurchaseRecommendations();
     if (typeof renderPurchaseCosts === 'function') renderPurchaseCosts();
     drawChart();
@@ -4123,6 +4122,7 @@ function enterApp() {
     if (productAdminControls) productAdminControls.classList.toggle('hidden', currentUser.role !== 'admin');
     if (typeof renderProductCatalogSelect === 'function') renderProductCatalogSelect();
     if (typeof renderProductCatalogManager === 'function') renderProductCatalogManager();
+    if (typeof startPurchaseQueueSync === 'function') startPurchaseQueueSync();
     if (typeof renderPurchaseRecommendations === 'function') renderPurchaseRecommendations();
     populateSellerFilter();
     renderAll();
