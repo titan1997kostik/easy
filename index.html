@@ -4750,11 +4750,11 @@ function getPurchaseQueueStorageKey(){
     return 'easy_purchase_queue_v1_'+encodeURIComponent(getPurchaseQueueOrgScope());
 }
 function getPurchaseQueueRemotePath(scope){
-    var safe=encodeURIComponent(String(scope||'mine')).replace(/\\./g,'%2E');
+    var safe=encodeURIComponent(String(scope||'mine')).replace(/\./g,'%2E');
     return 'purchase_queue_data/'+safe;
 }
 function getPurchaseQueueRemoteItemKey(productId,storeId){
-    return encodeURIComponent(String(productId)+'__'+String(storeId)).replace(/\\./g,'%2E');
+    return encodeURIComponent(String(productId)+'__'+String(storeId)).replace(/\./g,'%2E');
 }
 function getPurchaseQueueItems(){
     var key=getPurchaseQueueStorageKey();
