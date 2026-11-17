@@ -36,6 +36,14 @@
   var refs = {};
   var replenishmentCache = Object.create(null);
   var replenishmentCacheRevision = 0;
+  var moveQueueItems = [], moveQueueRef = null, moveQueueListener = null, moveQueueScope = '', moveQueueError = '';
+  function moveQueuePath(scope){return 'stock_move_queue_data/'+String(scope||'').replace(/[.#$\/\[\]]/g,'_');}
+  function moveQueueItemKey(item){return [item.productId,item.sourceId,item.targetId].map(function(value){return encodeURIComponent(String(value||'')).replace(/\./g,'%2E');}).join('__');}
+  function stopMoveQueueSync(){if(moveQueueRef&&moveQueueListener)moveQueueRef.off('value',moveQueueListener);moveQueueRef=null;moveQueueListener=null;moveQueueScope='';}
+  function startMoveQueueSync(){if(!isAdmin()||!canUse()){stopMoveQueueSync();moveQueueItems=[];return;}var scope=org();if(moveQueueRef&&moveQueueScope===scope)return;stopMoveQueueSync();moveQueueScope=scope;moveQueueError='';moveQueueRef=db.ref(moveQueuePath(scope));moveQueueListener=function(snapshot){var value=snapshot&&snapshot.val?snapshot.val()||{}:{};moveQueueItems=Object.keys(value).map(function(key){var item=value[key];return item&&typeof item==='object'?Object.assign({id:key},item):null;}).filter(Boolean);moveQueueItems.sort(function(a,b){return Number(a.addedAt||0)-Number(b.addedAt||0);});moveQueueError='';render();};moveQueueRef.on('value',moveQueueListener,function(error){moveQueueError='Не удалось загрузить список: '+String(error&&error.message||error||'ошибка Firebase');render();});}
+  function addMoveQueueItem(item){if(!isAdmin()||!canUse())return;var record={productId:String(item.productId),productName:String(item.productName||'Без названия'),category:String(item.category||''),photoUrl:String(item.photoUrl||''),sourceId:String(item.sourceId),sourceName:String(item.sourceName||''),targetId:String(item.targetId),targetName:String(item.targetName||''),quantity:Number(item.quantity)||0,sizeSummary:String(item.sizeSummary||''),actionLabel:String(item.actionLabel||''),reason:String(item.reason||''),addedAt:Date.now(),addedBy:String(user().username||user().name||user().id||'')};db.ref(moveQueuePath(org())+'/'+moveQueueItemKey(record)).set(record).then(function(){addAuditSafe('stock_move_queue_add','Добавлено в список «К перемещению»: '+record.productName+' ('+record.sourceName+' → '+record.targetName+')');}).catch(function(error){alert('Не удалось добавить товар в список: '+String(error&&error.message||error));});}
+  function removeMoveQueueItem(id){if(!isAdmin()||!canUse()||!id)return;db.ref(moveQueuePath(org())+'/'+String(id)).remove().catch(function(error){alert('Не удалось удалить позицию: '+String(error&&error.message||error));});}
+  function clearMoveQueue(){if(!isAdmin()||!canUse()||!moveQueueItems.length)return;if(!confirm('Очистить весь список «К перемещению»?'))return;db.ref(moveQueuePath(org())).remove().catch(function(error){alert('Не удалось очистить список: '+String(error&&error.message||error));});}
   function invalidateReplenishmentCache(){ replenishmentCache = Object.create(null); replenishmentCacheRevision++; if(adminTab==='advisor')render(); }
 
   function user(){ return window.currentUser || null; }
@@ -256,11 +264,17 @@
     });
     if(advisorCategoryFilter!=='all'&&!Object.prototype.hasOwnProperty.call(categoryMap,advisorCategoryFilter))advisorCategoryFilter='all';
     var categoryKeys=Object.keys(categoryMap).sort(function(a,b){return categoryMap[a].localeCompare(categoryMap[b],'ru');});
+    var queueHtml='<section class="card" style="margin-bottom:14px;border:1px solid var(--primary);"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;"><div><h3 style="margin:0 0 4px;border:0;padding:0;">К перемещению · '+moveQueueItems.length+'</h3><div style="font-size:12px;color:var(--text-light);">Отобранные вами предложения. Добавление сюда не выполняет складское перемещение.</div></div>'+(moveQueueItems.length?'<button type="button" class="btn btn-secondary" data-stock-move-queue-clear="1">Очистить список</button>':'')+'</div>';
+    if(moveQueueError)queueHtml+='<p style="font-size:12px;color:#b42318;margin-top:8px;">'+esc(moveQueueError)+'</p>';
+    if(moveQueueItems.length){queueHtml+='<div style="display:grid;gap:8px;margin-top:12px;">';moveQueueItems.forEach(function(item){queueHtml+='<div style="display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--border);border-radius:9px;">'+(item.photoUrl?'<img src="'+esc(cardPhotoUrl(item.photoUrl))+'" alt="" loading="lazy" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex:0 0 48px;">':'')+'<div style="flex:1;min-width:0;"><b>'+esc(item.productName)+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc(item.sourceName)+' → <b>'+esc(item.targetName)+'</b></div><div style="font-size:12px;margin-top:3px;">'+esc(item.quantity)+' шт. · '+esc(item.sizeSummary)+'</div></div><button type="button" class="btn btn-danger" data-stock-move-queue-remove="'+esc(item.id)+'" style="padding:7px 9px;">Убрать</button></div>';});queueHtml+='</div>';}
+    else queueHtml+='<p style="font-size:12px;color:var(--text-light);margin-top:10px;">Пока ничего не выбрано. Добавляйте сюда только те предложения, которые действительно планируете рассмотреть для переноса.</p>';
+    queueHtml+='</section>';
     var visibleMoves=result.moves.filter(function(item){return advisorCategoryFilter==='all'||item.categoryKey===advisorCategoryFilter;});
     var html='<div class="card" style="margin-bottom:14px;"><h3>Помощник склада</h3><p style="font-size:13px;color:var(--text-light);">Для обуви сохранён прежний алгоритм: локация с не более чем двумя разными размерами может стать донором, а получателем выбирается магазин с наибольшим остатком. Для остальных товаров при остатке 1 шт. в магазине предлагается перемещение туда, где по доступной истории продаж эту карточку покупают чаще.</p>'
       +'<div style="margin-top:12px;"><label for="stockAdvisorCategory" style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Категория товара</label><select id="stockAdvisorCategory" style="width:100%;max-width:360px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,#fff);color:var(--text);"><option value="all" '+(advisorCategoryFilter==='all'?'selected':'')+'>Все категории</option>'
       +categoryKeys.map(function(key){return '<option value="'+esc(key)+'" '+(advisorCategoryFilter===key?'selected':'')+'>'+esc(categoryMap[key])+'</option>';}).join('')
       +'</select><div style="font-size:12px;color:var(--text-light);margin-top:5px;">Рекомендации сгруппированы по категориям. Можно выбрать одну категорию для отдельного анализа.</div></div></div>';
+    html+=queueHtml;
     html+='<div class="card" style="margin-bottom:14px;"><b style="font-size:22px;">'+visibleMoves.length+'</b><div style="font-size:12px;color:var(--text-light);">предложений перемещения'+(advisorCategoryFilter==='all'?'':' в категории «'+esc(categoryMap[advisorCategoryFilter]||'')+'»')+'</div>'
       +(advisorCategoryFilter==='all'?'':'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">Всего по всем категориям: '+result.moves.length+'</div>')+'</div>';
     if(visibleMoves.length){
@@ -288,7 +302,7 @@
             +'<div style="padding:10px;border:1px solid var(--border);border-radius:9px;"><b style="font-size:12px;">Будет после переноса · '+item.afterSizes.length+' шт.</b><div style="font-size:13px;margin-top:5px;">'+esc(item.afterSummary)+'</div></div></div>'
             +inventoryHtml
             +'<div style="font-size:12px;color:var(--text-light);margin-top:9px;">'+esc(item.reason)+'</div>'
-            +'<button class="btn btn-primary" style="margin-top:10px;" type="button" data-stock-advisor-move="1" data-product-id="'+esc(item.productId)+'" data-source-id="'+esc(item.sourceId)+'" data-target-id="'+esc(item.targetId)+'">'+esc(item.actionLabel||'Переместить все размеры')+'</button></div>';
+            +'<button class="btn btn-primary" style="margin-top:10px;" type="button" data-stock-advisor-select="1" data-product-id="'+esc(item.productId)+'" data-source-id="'+esc(item.sourceId)+'" data-target-id="'+esc(item.targetId)+'">＋ В список «К перемещению»</button></div>';
         });
       });
     }else{
@@ -413,7 +427,9 @@
     var catalogButton=root.querySelector('#stockOpenCatalog');if(catalogButton)catalogButton.addEventListener('click',openCatalog);
     var advisorCategorySelect=root.querySelector('#stockAdvisorCategory');if(advisorCategorySelect)advisorCategorySelect.addEventListener('change',function(){advisorCategoryFilter=String(this.value||'all');render();});
     root.querySelectorAll('[data-stock-tab]').forEach(function(b){b.addEventListener('click',function(){adminTab=b.getAttribute('data-stock-tab');render();});});
-    root.querySelectorAll('[data-stock-advisor-move]').forEach(function(b){b.addEventListener('click',function(){moveProduct(b.getAttribute('data-product-id'),b.getAttribute('data-source-id'),{targetId:b.getAttribute('data-target-id'),storesOnly:true,forceAll:true});});});
+    root.querySelectorAll('[data-stock-advisor-select]').forEach(function(b){b.addEventListener('click',function(){var productId=String(b.getAttribute('data-product-id')||''),sourceId=String(b.getAttribute('data-source-id')||''),targetId=String(b.getAttribute('data-target-id')||'');var item=getStockConsolidationRecommendations().moves.filter(function(move){return String(move.productId)===productId&&String(move.sourceId)===sourceId&&String(move.targetId)===targetId;})[0];if(item)addMoveQueueItem(item);});});
+    root.querySelectorAll('[data-stock-move-queue-remove]').forEach(function(b){b.addEventListener('click',function(){removeMoveQueueItem(b.getAttribute('data-stock-move-queue-remove'));});});
+    var clearMoveQueueButton=root.querySelector('[data-stock-move-queue-clear]');if(clearMoveQueueButton)clearMoveQueueButton.addEventListener('click',clearMoveQueue);
     root.querySelectorAll('[data-stock-select-store]').forEach(function(b){b.addEventListener('click',function(){selectedStoreId=b.getAttribute('data-stock-select-store');persistSelectedStore();render();});});
     root.querySelectorAll('[data-stock-rename]').forEach(function(el){el.addEventListener('click',function(){renameProduct(el.getAttribute('data-stock-rename'));});});
     root.querySelectorAll('[data-stock-photo]').forEach(function(el){el.addEventListener('click',function(){chooseProductPhoto(el.getAttribute('data-stock-photo'));});});
@@ -1555,17 +1571,19 @@
     window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;window.stockGetReplenishmentRecommendations=getReplenishmentRecommendations;window.stockGetStoreCategoryStockSummary=getStoreCategoryStockSummary;window.stockGetCardSalesRanking=getCardSalesRanking;window.stockGetCardSalesAntiRanking=getCardSalesAntiRanking;window.stockGetStockConsolidationRecommendations=getStockConsolidationRecommendations;window.stockInvalidateReplenishmentCache=invalidateReplenishmentCache;
   }
   function start(){
-    expose();load();initPage();
+    expose();load();initPage();startMoveQueueSync();
     if(typeof window.switchOrg==='function' && !window.switchOrg._stockWrapped){
       var originalSwitchOrg=window.switchOrg;
       var wrappedSwitchOrg=function(key){var result=originalSwitchOrg.apply(this,arguments);render();return result;};
-      wrappedSwitchOrg._stockWrapped=true;window.switchOrg=wrappedSwitchOrg;
+      wrappedSwitchOrg._stockWrapped=true;window.switchOrg=wrappedSwitchOrg;startMoveQueueSync();
     }
     var originalShow=window.easyAppSyncShowPage;
     if(typeof originalShow==='function'&&!originalShow._stockWrapped){
       var wrapped=function(id){if(id==='stock'){show();return;}var result=originalShow.apply(this,arguments);if(id==='stores'&&typeof window.renderStoresManagement==='function')window.renderStoresManagement();return result;};
       wrapped._stockWrapped=true;window.easyAppSyncShowPage=wrapped;
     }
+    if(typeof window.enterApp==='function'&&!window.enterApp._stockMoveQueueWrapped){var originalEnterApp=window.enterApp;var wrappedEnterApp=function(){var result=originalEnterApp.apply(this,arguments);startMoveQueueSync();return result;};wrappedEnterApp._stockMoveQueueWrapped=true;window.enterApp=wrappedEnterApp;}
+    if(typeof window.doLogout==='function'&&!window.doLogout._stockMoveQueueWrapped){var originalDoLogout=window.doLogout;var wrappedDoLogout=function(){stopMoveQueueSync();moveQueueItems=[];return originalDoLogout.apply(this,arguments);};wrappedDoLogout._stockMoveQueueWrapped=true;window.doLogout=wrappedDoLogout;}
     // Avoid observing stockRoot mutations: render() updates innerHTML and would retrigger itself.
     if(user())render();
   }
