@@ -3551,6 +3551,11 @@ db.ref('.info/connected').on('value', function(snapshot) {
         if (st) st.textContent = 'Облако подключено';
         deletionLedgersFresh = false;
         refreshDeletionLedgersFromServerAndFlush();
+        // Re-read the authoritative queue snapshot after reconnect so a deferred legacy migration can run.
+        if (currentUser && typeof stopPurchaseQueueSync === 'function' && typeof startPurchaseQueueSync === 'function') {
+            stopPurchaseQueueSync();
+            startPurchaseQueueSync();
+        }
     } else {
         deletionLedgersFresh = false;
         if (st) st.textContent = 'Нет соединения с облаком';
