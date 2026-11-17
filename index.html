@@ -2917,6 +2917,7 @@ function switchOrg(orgKey) {
     if (!isSuperAdmin(currentUser)) return;
     if (!ORGS[orgKey]) return;
     currentOrgFilter = orgKey;
+    if (typeof startPurchaseQueueSync === 'function') startPurchaseQueueSync();
     if (currentUser && currentUser.role === 'admin' && typeof startAdminPersonalTasksListener === 'function') startAdminPersonalTasksListener();
     // Reset store filter to 'all' within the new org
     var sf = document.getElementById('storeFilter');
@@ -2929,6 +2930,7 @@ function switchOrg(orgKey) {
     refreshOrgSwitcher();
     if (typeof renderProductCatalogSelect === 'function') renderProductCatalogSelect();
     if (typeof renderProductCatalogManager === 'function') renderProductCatalogManager();
+    if (typeof startPurchaseQueueSync === 'function') startPurchaseQueueSync();
     if (typeof renderPurchaseRecommendations === 'function') renderPurchaseRecommendations();
     if (typeof renderPurchaseCosts === 'function') renderPurchaseCosts();
     drawChart();
@@ -4034,6 +4036,7 @@ function doLogout() {
     if (currentUser) addAudit('logout', 'Выход из системы');
     if (typeof stopSalePurchaseCostsSync === 'function') stopSalePurchaseCostsSync();
     if (typeof stopAdminPersonalTasksListener === 'function') stopAdminPersonalTasksListener();
+    if (typeof stopPurchaseQueueSync === 'function') stopPurchaseQueueSync();
     currentUser = null;
     localStorage.removeItem('easyAppSync_session');
     document.body.classList.add('logged-out');
@@ -4724,6 +4727,11 @@ var purchaseRecommendationVisibleCount=10;
 var purchaseRecommendationFilterKey='';
 var purchaseQueueItems=null;
 var purchaseQueueStorageKey='';
+var purchaseQueueListenerRef=null;
+var purchaseQueueListenerFn=null;
+var purchaseQueueListenerScope='';
+var purchaseQueueRemoteReady=false;
+var purchaseQueueMigrationInFlight=false;
 var purchaseRankingVisibleCount=10;
 var purchaseRankingFilterKey='';
 var purchaseRankingCachedKey='';
@@ -4734,11 +4742,19 @@ var purchaseAntiRankingCachedKey='';
 var purchaseAntiRankingCachedResult=null;
 var purchaseRankingMode='leaders';
 
+function getPurchaseQueueOrgScope(){
+    if(currentUser&&typeof isSuperAdmin==='function'&&isSuperAdmin(currentUser))return String(currentOrgFilter||'mine');
+    return String((currentUser&&currentUser.org)||'mine');
+}
 function getPurchaseQueueStorageKey(){
-    var scope='mine';
-    if(currentUser&&typeof isSuperAdmin==='function'&&isSuperAdmin(currentUser))scope=String(currentOrgFilter||'mine');
-    else if(currentUser&&currentUser.org)scope=String(currentUser.org);
-    return 'easy_purchase_queue_v1_'+encodeURIComponent(scope);
+    return 'easy_purchase_queue_v1_'+encodeURIComponent(getPurchaseQueueOrgScope());
+}
+function getPurchaseQueueRemotePath(scope){
+    var safe=encodeURIComponent(String(scope||'mine')).replace(/\\./g,'%2E');
+    return 'purchase_queue_data/'+safe;
+}
+function getPurchaseQueueRemoteItemKey(productId,storeId){
+    return encodeURIComponent(String(productId)+'__'+String(storeId)).replace(/\\./g,'%2E');
 }
 function getPurchaseQueueItems(){
     var key=getPurchaseQueueStorageKey();
@@ -4755,42 +4771,166 @@ function getPurchaseQueueItems(){
 }
 function savePurchaseQueueItems(){
     try{localStorage.setItem(purchaseQueueStorageKey,JSON.stringify(purchaseQueueItems||[]));}
-    catch(error){console.warn('Не удалось сохранить список «К закупке» в этом браузере:',error);}
+    catch(error){console.warn('Не удалось сохранить локальную копию списка «К закупке»:',error);}
+}
+function normalizePurchaseQueueRemoteItems(value){
+    var source=value&&value.items&&typeof value.items==='object'?value.items:value;
+    var result=[];
+    if(Array.isArray(source))source.forEach(function(item){if(item&&item.productId&&item.storeId)result.push(item);});
+    else if(source&&typeof source==='object')Object.keys(source).forEach(function(key){
+        var item=source[key];
+        if(item&&item.productId&&item.storeId)result.push(item);
+    });
+    return result;
+}
+function applyPurchaseQueueRemoteSnapshot(snapshot,scope){
+    if(scope!==getPurchaseQueueOrgScope())return;
+    var value=snapshot&&typeof snapshot.val==='function'?snapshot.val():null;
+    if(value&&value._migrationCompleted===true){
+        purchaseQueueItems=normalizePurchaseQueueRemoteItems(value);
+        purchaseQueueRemoteReady=true;
+        savePurchaseQueueItems();
+        if(typeof renderPurchaseRecommendations==='function')renderPurchaseRecommendations(true);
+        return;
+    }
+    var localItems=getPurchaseQueueItems();
+    var remoteItems=normalizePurchaseQueueRemoteItems(value);
+    if(remoteItems.length){
+        purchaseQueueItems=remoteItems;
+        purchaseQueueRemoteReady=true;
+        savePurchaseQueueItems();
+        if(typeof renderPurchaseRecommendations==='function')renderPurchaseRecommendations(true);
+        return;
+    }
+    if(localItems.length&&syncConnected&&!purchaseQueueMigrationInFlight){
+        purchaseQueueMigrationInFlight=true;
+        var migrated={};
+        localItems.forEach(function(item){
+            migrated[getPurchaseQueueRemoteItemKey(item.productId,item.storeId)]=item;
+        });
+        purchaseQueueListenerRef.transaction(function(current){
+            if(current&&current._migrationCompleted===true)return;
+            var existing=normalizePurchaseQueueRemoteItems(current);
+            if(existing.length)return;
+            if(!Object.keys(migrated).length)return;
+            return {_migrationCompleted:true,items:migrated};
+        },function(error,committed,transactionSnapshot){
+            purchaseQueueMigrationInFlight=false;
+            if(error){
+                purchaseQueueRemoteReady=false;
+                console.warn('Не удалось перенести старый список «К закупке» в Firebase:',error);
+                setFirebaseSyncError('purchase_queue_data',error);
+                return;
+            }
+            if(transactionSnapshot&&transactionSnapshot.exists()){
+                purchaseQueueItems=normalizePurchaseQueueRemoteItems(transactionSnapshot.val());
+                purchaseQueueRemoteReady=true;
+                savePurchaseQueueItems();
+            }else{
+                purchaseQueueRemoteReady=true;
+            }
+            if(typeof renderPurchaseRecommendations==='function')renderPurchaseRecommendations(true);
+        },false);
+        return;
+    }
+    purchaseQueueItems=remoteItems;
+    purchaseQueueRemoteReady=true;
+    savePurchaseQueueItems();
+    if(typeof renderPurchaseRecommendations==='function')renderPurchaseRecommendations(true);
+}
+function stopPurchaseQueueSync(){
+    if(purchaseQueueListenerRef&&purchaseQueueListenerFn&&typeof purchaseQueueListenerRef.off==='function'){
+        purchaseQueueListenerRef.off('value',purchaseQueueListenerFn);
+    }
+    purchaseQueueListenerRef=null;
+    purchaseQueueListenerFn=null;
+    purchaseQueueListenerScope='';
+    purchaseQueueRemoteReady=false;
+    purchaseQueueMigrationInFlight=false;
+}
+function startPurchaseQueueSync(){
+    if(!currentUser||currentUser.role!=='admin'||!db||typeof db.ref!=='function'){
+        stopPurchaseQueueSync();
+        return;
+    }
+    var scope=getPurchaseQueueOrgScope();
+    if(purchaseQueueListenerRef&&purchaseQueueListenerScope===scope)return;
+    stopPurchaseQueueSync();
+    purchaseQueueListenerScope=scope;
+    purchaseQueueStorageKey=getPurchaseQueueStorageKey();
+    getPurchaseQueueItems();
+    var ref=db.ref(getPurchaseQueueRemotePath(scope));
+    purchaseQueueListenerRef=ref;
+    purchaseQueueListenerFn=function(snapshot){applyPurchaseQueueRemoteSnapshot(snapshot,scope);};
+    ref.on('value',purchaseQueueListenerFn,function(error){
+        purchaseQueueRemoteReady=false;
+        console.warn('Не удалось загрузить список «К закупке» из Firebase:',error);
+        setFirebaseSyncError('purchase_queue_data',error);
+    });
+}
+function ensurePurchaseQueueCanWrite(){
+    if(!currentUser||currentUser.role!=='admin'){alert('Изменять список «К закупке» может только администратор.');return false;}
+    if(!syncConnected||!db||typeof db.ref!=='function'){alert('Для изменения списка «К закупке» подключитесь к Firebase.');return false;}
+    if(!purchaseQueueRemoteReady||purchaseQueueListenerScope!==getPurchaseQueueOrgScope()){alert('Дождитесь загрузки общего списка «К закупке» и повторите.');return false;}
+    if(typeof canUseStoreData==='function'&&!canUseStoreData()){alert('Дождитесь проверки актуальных данных Firebase и повторите.');return false;}
+    return true;
 }
 function purchaseQueueContains(productId,storeId){
     return getPurchaseQueueItems().some(function(item){return String(item.productId)===String(productId)&&String(item.storeId)===String(storeId);});
 }
 function togglePurchaseQueueItem(productId,storeId,checked){
+    if(!ensurePurchaseQueueCanWrite())return;
     var items=getPurchaseQueueItems(),index=items.findIndex(function(item){return String(item.productId)===String(productId)&&String(item.storeId)===String(storeId);});
+    var remoteRef=db.ref(getPurchaseQueueRemotePath(getPurchaseQueueOrgScope()));
+    var itemKey=getPurchaseQueueRemoteItemKey(productId,storeId);
     if(checked&&index<0){
         var result=typeof window.stockGetReplenishmentRecommendations==='function'?window.stockGetReplenishmentRecommendations('','',String(storeId),14):null;
         var row=result&&result.ready?(result.rows||[]).find(function(item){return String(item.productId)===String(productId)&&String(item.storeId)===String(storeId);}):null;
         if(!row)return;
-        items.push({
+        var item={
             productId:String(row.productId),productName:String(row.productName||'Без названия'),
             photoUrl:String(row.photoUrl||''),category:String(row.category||''),
             storeId:String(row.storeId),storeName:String(row.storeName||row.storeId),
             currentStock:Number(row.currentStock)||0,
             remainingSizes:Array.isArray(row.remainingSizes)?row.remainingSizes.map(function(size){return String(size);}):[],
-            isFootwear:!!row.isFootwear,addedAt:Date.now()
+            isFootwear:!!row.isFootwear,addedAt:Date.now(),org:getPurchaseQueueOrgScope()
+        };
+        var updates={_migrationCompleted:true};
+        updates['items/'+itemKey]=item;
+        remoteRef.update(updates).catch(function(error){
+            console.error('Не удалось добавить товар в общий список «К закупке»:',error);
+            alert('Не удалось сохранить товар в общем списке. Проверьте права Firebase и соединение.');
         });
     }else if(!checked&&index>=0){
-        items.splice(index,1);
+        var removeUpdates={_migrationCompleted:true};
+        removeUpdates['items/'+itemKey]=null;
+        remoteRef.update(removeUpdates).catch(function(error){
+            console.error('Не удалось убрать товар из общего списка «К закупке»:',error);
+            alert('Не удалось убрать товар из общего списка. Проверьте соединение и повторите.');
+        });
     }
-    purchaseQueueItems=items;
-    savePurchaseQueueItems();
-    renderPurchaseRecommendations(true);
 }
 function removePurchaseQueueItem(productId,storeId){
     togglePurchaseQueueItem(productId,storeId,false);
 }
 function resetPurchaseQueue(){
+    if(!ensurePurchaseQueueCanWrite())return;
     var select=document.getElementById('purchaseStoreSelect'),selectedStore=select?String(select.value||'all'):'all';
-    var items=getPurchaseQueueItems();
-    purchaseQueueItems=selectedStore==='all'?[]:items.filter(function(item){return String(item.storeId)!==selectedStore;});
-    if(!purchaseQueueStorageKey)purchaseQueueStorageKey=getPurchaseQueueStorageKey();
-    savePurchaseQueueItems();
-    renderPurchaseQueue(selectedStore);
+    var itemsRef=db.ref(getPurchaseQueueRemotePath(getPurchaseQueueOrgScope())+'/items');
+    itemsRef.transaction(function(current){
+        if(!current||typeof current!=='object')return current;
+        var next={};
+        Object.keys(current).forEach(function(key){
+            var item=current[key];
+            if(selectedStore!=='all'&&item&&String(item.storeId)!==selectedStore)next[key]=item;
+        });
+        return next;
+    },function(error){
+        if(error){
+            console.error('Не удалось сбросить общий список «К закупке»:',error);
+            alert('Не удалось сбросить общий список. Проверьте соединение и повторите.');
+        }
+    },false);
 }
 function purchaseQueueSizesLabel(values){
     if(!Array.isArray(values)||!values.length)return '';
