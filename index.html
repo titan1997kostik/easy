@@ -704,6 +704,39 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-avatar-panel-title{font-size:14px;font-weight:850;margin-bottom:10px;color:var(--text)}
 .community-avatar-stage{display:flex;align-items:center;justify-content:center;width:100%;max-width:260px;margin:0 auto;aspect-ratio:220/290;overflow:hidden;border-radius:18px;background:#f7eff5}
 .community-avatar-stage svg{display:block;width:100%;height:100%}
+.community-avatar-scene{position:relative;display:block;width:100%;height:100%;min-height:260px;overflow:hidden;border-radius:inherit;background:linear-gradient(145deg,#f7eff5,#fce8f0)}
+.community-avatar-stage .community-avatar-scene{min-height:0;height:100%}
+.community-avatar-person{position:absolute;left:0;bottom:0;width:100%;height:100%;z-index:1;display:flex;align-items:flex-end;justify-content:center}
+.community-avatar-person svg{display:block;width:100%;height:100%;object-fit:contain}
+.community-avatar-scene.has-vehicle .community-avatar-person{left:-7%;width:77%}
+.community-avatar-vehicle{position:absolute;right:-2%;bottom:7%;width:64%;z-index:2;filter:drop-shadow(0 5px 4px rgba(65,49,62,.16))}
+.community-avatar-vehicle svg{display:block;width:100%;height:auto}
+.community-profile-avatar-custom{width:158px!important;height:104px!important;flex:0 0 158px;border-radius:17px!important;display:block!important}
+.community-profile-avatar-custom .community-avatar-scene{min-height:0;height:100%;border-radius:17px}
+.community-vehicle-section{margin:8px 0 22px;padding:16px;border:1px solid var(--border);border-radius:15px;background:linear-gradient(145deg,#fff,#fff8fb)}
+.community-vehicle-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.community-vehicle-head h3{border:0;padding:0;margin:0 0 4px;font-size:17px}
+.community-vehicle-head p{font-size:12px;line-height:1.5;color:var(--text-light);max-width:680px;margin:0}
+.community-vehicle-active{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:13px 0;padding:10px 12px;border:1px solid #e9d7a8;border-radius:11px;background:#fffbef}
+.community-vehicle-active strong{font-size:12px}.community-vehicle-active span{font-size:11px;color:var(--text-light)}
+.community-vehicle-categories{display:flex;gap:6px;flex-wrap:wrap;margin:13px 0 10px}
+.community-vehicle-category{border:1px solid var(--border);border-radius:20px;background:#fff;color:var(--text-light);padding:7px 10px;font-size:11px;font-weight:750;cursor:pointer}
+.community-vehicle-category.active{background:#fbe4ed;border-color:#e9a9c2;color:#a83f70}
+.community-vehicle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.community-vehicle-card{display:flex;flex-direction:column;gap:7px;min-width:0;padding:11px;border:1px solid var(--border);border-radius:13px;background:#fff}
+.community-vehicle-card.active{border-color:#80bba1;background:#f6fcf8}
+.community-vehicle-card.previewing{border-color:#d39abd;box-shadow:0 0 0 2px rgba(211,154,189,.13)}
+.community-vehicle-art{display:grid;place-items:center;min-height:100px;border-radius:10px;background:linear-gradient(145deg,#fff4f8,#f1edf4);overflow:hidden}
+.community-vehicle-art svg{display:block;width:100%;max-width:230px;height:auto}
+.community-vehicle-brand{font-size:9px;letter-spacing:.08em;font-weight:850;color:#a17d90;text-transform:uppercase}
+.community-vehicle-card h4{font-size:13px;line-height:1.3;margin:0}
+.community-vehicle-card p{font-size:10px;line-height:1.45;color:var(--text-light);margin:0;min-height:29px;flex:1}
+.community-vehicle-meta{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.community-vehicle-price{font-size:12px;font-weight:850;color:#855f0b}
+.community-vehicle-tag{font-size:9px;padding:4px 7px;border-radius:20px;background:#f6eff4;color:#76566a;font-weight:750}
+.community-vehicle-card button{width:100%;font-size:11px;padding:8px 9px}
+.community-vehicle-preview{background:#f8f1f7!important;color:#795a70!important;border:1px solid #ead8e4!important}
+@media(max-width:680px){.community-profile-avatar-custom{width:132px!important;height:92px!important;flex-basis:132px}.community-vehicle-section{padding:12px}.community-vehicle-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.community-vehicle-card{padding:8px}.community-vehicle-art{min-height:76px}.community-vehicle-card h4{font-size:11px}.community-vehicle-card p{font-size:9px}}
 .community-avatar-caption{text-align:center;color:var(--text-light);font-size:11px;margin:9px 0 10px;min-height:16px}
 .community-avatar-preview-actions{display:flex;justify-content:center}
 .community-clothing-categories{display:flex;gap:6px;overflow-x:auto;padding:2px 0 11px;margin-bottom:3px}
@@ -722,6 +755,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-shop-section-title{margin:22px 0 7px;border:0;padding:0;font-size:17px}
 .community-profile-avatar-custom{overflow:hidden;padding:0!important;background:#f7eff5!important}
 .community-profile-avatar-custom svg{display:block;width:100%;height:100%}
+.community-profile-avatar-custom .community-avatar-vehicle svg{display:block;width:100%;height:auto!important}
 @media(max-width:850px){.community-avatar-editor{grid-template-columns:minmax(0,1fr)}.community-avatar-stage{max-width:220px}.community-avatar-preview-panel{display:flex;flex-direction:column;align-items:center}.community-avatar-panel-title{align-self:flex-start;width:100%}}
 @media(max-width:520px){.community-clothing-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.community-clothing-card{padding:9px}.community-clothing-card h4{font-size:11px}.community-clothing-card p{font-size:10px}}
 .community-owned-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
@@ -11265,7 +11299,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации'), communityPage=makePage('community','Сообщество EASY');
     communityPage.insertAdjacentHTML('beforeend', `
       <section class="community-intro">
-        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Сообщество EASY</h3><p>Общий чат организации, личные переписки, профили сотрудников и игровой магазин с гардеробом аватара. За выручку от продаж продавцы получают монеты и тратят их на одежду, аксессуары и статусы.</p></div>
+        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Сообщество EASY</h3><p>Общий чат организации, личные переписки, профили сотрудников и игровой магазин с гардеробом и автосалоном. Собирай образы и покупай автомобили, знакомые по российским дорогам.</p></div>
         <span class="community-org-pill" id="communityOrgLabel">Организация</span>
       </section>
       <div class="community-subnav" role="tablist" aria-label="Разделы сообщества">
@@ -11432,6 +11466,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     ];
     var communityClothingCategory='all';
     var communityAvatarPreviewItemId='';
+    var communityVehiclePreviewId='';
     var communityClothingCategories=[
       {id:'all',label:'Всё',icon:'✨'},
       {id:'top',label:'Верх',icon:'👕'},
@@ -11440,7 +11475,36 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       {id:'head',label:'Головные уборы',icon:'🧢'},
       {id:'accessory',label:'Аксессуары',icon:'🕶️'}
     ];
-    function communitySafeKey(value){return String(value==null?'':value).replace(/[.#$\[\]\/]/g,'_')||'empty';}
+    var communityVehicleCategory='all';
+    var communityVehiclePreviewId='';
+    var communityVehicleCategories=[
+      {id:'all',label:'Все авто'},
+      {id:'sedan',label:'Седаны'},
+      {id:'hatchback',label:'Хэтчбеки'},
+      {id:'crossover',label:'Кроссоверы'},
+      {id:'offroad',label:'Внедорожники'},
+      {id:'premium',label:'Премиум'}
+    ];
+    var communityVehicleCatalog=[
+      {id:'car-lada-granta',brand:'LADA',title:'Granta',fullTitle:'LADA Granta',type:'sedan',category:'sedan',price:8500,color:'#c7cbd1',description:'Знакомый городской седан на каждый день.',style:'classic'},
+      {id:'car-niva-legend',brand:'LADA',title:'Niva Legend',fullTitle:'LADA Niva Legend',type:'offroad',category:'offroad',price:15000,color:'#71835d',description:'Классическая российская Нива с узнаваемым силуэтом.',style:'boxy'},
+      {id:'car-zaz-968',brand:'ЗАЗ',title:'968М «Запорожец»',fullTitle:'ЗАЗ-968М «Запорожец»',type:'hatchback',category:'hatchback',price:3500,color:'#d5a45c',description:'Легендарный компактный автомобиль с округлым кузовом.',style:'zaporozhets'},
+      {id:'car-vaz-2101',brand:'ВАЗ',title:'2101 «Копейка»',fullTitle:'ВАЗ-2101 «Жигули»',type:'sedan',category:'sedan',price:4500,color:'#e2c99b',description:'Классические «Жигули» первого поколения.',style:'classic2101'},
+      {id:'car-bmw-e36',brand:'BMW',title:'E36',fullTitle:'BMW 3 Series E36',type:'sedan',category:'sedan',price:16000,color:'#6685a5',description:'Легендарная «тройка» девяностых.',style:'bmw-e36'},
+      {id:'car-bmw-e46',brand:'BMW',title:'E46',fullTitle:'BMW 3 Series E46',type:'sedan',category:'sedan',price:18000,color:'#496e91',description:'Одна из самых узнаваемых классических BMW.',style:'bmw-e46'},
+      {id:'car-bmw-e60',brand:'BMW',title:'E60',fullTitle:'BMW 5 Series E60',type:'sedan',category:'premium',price:24000,color:'#6b7585',description:'Выразительная «пятёрка» с динамичным дизайном.',style:'bmw-e60'},
+      {id:'car-bmw-e90',brand:'BMW',title:'E90',fullTitle:'BMW 3 Series E90',type:'sedan',category:'premium',price:26000,color:'#9a9fa5',description:'Спортивный седан третьей серии.',style:'bmw-e90'},
+      {id:'car-bmw-f30',brand:'BMW',title:'F30',fullTitle:'BMW 3 Series F30',type:'sedan',category:'premium',price:32000,color:'#3f668a',description:'Современная классика BMW с длинным капотом.',style:'bmw-f30'},
+      {id:'car-mercedes-w220',brand:'MERCEDES-BENZ',title:'S-Class W220',fullTitle:'Mercedes-Benz S-Class W220',type:'sedan',category:'premium',price:26000,color:'#b2b7bb',description:'Представительский S-класс начала 2000-х.',style:'mercedes-w220'},
+      {id:'car-mercedes-w221',brand:'MERCEDES-BENZ',title:'S-Class W221',fullTitle:'Mercedes-Benz S-Class W221',type:'sedan',category:'premium',price:32000,color:'#596c7b',description:'Солидный S-класс с узнаваемой линией кузова.',style:'mercedes-w221'},
+      {id:'car-mercedes-w222',brand:'MERCEDES-BENZ',title:'S-Class W222',fullTitle:'Mercedes-Benz S-Class W222',type:'sedan',category:'premium',price:42000,color:'#252d35',description:'Роскошный представительский седан.',style:'mercedes-w222'},
+      {id:'car-mercedes-w223',brand:'MERCEDES-BENZ',title:'S-Class W223',fullTitle:'Mercedes-Benz S-Class W223',type:'sedan',category:'premium',price:55000,color:'#7b8791',description:'Современный флагманский S-класс.',style:'mercedes-w223'},
+      {id:'car-mercedes-g-class',brand:'MERCEDES-BENZ',title:'G-Class',fullTitle:'Mercedes-Benz G-Class «Гелик»',type:'offroad',category:'offroad',price:65000,color:'#3b4641',description:'Легендарный угловатый внедорожник G-класса.',style:'gelik'},
+      {id:'car-kia-rio',brand:'KIA',title:'Rio',fullTitle:'Kia Rio',type:'sedan',category:'sedan',price:12000,color:'#bd5360',description:'Практичный городской седан.',style:'kia-rio'},
+      {id:'car-nissan-skyline-r34',brand:'NISSAN',title:'Skyline GT-R R34',fullTitle:'Nissan Skyline GT-R R34',type:'hatchback',category:'premium',price:70000,color:'#3977a7',description:'Культовое японское купе с гоночным характером.',style:'skyline-r34'},
+      {id:'car-bmw-e34',brand:'BMW',title:'E34',fullTitle:'BMW 5 Series E34',type:'sedan',category:'sedan',price:14000,color:'#6484a3',description:'Классическая «пятёрка» с угловатым силуэтом 90-х.',style:'bmw-e34'},
+      {id:'car-daewoo-matiz',brand:'DAEWOO',title:'Matiz',fullTitle:'Daewoo Matiz',type:'hatchback',category:'hatchback',price:5000,color:'#7eaaa0',description:'Маленький и узнаваемый городской автомобиль.',style:'matiz'}
+    ];    function communitySafeKey(value){return String(value==null?'':value).replace(/[.#$\[\]\/]/g,'_')||'empty';}
     function getCommunityOrgKey(){
       var user=window.currentUser;
       if(!user)return 'mine';
@@ -11472,6 +11536,124 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     }
     function getCommunityClothingItem(itemId){
       return communityClothingCatalog.find(function(item){return item.id===String(itemId||'');})||null;
+    }
+    function getCommunityVehicleItem(vehicleId){
+      return communityVehicleCatalog.find(function(item){return item.id===String(vehicleId||'');})||null;
+    }
+    function getCommunityActiveVehicle(state){
+      var garage=state&&state.garage&&typeof state.garage==='object'?state.garage:{};
+      return getCommunityVehicleItem(garage.activeVehicleId);
+    }
+    function buildCommunityVehicleSvg(vehicleId){
+      var item=getCommunityVehicleItem(vehicleId);
+      if(!item)return '';
+      var style=item.style||'classic';
+      var roof='';
+      if(style==='boxy'||style==='gelik'){
+        roof='<path d="M84 79 L91 24 Q93 17 104 17 H216 Q228 18 230 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+      }else if(style==='zaporozhets'){
+        roof='<path d="M88 82 Q91 62 108 49 Q124 37 152 41 Q174 43 190 81 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+      }else if(style==='matiz'){
+        roof='<path d="M84 82 Q87 49 107 35 Q124 24 161 31 Q184 37 202 82 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+      }else if(style==='classic2101'){
+        roof='<path d="M83 79 L106 45 L119 37 H194 L216 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+      }else if(style.indexOf('bmw-')===0){
+        if(style==='bmw-e34')roof='<path d="M83 79 L108 43 L122 34 H194 L221 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+        else if(style==='bmw-e36')roof='<path d="M86 79 L112 45 Q122 36 145 36 H190 Q208 38 226 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+        else if(style==='bmw-e46')roof='<path d="M84 79 L111 44 Q122 35 148 35 H191 Q210 39 229 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+        else if(style==='bmw-e60')roof='<path d="M80 79 L108 43 Q120 32 151 33 H199 Q220 36 238 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+        else if(style==='bmw-e90')roof='<path d="M84 79 L112 45 Q125 34 151 35 H197 Q215 39 231 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+        else roof='<path d="M79 79 L109 42 Q123 31 155 32 H201 Q222 36 241 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+      }else if(style.indexOf('mercedes-w')===0){
+        var rear=style==='mercedes-w220'?'105 45 Q118 35 145 35':style==='mercedes-w221'?'107 43 Q121 32 151 33':style==='mercedes-w222'?'110 40 Q125 29 158 30':'111 38 Q127 27 160 28';
+        roof='<path d="M80 79 L'+rear+' H205 Q224 32 244 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+      }else if(style==='skyline-r34'){
+        roof='<path d="M79 80 L107 48 Q120 35 151 35 H191 Q214 38 232 80 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+      }else if(style==='kia-rio'){
+        roof='<path d="M87 79 L112 48 Q125 37 149 38 H190 Q210 42 225 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+      }else{
+        roof='<path d="M88 79 L116 49 Q126 36 151 35 H191 Q212 37 229 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
+      }
+      var windows='';
+      if(style==='boxy'||style==='gelik'){
+        windows='<path d="M99 68 L103 28 H151 V70 Z M158 28 H211 Q219 29 220 70 H158 Z" fill="#c9e0e9" stroke="#40515d" stroke-width="2"/><path d="M154 26 V73" stroke="#40515d" stroke-width="3"/>';
+      }else if(style==='zaporozhets'){
+        windows='<path d="M101 76 Q105 55 120 50 Q134 45 151 48 V77 Z M158 48 Q180 48 199 77 H158 Z" fill="#c9e0e9" stroke="#40515d" stroke-width="2"/><path d="M154 47 V78" stroke="#40515d" stroke-width="3"/>';
+      }else if(style==='matiz'){
+        windows='<path d="M98 77 Q103 45 119 39 Q135 31 157 37 V77 Z M163 38 Q184 43 193 77 H163 Z" fill="#c9e0e9" stroke="#40515d" stroke-width="2"/><path d="M160 36 V78" stroke="#40515d" stroke-width="3"/>';
+      }else if(style==='classic2101'||style==='bmw-e34'){
+        windows='<path d="M99 72 L119 43 H151 V73 Z M157 43 H190 Q205 45 218 73 H157 Z" fill="#c9e0e9" stroke="#40515d" stroke-width="2"/><path d="M154 42 V74" stroke="#40515d" stroke-width="3"/>';
+      }else{
+        windows='<path d="M99 73 L121 45 Q130 38 151 39 H153 V73 Z M161 39 H192 Q211 41 224 73 H161 Z" fill="#c9e0e9" stroke="#40515d" stroke-width="2"/><path d="M157 38 V75" stroke="#40515d" stroke-width="3"/>';
+      }
+      var bodyPath='';
+      if(style==='boxy'||style==='gelik'){
+        bodyPath='M27 104 L34 87 Q39 81 60 79 L76 77 L80 62 H235 L247 79 L276 84 Q289 89 293 104 L286 118 H35 Q25 115 27 104 Z';
+      }else if(style==='zaporozhets'){
+        bodyPath='M35 105 Q35 91 56 85 Q75 80 89 82 Q97 62 122 65 Q164 63 190 83 L256 86 Q282 89 288 105 L282 117 H43 Q34 115 35 105 Z';
+      }else if(style==='matiz'){
+        bodyPath='M45 105 Q42 92 57 85 L79 81 Q86 55 111 58 H194 Q216 65 226 84 L269 91 Q283 96 283 107 L276 117 H49 Q42 115 45 105 Z';
+      }else if(style==='skyline-r34'){
+        bodyPath='M25 104 L34 89 Q43 82 64 80 L78 78 L247 78 L275 86 Q289 90 294 103 L287 118 H32 Q24 114 25 104 Z';
+      }else if(style==='classic2101'){
+        bodyPath='M28 103 L35 88 L60 82 L80 79 L241 79 L274 86 Q288 90 291 103 L285 117 H36 Q27 115 28 103 Z';
+      }else if(style.indexOf('mercedes-w')===0){
+        bodyPath='M20 103 L30 88 Q39 81 62 79 L78 77 L255 77 L282 86 Q297 91 299 104 L292 118 H28 Q18 115 20 103 Z';
+      }else if(style.indexOf('bmw-')===0){
+        bodyPath='M25 103 L34 88 Q42 81 62 79 L78 77 L248 77 L276 86 Q289 90 294 103 L287 118 H32 Q23 115 25 103 Z';
+      }else if(style==='kia-rio'){
+        bodyPath='M29 103 L37 89 Q43 82 61 80 L78 78 L239 78 L274 87 Q286 91 289 104 L283 117 H36 Q27 115 29 103 Z';
+      }else{
+        bodyPath='M28 103 L36 89 Q41 82 60 80 L79 78 L239 78 L276 86 Q288 90 291 103 L286 117 H36 Q27 115 28 103 Z';
+      }
+      var trim=(style==='boxy'||style==='gelik')
+        ?'<path d="M31 109 H286" stroke="#242b2c" stroke-width="5"/><rect x="42" y="87" width="18" height="8" rx="2" fill="#f2d9a8"/><rect x="265" y="88" width="16" height="7" rx="2" fill="#f6e4bb"/>'
+        :'<path d="M32 108 H286" stroke="#47535d" stroke-width="3"/><path d="M38 88 L58 84 L69 88" fill="none" stroke="#f6e5bb" stroke-width="4" stroke-linecap="round"/><path d="M269 88 L283 91" stroke="#f5d5c9" stroke-width="4" stroke-linecap="round"/>';
+      if(style==='zaporozhets')trim+='<path d="M51 93 Q57 90 65 92 M258 94 L276 96" stroke="#c4b5a2" stroke-width="3" fill="none"/>';
+      if(style==='classic2101')trim+='<path d="M42 83 H274" stroke="#d9d0c3" stroke-width="2"/><rect x="75" y="82" width="3" height="8" fill="#d9d0c3"/>';
+      if(style==='skyline-r34')trim+='<path d="M211 69 L218 57 L231 57 L228 76" stroke="#293b4f" stroke-width="4" fill="none"/><path d="M30 113 H289" stroke="#273d52" stroke-width="3"/>';
+      if(style==='bmw-e36')trim+='<path d="M42 91 H276" stroke="#e4e8eb" stroke-opacity=".45" stroke-width="1"/>';
+      if(style==='bmw-e46')trim+='<path d="M42 91 H276" stroke="#e4e8eb" stroke-opacity=".6" stroke-width="1.5"/>';
+      if(style==='bmw-e60'||style==='bmw-e90'||style==='bmw-f30')trim+='<path d="M42 91 H276" stroke="#dce5eb" stroke-opacity=".55" stroke-width="1.5"/>';
+      var grille='';
+      if(item.brand==='BMW'){
+        grille='<path d="M268 94 Q272 92 274 95 L273 108 Q268 110 266 107Z M278 95 Q282 93 284 97 L282 109 Q278 110 276 107Z" fill="#26333c" stroke="#c2cbd0" stroke-width="1.2"/>';
+      }else if(item.brand==='MERCEDES-BENZ'){
+        grille='<path d="M266 94 L284 96 L281 110 L264 108 Z" fill="#29333b" stroke="#b8c1c7" stroke-width="1.2"/><path d="M268 99 H281 M267 103 H280 M266 107 H279" stroke="#c8d0d5" stroke-width="1.3"/><path d="M273 92 L276 87 L279 92 M276 88 V94" stroke="#c7d0d5" stroke-width="1.5" fill="none"/>';
+      }else if(item.brand==='ЗАЗ'||item.brand==='ВАЗ'){
+        grille='<rect x="265" y="96" width="15" height="11" rx="2" fill="#647078" stroke="#d9d0c3" stroke-width="1"/><path d="M268 97 V106 M272 97 V106 M276 97 V106" stroke="#d9d0c3" stroke-width="1"/>';
+      }else if(item.brand==='NISSAN'){
+        grille='<path d="M265 94 L284 96 L281 109 L264 108 Z" fill="#26323b" stroke="#d0d8df" stroke-width="1.2"/><path d="M269 99 H280 M269 103 H279" stroke="#d0d8df" stroke-width="1.4"/>';
+      }else{
+        grille='<path d="M267 94 L280 96 L278 109 L264 108 Z" fill="#283238"/><path d="M267 99 H278 M266 103 H277" stroke="#aab3b8" stroke-width="1.2"/>';
+      }
+      var sport=(style==='skyline-r34')
+        ?'<path d="M202 69 L207 57 H244 L247 65 M207 57 L201 50 M240 57 L246 50" stroke="#273747" stroke-width="4" fill="none" stroke-linecap="round"/>'
+        :(style.indexOf('bmw-')===0||style.indexOf('mercedes-w')===0)
+          ?'<path d="M112 29 H205" stroke="#fff" stroke-opacity=".28" stroke-width="2"/>'
+          :'';
+      var wheels=(style==='zaporozhets'||style==='matiz')?{left:83,right:234,r:18}:{left:89,right:235,r:22};
+      var wheelMarkup='<circle cx="'+wheels.left+'" cy="111" r="'+wheels.r+'" fill="#262d33" stroke="#151a1e" stroke-width="3"/><circle cx="'+wheels.left+'" cy="111" r="'+Math.round(wheels.r*.5)+'" fill="#c4cbd0" stroke="#7b858c" stroke-width="3"/><circle cx="'+wheels.left+'" cy="111" r="3" fill="#626b72"/>'+
+        '<circle cx="'+wheels.right+'" cy="111" r="'+wheels.r+'" fill="#262d33" stroke="#151a1e" stroke-width="3"/><circle cx="'+wheels.right+'" cy="111" r="'+Math.round(wheels.r*.5)+'" fill="#c4cbd0" stroke="#7b858c" stroke-width="3"/><circle cx="'+wheels.right+'" cy="111" r="3" fill="#626b72"/>';
+      var bodyText=item.brand==='MERCEDES-BENZ'?'MERCEDES':item.brand;
+      return '<svg viewBox="0 0 320 150" role="img" aria-label="'+item.fullTitle+'" xmlns="http://www.w3.org/2000/svg">'+
+        '<ellipse cx="162" cy="124" rx="127" ry="8" fill="#685d66" opacity=".18"/>'+
+        '<path d="'+bodyPath+'" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>'+
+        roof+windows+sport+trim+
+        '<path d="M28 100 Q34 93 48 93" stroke="#e9edf0" stroke-width="4" fill="none"/>'+
+        '<path d="M45 108 H273" stroke="#222a2e" stroke-width="3" opacity=".35"/>'+
+        wheelMarkup+grille+
+        '<path d="M51 93 L67 92" stroke="#e9edf0" stroke-width="3" stroke-linecap="round"/>'+
+        '<text x="160" y="142" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="800" letter-spacing="1.1" fill="#61717a">'+bodyText+'</text></svg>';
+    }
+        function buildCommunityAvatarScene(userId,previewClothingId,previewVehicleId){
+      var state=getCommunityUserGameState(userId);
+      var active=getCommunityActiveVehicle(state);
+      var preview=getCommunityVehicleItem(previewVehicleId);
+      var vehicle=preview||active;
+      var markup='<div class="community-avatar-scene'+(vehicle?' has-vehicle':'')+'"><div class="community-avatar-person">'+buildCommunityAvatarSvg(userId,previewClothingId)+'</div>';
+      if(vehicle)markup+='<div class="community-avatar-vehicle">'+buildCommunityVehicleSvg(vehicle.id)+'</div>';
+      return markup+'</div>';
     }
     function buildCommunityAvatarSvg(userId,previewItemId){
       var state=getCommunityUserGameState(userId);
@@ -11776,7 +11958,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       var card=document.createElement('article');card.className='community-profile-card';
       var back=document.createElement('button');back.type='button';back.className='community-back';back.textContent='← К списку сотрудников';back.addEventListener('click',function(){showCommunityTab('employees');});card.appendChild(back);
       var header=document.createElement('div');header.className='community-profile-header';
-      var avatar=document.createElement('div');avatar.className='community-profile-avatar community-profile-avatar-custom';avatar.innerHTML=buildCommunityAvatarSvg(user.id);
+      var avatar=document.createElement('div');avatar.className='community-profile-avatar community-profile-avatar-custom';avatar.innerHTML=buildCommunityAvatarScene(user.id,'','');
       var info=document.createElement('div');info.style.minWidth='0';
       var nameLine=document.createElement('div');nameLine.className='community-name-line';
       var title=document.createElement('h3');title.style.cssText='border:0;padding:0;margin:0;font-size:20px;';title.textContent=String(user.communityNickname||user.name||user.username||'Сотрудник');nameLine.appendChild(title);appendCommunityStatus(nameLine,user.id);
@@ -11799,13 +11981,16 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       var equipped=getCommunityEquippedClothes(state);
       var owned=communityStatusCatalog.filter(function(item){return !!purchases[item.id];});
       var ownedClothes=communityClothingCatalog.filter(function(item){return !!purchases[item.id];});
-      if(owned.length||ownedClothes.length){
+      var ownedVehicles=communityVehicleCatalog.filter(function(item){return !!purchases[item.id];});
+      var activeVehicle=getCommunityActiveVehicle(state);
+      if(owned.length||ownedClothes.length||ownedVehicles.length){
         var chips=document.createElement('div');chips.className='community-owned-list';
         owned.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent=item.icon+' '+item.title+(String(state.activeStatusId||'')===item.id?' · надет':'');chips.appendChild(chip);});
         ownedClothes.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent=item.icon+' '+item.title+(String(equipped[item.slot]||'')===item.id?' · надето':'');chips.appendChild(chip);});
+        ownedVehicles.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent='🚗 '+item.fullTitle+(activeVehicle&&activeVehicle.id===item.id?' · выбран':'');chips.appendChild(chip);});
         collection.appendChild(chips);
       }else{
-        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных предметов. Первые вещи и статусы уже ждут в магазине.';collection.appendChild(collectionNote);
+        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных предметов. Первые вещи, автомобили и статусы уже ждут в магазине.';collection.appendChild(collectionNote);
       }
       card.appendChild(collection);
       var action=document.createElement('button');action.type='button';action.className='btn btn-primary';action.style.marginTop='14px';
@@ -11833,11 +12018,16 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       var editor=document.createElement('section');editor.className='community-avatar-editor';
       var previewPanel=document.createElement('div');previewPanel.className='community-avatar-preview-panel';
       var previewTitle=document.createElement('div');previewTitle.className='community-avatar-panel-title';previewTitle.textContent='Твой аватар';
-      var avatarStage=document.createElement('div');avatarStage.className='community-avatar-stage';avatarStage.innerHTML=buildCommunityAvatarSvg(user.id,communityAvatarPreviewItemId);
-      var previewCaption=document.createElement('div');previewCaption.className='community-avatar-caption';previewCaption.textContent=communityAvatarPreviewItemId?'Примерка · предмет ещё не куплен':'Текущий образ · меняй вещи как захочешь';
+      var avatarStage=document.createElement('div');avatarStage.className='community-avatar-stage';avatarStage.innerHTML=buildCommunityAvatarScene(user.id,communityAvatarPreviewItemId,communityVehiclePreviewId);
+      var previewCaption=document.createElement('div');previewCaption.className='community-avatar-caption';previewCaption.textContent=(communityAvatarPreviewItemId||communityVehiclePreviewId)?'Примерка · предмет ещё не куплен':'Текущий образ · меняй вещи и автомобиль как захочешь';
       var previewActions=document.createElement('div');previewActions.className='community-avatar-preview-actions';
-      if(communityAvatarPreviewItemId){
-        var resetPreview=document.createElement('button');resetPreview.type='button';resetPreview.className='btn btn-secondary';resetPreview.textContent='Сбросить примерку';resetPreview.addEventListener('click',function(){communityAvatarPreviewItemId='';renderCommunityShop();});previewActions.appendChild(resetPreview);
+      if(communityAvatarPreviewItemId||communityVehiclePreviewId){
+        var resetPreview=document.createElement('button');resetPreview.type='button';resetPreview.className='btn btn-secondary';resetPreview.textContent='Сбросить примерку';resetPreview.addEventListener('click',function(){communityAvatarPreviewItemId='';communityVehiclePreviewId='';renderCommunityShop();});previewActions.appendChild(resetPreview);
+      }
+      var garageState=getCommunityUserGameState(user.id);
+      var activeGarageVehicle=getCommunityActiveVehicle(garageState);
+      if(activeGarageVehicle){
+        var hideVehicle=document.createElement('button');hideVehicle.type='button';hideVehicle.className='btn btn-secondary';hideVehicle.style.marginLeft='7px';hideVehicle.textContent='Убрать авто';hideVehicle.addEventListener('click',function(){setCommunityActiveVehicle(null);});previewActions.appendChild(hideVehicle);
       }
       previewPanel.appendChild(previewTitle);previewPanel.appendChild(avatarStage);previewPanel.appendChild(previewCaption);previewPanel.appendChild(previewActions);
       var wardrobe=document.createElement('div');wardrobe.className='community-avatar-wardrobe';
@@ -11872,6 +12062,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(!items.length){var emptyClothes=document.createElement('div');emptyClothes.className='community-empty';emptyClothes.textContent='В этой категории пока нет вещей.';clothingGrid.appendChild(emptyClothes);}
       wardrobe.appendChild(wardrobeTitle);wardrobe.appendChild(categories);wardrobe.appendChild(clothingGrid);
       editor.appendChild(previewPanel);editor.appendChild(wardrobe);host.appendChild(editor);
+      renderCommunityVehicleShowroom(host,user,wallet);
 
       var statusTitle=document.createElement('h3');statusTitle.className='community-shop-section-title';statusTitle.textContent='Статусы профиля';host.appendChild(statusTitle);
       var statusNote=document.createElement('p');statusNote.style.cssText='font-size:12px;color:var(--text-light);margin:0 0 8px;';statusNote.textContent='Статусы отображаются рядом с именем в сообществе и сообщениях.';host.appendChild(statusNote);
@@ -11893,6 +12084,104 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         article.appendChild(icon);article.appendChild(heading);article.appendChild(description);article.appendChild(price);article.appendChild(button);statusGrid.appendChild(article);
       });
       host.appendChild(statusGrid);
+    }
+    function renderCommunityVehicleShowroom(host,user,wallet){
+      var state=getCommunityUserGameState(user.id);
+      var garage=state.garage&&typeof state.garage==='object'?state.garage:{};
+      var activeId=String(garage.activeVehicleId||'');
+      var activeVehicle=getCommunityVehicleItem(activeId);
+      var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
+      var ownedCount=communityVehicleCatalog.filter(function(item){return !!purchases[item.id];}).length;
+      var section=document.createElement('section');section.className='community-vehicle-section';
+      var head=document.createElement('div');head.className='community-vehicle-head';
+      var titleBlock=document.createElement('div');
+      var title=document.createElement('h3');title.textContent='Автосалон и мой гараж';titleBlock.appendChild(title);
+      var description=document.createElement('p');description.textContent='Выбирай настоящие модели, знакомые по российским дорогам. Машину можно примерить до покупки, а купленные автомобили навсегда остаются в гараже.';titleBlock.appendChild(description);
+      var count=document.createElement('span');count.className='community-org-pill';count.textContent='В гараже: '+ownedCount;
+      head.appendChild(titleBlock);head.appendChild(count);section.appendChild(head);
+      var activeRow=document.createElement('div');activeRow.className='community-vehicle-active';
+      var activeText=document.createElement('div');
+      var activeLabel=document.createElement('strong');activeLabel.textContent=activeVehicle?'Сейчас у аватара: '+activeVehicle.fullTitle:'У аватара пока нет автомобиля';activeText.appendChild(activeLabel);
+      var activeHint=document.createElement('span');activeHint.textContent=activeVehicle?'Выбери другую машину в гараже — смена бесплатная.':'Купи первую машину, чтобы она появилась рядом с персонажем.';activeText.appendChild(activeHint);
+      activeRow.appendChild(activeText);
+      if(activeVehicle){
+        var clearButton=document.createElement('button');clearButton.type='button';clearButton.className='btn btn-secondary';clearButton.textContent='Убрать с аватара';clearButton.addEventListener('click',function(){setCommunityActiveVehicle(null);});activeRow.appendChild(clearButton);
+      }
+      section.appendChild(activeRow);
+      var categories=document.createElement('div');categories.className='community-vehicle-categories';
+      communityVehicleCategories.forEach(function(category){
+        var button=document.createElement('button');button.type='button';button.className='community-vehicle-category'+(communityVehicleCategory===category.id?' active':'');button.textContent=category.label;
+        button.setAttribute('aria-pressed',communityVehicleCategory===category.id?'true':'false');
+        button.addEventListener('click',function(){communityVehicleCategory=category.id;renderCommunityShop();});
+        categories.appendChild(button);
+      });
+      section.appendChild(categories);
+      var grid=document.createElement('div');grid.className='community-vehicle-grid';
+      communityVehicleCatalog.filter(function(item){return communityVehicleCategory==='all'||item.category===communityVehicleCategory;}).forEach(function(item){
+        var owned=!!purchases[item.id];
+        var active=activeId===item.id;
+        var previewing=String(communityVehiclePreviewId||'')===item.id;
+        var card=document.createElement('article');card.className='community-vehicle-card'+(active?' active':'')+(previewing?' previewing':'');
+        var art=document.createElement('div');art.className='community-vehicle-art';art.innerHTML=buildCommunityVehicleSvg(item.id);
+        var brand=document.createElement('div');brand.className='community-vehicle-brand';brand.textContent=item.brand;
+        var model=document.createElement('h4');model.textContent=item.title;
+        var description=document.createElement('p');description.textContent=item.description;
+        var meta=document.createElement('div');meta.className='community-vehicle-meta';
+        var price=document.createElement('span');price.className='community-vehicle-price';price.textContent=formatCommunityCoins(item.price);
+        var tag=document.createElement('span');tag.className='community-vehicle-tag';tag.textContent=item.type==='sedan'?'Седан':item.type==='hatchback'?'Хэтчбек':item.type==='crossover'?'Кроссовер':item.type==='offroad'?'Внедорожник':'Премиум';
+        meta.appendChild(price);meta.appendChild(tag);
+        var previewButton=document.createElement('button');previewButton.type='button';previewButton.className='btn community-vehicle-preview';previewButton.textContent=previewing?'Примеряешь':'Примерить';
+        previewButton.addEventListener('click',function(){communityVehiclePreviewId=previewing?'':item.id;communityAvatarPreviewItemId='';renderCommunityShop();});
+        var action=document.createElement('button');action.type='button';action.className='btn '+(active?'btn-secondary':'btn-primary');
+        if(active){action.textContent='Выбрана';action.disabled=true;}
+        else if(owned){action.textContent='Выбрать из гаража';action.addEventListener('click',function(){setCommunityActiveVehicle(item.id);});}
+        else{action.textContent='Купить автомобиль';action.disabled=wallet.balance<item.price;action.addEventListener('click',function(){buyCommunityVehicle(item.id);});}
+        card.appendChild(art);card.appendChild(brand);card.appendChild(model);card.appendChild(description);card.appendChild(meta);card.appendChild(previewButton);card.appendChild(action);grid.appendChild(card);
+      });
+      section.appendChild(grid);host.appendChild(section);
+    }
+    function setCommunityActiveVehicle(vehicleId){
+      if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
+      var state=getCommunityUserGameState(window.currentUser.id);
+      var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
+      if(vehicleId&&!purchases[vehicleId]){alert('Сначала купи этот автомобиль.');return;}
+      if(vehicleId&&!getCommunityVehicleItem(vehicleId))return;
+      db.ref('community_game_data/'+communitySafeKey(getCommunityOrgKey())+'/'+communitySafeKey(window.currentUser.id)).update({
+        'garage/activeVehicleId':vehicleId||null,
+        updatedAt:Date.now()
+      }).then(function(){
+        communityVehiclePreviewId='';renderCommunityShop();
+        if(communityCurrentTab==='profile'&&String(communitySelectedUserId)===String(window.currentUser.id))renderCommunityProfile(String(window.currentUser.id));
+      }).catch(function(error){alert('Не удалось сменить автомобиль: '+String(error&&error.message||error));});
+    }
+    function buyCommunityVehicle(vehicleId){
+      if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
+      var item=getCommunityVehicleItem(vehicleId);if(!item)return;
+      var userId=String(window.currentUser.id);
+      var earned=getCommunityRevenueForUser(window.currentUser);
+      var ref=db.ref('community_game_data/'+communitySafeKey(getCommunityOrgKey())+'/'+communitySafeKey(userId));
+      var failureReason='';
+      ref.transaction(function(current){
+        current=current&&typeof current==='object'?current:{};
+        var purchases=current.purchases&&typeof current.purchases==='object'?current.purchases:{};
+        if(purchases[item.id]){failureReason='owned';return;}
+        var spent=Object.keys(purchases).reduce(function(total,key){return total+(purchases[key]?Math.max(0,Number(purchases[key].price)||0):0);},0);
+        if(earned-spent<item.price){failureReason='funds';return;}
+        purchases[item.id]={id:item.id,title:item.fullTitle,price:item.price,purchasedAt:Date.now(),type:'vehicle',category:item.category};
+        current.purchases=purchases;
+        current.garage=current.garage&&typeof current.garage==='object'?current.garage:{};
+        current.garage.activeVehicleId=item.id;
+        current.updatedAt=Date.now();
+        return current;
+      },function(error,committed){
+        if(error){alert('Не удалось купить автомобиль: '+String(error.message||error));return;}
+        if(!committed){
+          alert(failureReason==='owned'?'Этот автомобиль уже есть в гараже.':failureReason==='funds'?'Недостаточно звёзд для покупки.':'Покупка не выполнена. Обнови страницу и повтори.');
+          return;
+        }
+        communityVehiclePreviewId='';renderCommunityShop();
+        if(communityCurrentTab==='profile'&&String(communitySelectedUserId)===String(userId))renderCommunityProfile(userId);
+      },false);
     }
     function setCommunityEquippedClothing(itemId,equip){
       if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
