@@ -698,6 +698,32 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-shop-item{display:flex;flex-direction:column;gap:10px;padding:15px;border:1px solid var(--border);border-radius:14px;background:#fff;min-width:0}
 .community-shop-item-icon{font-size:30px}.community-shop-item h4{margin:0;font-size:14px}.community-shop-item p{margin:0;color:var(--text-light);font-size:12px;line-height:1.45;flex:1}
 .community-shop-price{font-size:13px;font-weight:800;color:#855f0b}
+
+.community-avatar-editor{display:grid;grid-template-columns:minmax(230px,310px) minmax(0,1fr);gap:14px;margin:14px 0 22px;align-items:start}
+.community-avatar-preview-panel,.community-avatar-wardrobe{border:1px solid var(--border);border-radius:15px;background:#fff;padding:14px;min-width:0}
+.community-avatar-panel-title{font-size:14px;font-weight:850;margin-bottom:10px;color:var(--text)}
+.community-avatar-stage{display:flex;align-items:center;justify-content:center;width:100%;max-width:260px;margin:0 auto;aspect-ratio:220/290;overflow:hidden;border-radius:18px;background:#f7eff5}
+.community-avatar-stage svg{display:block;width:100%;height:100%}
+.community-avatar-caption{text-align:center;color:var(--text-light);font-size:11px;margin:9px 0 10px;min-height:16px}
+.community-avatar-preview-actions{display:flex;justify-content:center}
+.community-clothing-categories{display:flex;gap:6px;overflow-x:auto;padding:2px 0 11px;margin-bottom:3px}
+.community-clothing-category{flex:0 0 auto;border:1px solid var(--border);border-radius:20px;background:#fff;color:var(--text-light);font-size:11px;font-weight:750;padding:7px 10px;cursor:pointer}
+.community-clothing-category.active{background:#fbe4ed;border-color:#e9a9c2;color:#a83f70}
+.community-clothing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:9px}
+.community-clothing-card{display:flex;flex-direction:column;gap:7px;padding:11px;border:1px solid var(--border);border-radius:12px;background:#fff;min-width:0}
+.community-clothing-card.equipped{border-color:#80bba1;background:#f5fcf8}
+.community-clothing-card.previewing{border-color:#d39abd;box-shadow:0 0 0 2px rgba(211,154,189,.13)}
+.community-clothing-art{display:flex;align-items:center;justify-content:center;min-height:58px;border-radius:9px;background:linear-gradient(135deg,#fbf5f8,#f2edf5);font-size:34px}
+.community-clothing-card h4{font-size:12px;line-height:1.3;margin:0;min-height:30px}
+.community-clothing-card p{font-size:10px;line-height:1.4;color:var(--text-light);margin:0;min-height:42px;flex:1}
+.community-clothing-card .community-shop-price{font-size:12px}
+.community-clothing-card button{width:100%;font-size:11px;padding:8px 9px}
+.community-clothing-preview-button{margin-top:2px}
+.community-shop-section-title{margin:22px 0 7px;border:0;padding:0;font-size:17px}
+.community-profile-avatar-custom{overflow:hidden;padding:0!important;background:#f7eff5!important}
+.community-profile-avatar-custom svg{display:block;width:100%;height:100%}
+@media(max-width:850px){.community-avatar-editor{grid-template-columns:minmax(0,1fr)}.community-avatar-stage{max-width:220px}.community-avatar-preview-panel{display:flex;flex-direction:column;align-items:center}.community-avatar-panel-title{align-self:flex-start;width:100%}}
+@media(max-width:520px){.community-clothing-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.community-clothing-card{padding:9px}.community-clothing-card h4{font-size:11px}.community-clothing-card p{font-size:10px}}
 .community-owned-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
 .community-owned-chip{display:inline-flex;padding:6px 9px;border-radius:20px;background:#f7f1f5;color:#725365;font-size:11px;font-weight:700}
 .community-leaderboard{display:flex;flex-direction:column;gap:8px}
@@ -11385,6 +11411,35 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       {id:'fire',title:'Хит продаж',icon:'🔥',price:3000,description:'Для тех, кто регулярно закрывает сильные смены.',badgeClass:'community-status-fire'},
       {id:'legend',title:'Легенда EASY',icon:'👑',price:7000,description:'Самый заметный статус магазина.',badgeClass:'community-status-legend'}
     ];
+    var communityClothingCatalog=[
+      {id:'tee-rose',title:'Футболка EASY',icon:'👕',slot:'top',category:'top',price:600,description:'Лёгкая футболка в фирменном стиле.',color:'#d985a8',style:'tee'},
+      {id:'hoodie-mint',title:'Мятное худи',icon:'🧥',slot:'top',category:'top',price:1400,description:'Уютное худи для спокойных смен.',color:'#65ad9b',style:'hoodie'},
+      {id:'hoodie-graphite',title:'Графитовое худи',icon:'🖤',slot:'top',category:'top',price:1800,description:'Минималистичный городской образ.',color:'#48505e',style:'hoodie'},
+      {id:'varsity-blue',title:'Бомбер EASY',icon:'🎽',slot:'top',category:'top',price:2800,description:'Контрастный бомбер с яркими деталями.',color:'#477eb4',style:'jacket'},
+      {id:'suit-midnight',title:'Костюм «Бизнес»',icon:'🤵',slot:'top',category:'top',price:6000,description:'Строгий образ для настоящей легенды.',color:'#34425e',style:'suit'},
+      {id:'jeans-classic',title:'Классические джинсы',icon:'👖',slot:'bottom',category:'bottom',price:700,description:'Базовая вещь на каждый день.',color:'#4779aa',style:'pants'},
+      {id:'joggers-graphite',title:'Спортивные джоггеры',icon:'🩶',slot:'bottom',category:'bottom',price:900,description:'Свободная посадка и городской стиль.',color:'#626a78',style:'pants'},
+      {id:'cargo-olive',title:'Карго хаки',icon:'🪖',slot:'bottom',category:'bottom',price:1600,description:'Практичные брюки с объёмными карманами.',color:'#78815b',style:'cargo'},
+      {id:'shorts-summer',title:'Летние шорты',icon:'🩳',slot:'bottom',category:'bottom',price:800,description:'Для тёплых дней и лёгких образов.',color:'#c98d56',style:'shorts'},
+      {id:'sneakers-white',title:'Белые кроссовки',icon:'👟',slot:'shoes',category:'shoes',price:500,description:'Универсальная пара под любой стиль.',color:'#f5f2ed',style:'sneakers'},
+      {id:'high-tops-red',title:'Красные высокие кеды',icon:'👟',slot:'shoes',category:'shoes',price:1100,description:'Яркий акцент в образе.',color:'#c95e70',style:'high'},
+      {id:'boots-black',title:'Чёрные ботинки',icon:'🥾',slot:'shoes',category:'shoes',price:1700,description:'Брутальная обувь для уверенного шага.',color:'#343641',style:'boots'},
+      {id:'cap-pink',title:'Розовая кепка',icon:'🧢',slot:'head',category:'head',price:800,description:'Добавляет образу характер.',color:'#d77fa5',style:'cap'},
+      {id:'beanie-purple',title:'Фиолетовая шапка',icon:'🧶',slot:'head',category:'head',price:1000,description:'Тёплый аксессуар с ярким цветом.',color:'#806bb0',style:'beanie'},
+      {id:'glasses-dark',title:'Солнцезащитные очки',icon:'🕶️',slot:'accessory',category:'accessory',price:1200,description:'Немного загадочности и уверенности.',color:'#303744',style:'glasses'},
+      {id:'headphones-purple',title:'Большие наушники',icon:'🎧',slot:'accessory',category:'accessory',price:1800,description:'Для тех, кто всегда на своей волне.',color:'#8765b5',style:'headphones'},
+      {id:'chain-gold',title:'Золотая цепочка',icon:'📿',slot:'accessory',category:'accessory',price:2300,description:'Яркая деталь премиального образа.',color:'#d5a63b',style:'chain'}
+    ];
+    var communityClothingCategory='all';
+    var communityAvatarPreviewItemId='';
+    var communityClothingCategories=[
+      {id:'all',label:'Всё',icon:'✨'},
+      {id:'top',label:'Верх',icon:'👕'},
+      {id:'bottom',label:'Низ',icon:'👖'},
+      {id:'shoes',label:'Обувь',icon:'👟'},
+      {id:'head',label:'Головные уборы',icon:'🧢'},
+      {id:'accessory',label:'Аксессуары',icon:'🕶️'}
+    ];
     function communitySafeKey(value){return String(value==null?'':value).replace(/[.#$\[\]\/]/g,'_')||'empty';}
     function getCommunityOrgKey(){
       var user=window.currentUser;
@@ -11415,7 +11470,45 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     function getCommunityStatusItem(statusId){
       return communityStatusCatalog.find(function(item){return item.id===String(statusId||'');})||null;
     }
-    function getCommunityUserGameState(userId){
+    function getCommunityClothingItem(itemId){
+      return communityClothingCatalog.find(function(item){return item.id===String(itemId||'');})||null;
+    }
+    function buildCommunityAvatarSvg(userId,previewItemId){
+      var state=getCommunityUserGameState(userId);
+      var avatarState=state.avatar&&typeof state.avatar==='object'?state.avatar:{};
+      var equipped=Object.assign({},avatarState.equipped&&typeof avatarState.equipped==='object'?avatarState.equipped:{});
+      var preview=getCommunityClothingItem(previewItemId);
+      if(preview)equipped[preview.slot]=preview.id;
+      function item(slot){return getCommunityClothingItem(equipped[slot]);}
+      var top=item('top'),bottom=item('bottom'),shoes=item('shoes'),head=item('head'),accessory=item('accessory');
+      var topColor=top?top.color:'#5489ad';
+      var bottomColor=bottom?bottom.color:'#52647d';
+      var shoeColor=shoes?shoes.color:'#f3f0ed';
+      var topDetails='';
+      if(top&&top.style==='hoodie')topDetails='<path d="M91 108 Q110 91 129 108 L124 125 Q110 117 96 125Z" fill="none" stroke="#ffffff" stroke-opacity=".35" stroke-width="3"/><path d="M104 132 L108 151 M116 132 L112 151" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>';
+      if(top&&top.style==='jacket')topDetails='<path d="M110 104 L110 184" stroke="#e8edf4" stroke-width="3"/><path d="M91 109 L104 124 L110 116 L116 124 L129 109" fill="none" stroke="#dce8f2" stroke-width="3"/>';
+      if(top&&top.style==='suit')topDetails='<path d="M92 105 L108 132 L101 151 L84 111Z" fill="#f4f3ee"/><path d="M128 105 L112 132 L119 151 L136 111Z" fill="#f4f3ee"/><path d="M108 128 L112 128 L117 160 L110 168 L103 160Z" fill="#bf596d"/><path d="M110 132 L110 181" stroke="#d7dce5" stroke-width="1.5"/>';
+      var bottomShape=bottom&&bottom.style==='shorts'
+        ?'<path d="M78 174 Q110 181 142 174 L138 216 L112 218 L109 205 L106 218 L82 216Z" fill="'+bottomColor+'"/><path d="M110 184 L110 214" stroke="#ffffff" stroke-opacity=".35" stroke-width="2"/>'
+        :'<path d="M78 174 Q110 181 142 174 L137 255 L113 255 L110 206 L105 255 L82 255Z" fill="'+bottomColor+'"/><path d="M110 184 L110 249" stroke="#ffffff" stroke-opacity=".22" stroke-width="2"/>';
+      if(bottom&&bottom.style==='cargo')bottomShape+='<rect x="82" y="203" width="18" height="20" rx="3" fill="#606d49" stroke="#aab18d" stroke-width="1"/><rect x="120" y="203" width="17" height="20" rx="3" fill="#606d49" stroke="#aab18d" stroke-width="1"/>';
+      var shoeShape='<path d="M82 249 L106 249 L110 261 Q101 270 76 265 Q72 259 82 249Z" fill="'+shoeColor+'" stroke="#777985" stroke-opacity=".45" stroke-width="1.5"/><path d="M114 249 L137 249 L145 260 Q143 267 117 265 Q111 261 114 249Z" fill="'+shoeColor+'" stroke="#777985" stroke-opacity=".45" stroke-width="1.5"/>';
+      if(shoes&&shoes.style==='high')shoeShape='<path d="M82 239 L104 239 L108 261 Q98 269 76 265 Q72 259 82 239Z" fill="'+shoeColor+'" stroke="#8e394a" stroke-width="2"/><path d="M115 239 L136 239 L145 260 Q143 267 117 265Z" fill="'+shoeColor+'" stroke="#8e394a" stroke-width="2"/><path d="M84 250 L105 250 M117 250 L139 250" stroke="#f7dce1" stroke-width="2"/>';
+      if(shoes&&shoes.style==='boots')shoeShape='<path d="M83 236 L105 236 L108 260 Q98 269 75 265 L77 254Z" fill="'+shoeColor+'" stroke="#23252d" stroke-width="2"/><path d="M115 236 L137 236 L145 260 Q143 267 117 265Z" fill="'+shoeColor+'" stroke="#23252d" stroke-width="2"/><path d="M80 252 L105 252 M117 252 L142 252" stroke="#777985" stroke-width="2"/>';
+      var headwear='';
+      if(head&&head.style==='cap')headwear='<path d="M79 48 Q82 17 111 18 Q139 19 143 49 L135 56 Q111 45 87 57Z" fill="'+head.color+'"/><path d="M126 48 Q154 47 159 57 Q146 65 126 59Z" fill="'+head.color+'"/>';
+      if(head&&head.style==='beanie')headwear='<path d="M80 51 Q82 18 110 17 Q139 18 142 51 L139 63 Q111 54 83 63Z" fill="'+head.color+'"/><path d="M82 48 Q110 39 140 48 L140 59 Q111 51 82 60Z" fill="#ffffff" fill-opacity=".24"/><circle cx="111" cy="17" r="5" fill="'+head.color+'"/>';
+      var accessoryShape='';
+      if(accessory&&accessory.style==='glasses')accessoryShape='<path d="M83 62 Q96 56 106 63 L105 75 Q94 82 86 74Z M114 63 Q125 56 138 62 L135 74 Q126 82 115 75Z" fill="'+accessory.color+'" stroke="#1e2430" stroke-width="2"/><path d="M105 66 L114 66" stroke="#1e2430" stroke-width="3"/>';
+      if(accessory&&accessory.style==='headphones')accessoryShape='<path d="M76 66 Q76 24 111 24 Q146 24 146 66" fill="none" stroke="'+accessory.color+'" stroke-width="8"/><rect x="72" y="59" width="13" height="28" rx="6" fill="'+accessory.color+'"/><rect x="137" y="59" width="13" height="28" rx="6" fill="'+accessory.color+'"/>';
+      if(accessory&&accessory.style==='chain')accessoryShape='<path d="M91 111 Q110 139 129 111" fill="none" stroke="'+accessory.color+'" stroke-width="3.5"/><path d="M110 132 L115 138 L110 145 L105 138Z" fill="'+accessory.color+'"/>';
+      return '<svg viewBox="0 0 220 290" role="img" aria-label="Аватар сотрудника" xmlns="http://www.w3.org/2000/svg"><rect width="220" height="290" rx="25" fill="#f7eff5"/><circle cx="110" cy="126" r="92" fill="#ffffff" opacity=".65"/><ellipse cx="110" cy="271" rx="49" ry="8" fill="#d9cbd5"/>'+bottomShape+shoeShape+'<path d="M82 107 Q69 116 65 151 L57 176 Q57 184 65 185 Q72 185 76 174 L91 133Z M138 107 Q151 116 155 151 L163 176 Q163 184 155 185 Q148 185 144 174 L129 133Z" fill="'+topColor+'"/><path d="M57 174 Q66 172 72 180 Q73 188 64 190 Q55 190 54 183Z M148 180 Q155 172 164 174 Q167 183 159 190 Q150 190 148 184Z" fill="#d9a17f"/><path d="M78 104 Q110 91 142 104 L151 183 Q110 194 69 183Z" fill="'+topColor+'"/>'+topDetails+'<path d="M98 84 L122 84 L124 111 Q110 120 96 111Z" fill="#d9a17f"/><circle cx="79" cy="61" r="7" fill="#d9a17f"/><circle cx="141" cy="61" r="7" fill="#d9a17f"/><ellipse cx="110" cy="58" rx="31" ry="37" fill="#e7b18f"/><path d="M80 55 Q77 21 110 20 Q145 20 142 57 Q132 44 125 36 Q106 49 83 48Z" fill="#4b3740"/><path d="M91 61 Q96 57 101 61 M119 61 Q124 57 129 61" stroke="#4a3437" stroke-width="2.5" stroke-linecap="round"/><circle cx="97" cy="68" r="2.3" fill="#47373b"/><circle cx="123" cy="68" r="2.3" fill="#47373b"/><path d="M103 81 Q110 86 117 81" fill="none" stroke="#9e5d5b" stroke-width="2" stroke-linecap="round"/>'+headwear+accessoryShape+'</svg>';
+    }
+    function getCommunityEquippedClothes(state){
+      var avatar=state&&state.avatar&&typeof state.avatar==='object'?state.avatar:{};
+      return avatar.equipped&&typeof avatar.equipped==='object'?avatar.equipped:{};
+    }
+        function getCommunityUserGameState(userId){
       return communityGameStateByUser[String(userId||'')]||{};
     }
     function getCommunitySpent(state){
@@ -11683,7 +11776,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       var card=document.createElement('article');card.className='community-profile-card';
       var back=document.createElement('button');back.type='button';back.className='community-back';back.textContent='← К списку сотрудников';back.addEventListener('click',function(){showCommunityTab('employees');});card.appendChild(back);
       var header=document.createElement('div');header.className='community-profile-header';
-      var avatar=document.createElement('div');avatar.className='community-profile-avatar';avatar.textContent=String(user.name||user.username||'?').trim().charAt(0).toLocaleUpperCase('ru-RU')||'?';
+      var avatar=document.createElement('div');avatar.className='community-profile-avatar community-profile-avatar-custom';avatar.innerHTML=buildCommunityAvatarSvg(user.id);
       var info=document.createElement('div');info.style.minWidth='0';
       var nameLine=document.createElement('div');nameLine.className='community-name-line';
       var title=document.createElement('h3');title.style.cssText='border:0;padding:0;margin:0;font-size:20px;';title.textContent=String(user.communityNickname||user.name||user.username||'Сотрудник');nameLine.appendChild(title);appendCommunityStatus(nameLine,user.id);
@@ -11703,13 +11796,16 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       var collectionTitle=document.createElement('h4');collectionTitle.style.margin='0 0 7px';collectionTitle.textContent='Игровая коллекция';collection.appendChild(collectionTitle);
       var state=getCommunityUserGameState(user.id);
       var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
+      var equipped=getCommunityEquippedClothes(state);
       var owned=communityStatusCatalog.filter(function(item){return !!purchases[item.id];});
-      if(owned.length){
+      var ownedClothes=communityClothingCatalog.filter(function(item){return !!purchases[item.id];});
+      if(owned.length||ownedClothes.length){
         var chips=document.createElement('div');chips.className='community-owned-list';
         owned.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent=item.icon+' '+item.title+(String(state.activeStatusId||'')===item.id?' · надет':'');chips.appendChild(chip);});
+        ownedClothes.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent=item.icon+' '+item.title+(String(equipped[item.slot]||'')===item.id?' · надето':'');chips.appendChild(chip);});
         collection.appendChild(chips);
       }else{
-        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных предметов. Первые статусы уже ждут в магазине.';collection.appendChild(collectionNote);
+        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных предметов. Первые вещи и статусы уже ждут в магазине.';collection.appendChild(collectionNote);
       }
       card.appendChild(collection);
       var action=document.createElement('button');action.type='button';action.className='btn btn-primary';action.style.marginTop='14px';
@@ -11719,6 +11815,127 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       host.appendChild(card);
     }
     function renderCommunityShop(){
+      var host=document.getElementById('communityShopContent');
+      if(!host||!window.currentUser)return;
+      host.textContent='';
+      var user=window.currentUser;
+      var wallet=getCommunityWallet(user);
+      if(communityGameLoadError){
+        var error=document.createElement('div');error.className='community-empty';error.textContent='Не удалось загрузить игровой кошелёк из Firebase. Проверьте подключение и попробуйте обновить страницу.';host.appendChild(error);return;
+      }
+      var walletCard=document.createElement('div');walletCard.className='community-wallet-card';
+      var balanceBlock=document.createElement('div');var balanceLabel=document.createElement('span');balanceLabel.textContent='Доступно для покупок';var balance=document.createElement('strong');balance.textContent=formatCommunityCoins(wallet.balance);balanceBlock.appendChild(balanceLabel);balanceBlock.appendChild(balance);
+      var earnedBlock=document.createElement('div');var earnedLabel=document.createElement('span');earnedLabel.textContent='Всего заработано';var earned=document.createElement('strong');earned.style.fontSize='18px';earned.textContent=formatCommunityCoins(wallet.earned);earnedBlock.appendChild(earnedLabel);earnedBlock.appendChild(earned);
+      var spentBlock=document.createElement('div');var spentLabel=document.createElement('span');spentLabel.textContent='Потрачено';var spent=document.createElement('strong');spent.style.fontSize='18px';spent.textContent=formatCommunityCoins(wallet.spent);spentBlock.appendChild(spentLabel);spentBlock.appendChild(spent);
+      walletCard.appendChild(balanceBlock);walletCard.appendChild(earnedBlock);walletCard.appendChild(spentBlock);host.appendChild(walletCard);
+      var note=document.createElement('p');note.style.cssText='font-size:12px;color:var(--text-light);margin:12px 0 14px;line-height:1.5;';note.textContent='За каждый 1 ₽ выручки начисляется 1 ⭐. Покупай одежду и статусы, примеряй вещи и собирай свой уникальный образ. Купленные предметы остаются в коллекции навсегда.';host.appendChild(note);
+
+      var editor=document.createElement('section');editor.className='community-avatar-editor';
+      var previewPanel=document.createElement('div');previewPanel.className='community-avatar-preview-panel';
+      var previewTitle=document.createElement('div');previewTitle.className='community-avatar-panel-title';previewTitle.textContent='Твой аватар';
+      var avatarStage=document.createElement('div');avatarStage.className='community-avatar-stage';avatarStage.innerHTML=buildCommunityAvatarSvg(user.id,communityAvatarPreviewItemId);
+      var previewCaption=document.createElement('div');previewCaption.className='community-avatar-caption';previewCaption.textContent=communityAvatarPreviewItemId?'Примерка · предмет ещё не куплен':'Текущий образ · меняй вещи как захочешь';
+      var previewActions=document.createElement('div');previewActions.className='community-avatar-preview-actions';
+      if(communityAvatarPreviewItemId){
+        var resetPreview=document.createElement('button');resetPreview.type='button';resetPreview.className='btn btn-secondary';resetPreview.textContent='Сбросить примерку';resetPreview.addEventListener('click',function(){communityAvatarPreviewItemId='';renderCommunityShop();});previewActions.appendChild(resetPreview);
+      }
+      previewPanel.appendChild(previewTitle);previewPanel.appendChild(avatarStage);previewPanel.appendChild(previewCaption);previewPanel.appendChild(previewActions);
+      var wardrobe=document.createElement('div');wardrobe.className='community-avatar-wardrobe';
+      var wardrobeTitle=document.createElement('div');wardrobeTitle.className='community-avatar-panel-title';wardrobeTitle.textContent='Гардероб';
+      var categories=document.createElement('div');categories.className='community-clothing-categories';
+      communityClothingCategories.forEach(function(category){
+        var tab=document.createElement('button');tab.type='button';tab.className='community-clothing-category'+(communityClothingCategory===category.id?' active':'');tab.textContent=category.icon+' '+category.label;
+        tab.addEventListener('click',function(){communityClothingCategory=category.id;renderCommunityShop();});categories.appendChild(tab);
+      });
+      var clothingGrid=document.createElement('div');clothingGrid.className='community-clothing-grid';
+      var items=communityClothingCatalog.filter(function(item){return communityClothingCategory==='all'||item.category===communityClothingCategory;});
+      items.forEach(function(item){
+        var state=getCommunityUserGameState(user.id);
+        var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
+        var equipped=getCommunityEquippedClothes(state);
+        var owned=!!purchases[item.id];
+        var active=String(equipped[item.slot]||'')===item.id;
+        var previewing=String(communityAvatarPreviewItemId||'')===item.id;
+        var card=document.createElement('article');card.className='community-clothing-card'+(active?' equipped':'')+(previewing?' previewing':'');
+        var art=document.createElement('div');art.className='community-clothing-art';art.textContent=item.icon;
+        var title=document.createElement('h4');title.textContent=item.title;
+        var description=document.createElement('p');description.textContent=item.description;
+        var price=document.createElement('div');price.className='community-shop-price';price.textContent=formatCommunityCoins(item.price);
+        var previewButton=document.createElement('button');previewButton.type='button';previewButton.className='btn btn-secondary community-clothing-preview-button';previewButton.textContent=previewing?'Сейчас примеряю':'Примерить';
+        previewButton.addEventListener('click',function(){communityAvatarPreviewItemId=previewing?'':item.id;renderCommunityShop();});
+        var action=document.createElement('button');action.type='button';action.className='btn '+(active?'btn-secondary':'btn-primary');
+        if(active){action.textContent='Снять';action.addEventListener('click',function(){setCommunityEquippedClothing(item.id,false);});}
+        else if(owned){action.textContent='Надеть';action.addEventListener('click',function(){setCommunityEquippedClothing(item.id,true);});}
+        else{action.textContent='Купить и надеть';action.disabled=wallet.balance<item.price;action.addEventListener('click',function(){buyCommunityClothing(item.id);});}
+        card.appendChild(art);card.appendChild(title);card.appendChild(description);card.appendChild(price);card.appendChild(previewButton);card.appendChild(action);clothingGrid.appendChild(card);
+      });
+      if(!items.length){var emptyClothes=document.createElement('div');emptyClothes.className='community-empty';emptyClothes.textContent='В этой категории пока нет вещей.';clothingGrid.appendChild(emptyClothes);}
+      wardrobe.appendChild(wardrobeTitle);wardrobe.appendChild(categories);wardrobe.appendChild(clothingGrid);
+      editor.appendChild(previewPanel);editor.appendChild(wardrobe);host.appendChild(editor);
+
+      var statusTitle=document.createElement('h3');statusTitle.className='community-shop-section-title';statusTitle.textContent='Статусы профиля';host.appendChild(statusTitle);
+      var statusNote=document.createElement('p');statusNote.style.cssText='font-size:12px;color:var(--text-light);margin:0 0 8px;';statusNote.textContent='Статусы отображаются рядом с именем в сообществе и сообщениях.';host.appendChild(statusNote);
+      var statusGrid=document.createElement('div');statusGrid.className='community-shop-grid';
+      communityStatusCatalog.forEach(function(item){
+        var state=getCommunityUserGameState(user.id);
+        var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
+        var owned=!!purchases[item.id];
+        var active=String(state.activeStatusId||'')===item.id;
+        var article=document.createElement('article');article.className='community-shop-item';
+        var icon=document.createElement('div');icon.className='community-shop-item-icon';icon.textContent=item.icon;
+        var heading=document.createElement('h4');heading.textContent=item.title;
+        var description=document.createElement('p');description.textContent=item.description;
+        var price=document.createElement('div');price.className='community-shop-price';price.textContent=formatCommunityCoins(item.price);
+        var button=document.createElement('button');button.type='button';button.className=active?'btn btn-secondary':'btn btn-primary';
+        if(active){button.textContent='Снять статус';button.addEventListener('click',function(){setCommunityActiveStatus(null);});}
+        else if(owned){button.textContent='Надеть';button.addEventListener('click',function(){setCommunityActiveStatus(item.id);});}
+        else{button.textContent='Купить';button.disabled=wallet.balance<item.price;button.addEventListener('click',function(){buyCommunityStatus(item.id);});}
+        article.appendChild(icon);article.appendChild(heading);article.appendChild(description);article.appendChild(price);article.appendChild(button);statusGrid.appendChild(article);
+      });
+      host.appendChild(statusGrid);
+    }
+    function setCommunityEquippedClothing(itemId,equip){
+      if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
+      var item=getCommunityClothingItem(itemId);if(!item)return;
+      var state=getCommunityUserGameState(window.currentUser.id);
+      var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
+      if(equip&&!purchases[item.id]){alert('Сначала купи эту вещь.');return;}
+      var equipped=Object.assign({},getCommunityEquippedClothes(state));
+      if(equip)equipped[item.slot]=item.id;
+      else if(String(equipped[item.slot]||'')===item.id)delete equipped[item.slot];
+      var payload={};payload['avatar/equipped/'+item.slot]=equip?item.id:null;payload.updatedAt=Date.now();
+      db.ref('community_game_data/'+communitySafeKey(getCommunityOrgKey())+'/'+communitySafeKey(window.currentUser.id)).update(payload).then(function(){
+        communityAvatarPreviewItemId='';renderCommunityShop();
+        if(String(communitySelectedUserId||'')===String(window.currentUser.id)&&communityCurrentTab==='profile')renderCommunityProfile(String(window.currentUser.id));
+      }).catch(function(error){alert('Не удалось изменить образ: '+String(error&&error.message||error));});
+    }
+    function buyCommunityClothing(itemId){
+      if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
+      var item=getCommunityClothingItem(itemId);if(!item)return;
+      var userId=String(window.currentUser.id);
+      var earned=getCommunityRevenueForUser(window.currentUser);
+      var ref=db.ref('community_game_data/'+communitySafeKey(getCommunityOrgKey())+'/'+communitySafeKey(userId));
+      var failureReason='';
+      ref.transaction(function(current){
+        current=current&&typeof current==='object'?current:{};
+        var purchases=current.purchases&&typeof current.purchases==='object'?current.purchases:{};
+        if(purchases[item.id]){failureReason='owned';return;}
+        var spent=Object.keys(purchases).reduce(function(total,key){return total+(purchases[key]?Math.max(0,Number(purchases[key].price)||0):0);},0);
+        if(earned-spent<item.price){failureReason='funds';return;}
+        purchases[item.id]={id:item.id,title:item.title,price:item.price,purchasedAt:Date.now(),type:'clothing',slot:item.slot};
+        current.purchases=purchases;
+        current.avatar=current.avatar&&typeof current.avatar==='object'?current.avatar:{};
+        current.avatar.equipped=current.avatar.equipped&&typeof current.avatar.equipped==='object'?current.avatar.equipped:{};
+        current.avatar.equipped[item.slot]=item.id;
+        current.updatedAt=Date.now();
+        return current;
+      },function(error,committed){
+        if(error){alert('Не удалось купить вещь: '+String(error.message||error));return;}
+        if(!committed){alert(failureReason==='owned'?'Эта вещь уже есть в гардеробе.':failureReason==='funds'?'Недостаточно монет для покупки.':'Покупка не выполнена. Обновите страницу и повторите.');return;}
+        communityAvatarPreviewItemId='';renderCommunityShop();
+      },false);
+    }
+        function renderCommunityShop(){
       var host=document.getElementById('communityShopContent');
       if(!host||!window.currentUser)return;
       host.textContent='';
