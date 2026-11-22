@@ -2998,6 +2998,7 @@ function switchOrg(orgKey) {
     if (typeof renderPurchaseRecommendations === 'function') renderPurchaseRecommendations();
     if (typeof renderPurchaseCosts === 'function') renderPurchaseCosts();
     drawChart();
+    if (typeof window.easyAppSyncRenderCommunity === 'function') window.easyAppSyncRenderCommunity();
 }
 
 function deleteCurrentOrg() {
@@ -11404,6 +11405,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(communityCurrentTab==='employees')renderCommunityDirectory();
       if(communityCurrentTab==='profile')renderCommunityProfile(String(communitySelectedUserId||window.currentUser&&window.currentUser.id||''));
     }
+    window.easyAppSyncRenderCommunity=renderCommunityPage;
 
     quick.querySelectorAll('[data-jump]').forEach(function(b){b.addEventListener('click',function(){var target=b.dataset.jump;if(target==='sale'){showPage('sale');var el=document.getElementById('prodName');if(el){el.focus({preventScroll:true});el.scrollIntoView({behavior:'smooth',block:'center'});}}else if(target==='expense'){showPage('dashboard');var el2=document.getElementById('expenseAmount');if(el2){el2.focus();el2.scrollIntoView({behavior:'smooth',block:'center'});}}else if(target==='tasks'){showPage('tasks');}else if(target==='costs'){if(!window.isPurchaseCostOwner||!window.isPurchaseCostOwner())return;var costStatus=document.getElementById('saleCostStatusFilter');var costStart=document.getElementById('saleCostStartDate');var costEnd=document.getElementById('saleCostEndDate');var costSearch=document.getElementById('saleCostSearch');if(costStatus)costStatus.value='missing';if(costStart)costStart.value='';if(costEnd)costEnd.value='';if(costSearch)costSearch.value='';showPage('costs');if(typeof renderPurchaseCosts==='function')renderPurchaseCosts();}else if(target==='purchaseJournal'){if(!window.currentUser||window.currentUser.role!=='admin'||!window.isSuperAdmin||!window.isSuperAdmin(window.currentUser))return;showPage('dashboard');setTimeout(function(){var card=document.getElementById('purchaseJournalCard');var name=document.getElementById('purchaseJournalName');if(card)card.scrollIntoView({behavior:'smooth',block:'start'});if(name&&!name.disabled)name.focus({preventScroll:true});},60);}else showPage('cash');});});
     function showPage(id){
