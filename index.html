@@ -11818,7 +11818,6 @@ function getCommunityUserGameState(userId){
       walletCard.appendChild(balanceBlock);walletCard.appendChild(earnedBlock);walletCard.appendChild(spentBlock);host.appendChild(walletCard);
       var note=document.createElement('p');note.style.cssText='font-size:12px;color:var(--text-light);margin:12px 0 14px;line-height:1.5;';note.textContent='За каждый 1 ₽ выручки начисляется 1 ⭐. Игровую валюту можно тратить на статусы профиля и награды сообщества. Купленные награды остаются в коллекции навсегда.';host.appendChild(note);
 
-      var shopSectionNote=document.createElement('p');shopSectionNote.style.cssText='font-size:12px;color:var(--text-light);margin:0 0 8px;';shopSectionNote.textContent='Выбирай статус, который будет отображаться рядом с твоим именем в профиле, сообщениях и списке сотрудников.';host.appendChild(shopSectionNote);
       var statusTitle=document.createElement('h3');statusTitle.className='community-shop-section-title';statusTitle.textContent='Статусы профиля';host.appendChild(statusTitle);
       var statusNote=document.createElement('p');statusNote.style.cssText='font-size:12px;color:var(--text-light);margin:0 0 8px;';statusNote.textContent='Статусы отображаются рядом с именем в сообществе и сообщениях.';host.appendChild(statusNote);
       var statusGrid=document.createElement('div');statusGrid.className='community-shop-grid';
