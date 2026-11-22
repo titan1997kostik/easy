@@ -1113,7 +1113,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
             <div id="analyticsSellerPerformanceChart" class="seller-performance-chart" aria-label="Сравнение показателей продавцов"></div>
             <div style="overflow-x:auto;max-width:100%;margin-top:16px;">
                 <table class="seller-performance-table">
-                    <thead><tr><th>Продавец</th><th>Магазин</th><th>Выручка</th><th>Зарплата</th><th>Количество чеков</th><th>Количество смен</th></tr></thead>
+                    <thead><tr><th>Продавец</th><th>Магазин</th><th>Выручка</th><th id="analyticsSellerSalaryHeader">Зарплата</th><th>Количество чеков</th><th>Количество смен</th></tr></thead>
                     <tbody id="analyticsSellerPerformanceTable"><tr><td colspan="6" style="color:var(--text-light);">Данные загружаются…</td></tr></tbody>
                 </table>
             </div>
@@ -9756,6 +9756,11 @@ function renderSellerAnalytics(startDate, endDate, targetStore) {
     var periodLabel = document.getElementById('analyticsSellerPerformancePeriod');
     var status = document.getElementById('analyticsSellerPerformanceStatus');
     var metricEl = document.getElementById('analyticsSellerMetric');
+    var salaryMetricOption = metricEl ? metricEl.querySelector('option[value="salary"]') : null;
+    if (salaryMetricOption) { salaryMetricOption.hidden = sellerMode; salaryMetricOption.disabled = sellerMode; }
+    if (sellerMode && metricEl && metricEl.value === 'salary') metricEl.value = 'revenue';
+    var salaryHeader = document.getElementById('analyticsSellerSalaryHeader');
+    if (salaryHeader) salaryHeader.style.display = sellerMode ? 'none' : '';
     if (!tbody || !chart) return;
     var storeKey = String(targetStore || 'all');
     var storeLabel = storeKey === 'all' ? 'Все доступные магазины' : (STORES[storeKey] || ('Магазин ' + storeKey));
@@ -9834,7 +9839,7 @@ function renderSellerAnalytics(startDate, endDate, targetStore) {
     var sortedForGraph = rows.slice().sort(function(a,b) { return valueOf(b) - valueOf(a) || a.name.localeCompare(b.name, 'ru'); });
     chart.innerHTML = '';
     if (!staff.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-light);">Нет доступных продавцов.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="' + (sellerMode ? '5' : '6') + '" style="color:var(--text-light);">Нет доступных продавцов.</td></tr>';
         chart.innerHTML = '<div class="seller-performance-empty">Нет доступных продавцов для выбранной организации.</div>';
         if (status) status.textContent = '';
         return;
@@ -9862,7 +9867,10 @@ function renderSellerAnalytics(startDate, endDate, targetStore) {
         var isCurrentSeller = sellerMode && String(row.employee.id) === String(currentUser.id);
         if (isCurrentSeller) tr.className = 'seller-performance-current-user';
         var displayName = row.name + (isCurrentSeller ? ' · ВЫ' : '');
-        [displayName, row.store, money(row.revenue), money(row.salary), row.checks.toLocaleString('ru-RU'), row.shifts.toLocaleString('ru-RU')].forEach(function(value) {
+        var cellValues = [displayName, row.store, money(row.revenue)];
+        if (!sellerMode) cellValues.push(money(row.salary));
+        cellValues.push(row.checks.toLocaleString('ru-RU'), row.shifts.toLocaleString('ru-RU'));
+        cellValues.forEach(function(value) {
             var td = document.createElement('td'); td.textContent = value; tr.appendChild(td);
         });
         tbody.appendChild(tr);
@@ -9872,7 +9880,7 @@ function renderSellerAnalytics(startDate, endDate, targetStore) {
         var totalChecks = rows.reduce(function(sum,row) { return sum + row.checks; }, 0);
         var totalSalary = rows.reduce(function(sum,row) { return sum + row.salary; }, 0);
         status.textContent = sellerMode
-            ? 'Соревнование внутри вашего магазина. Учитываются продажи, подтверждённые сменами, с 1-го числа текущего месяца. Итог магазина: ' + money(totalRevenue) + ' выручки · ' + totalChecks.toLocaleString('ru-RU') + ' чеков · ' + money(totalSalary) + ' зарплаты.'
+            ? 'Соревнование внутри вашего магазина. Учитываются продажи, подтверждённые сменами, с 1-го числа текущего месяца. Итог магазина: ' + money(totalRevenue) + ' выручки · ' + totalChecks.toLocaleString('ru-RU') + ' чеков.'
             : 'Итого по подтверждённым сменам: выручка ' + money(totalRevenue) + ', чеков ' + totalChecks.toLocaleString('ru-RU') + ', зарплата ' + money(totalSalary) + '.';
     }
 }
