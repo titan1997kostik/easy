@@ -714,9 +714,9 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                     <span class="sync-dot connecting"></span>
                     <span id="syncText">Интернет: проверка подключения...</span>
                 </span>
-                <span id="mqttIndicator" class="sync-indicator connecting" style="margin-left:6px;">
+                <span id="cloudSyncIndicator" class="sync-indicator connecting" style="margin-left:6px;">
                     <span class="sync-dot connecting"></span>
-                    <span id="mqttText">MQTT: подключение...</span>
+                    <span id="cloudSyncText">Синхронизация: проверка подключения...</span>
                 </span>
             </p>
         </div>
@@ -2754,28 +2754,54 @@ function mergeDeletionLedgerSnapshots(snapshots) {
     deletionLedgersLoaded = true;
     deletionLedgersFresh = true;
     deletionLedgersVerifiedOnce = true;
+    updateCloudSyncIndicator();
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
 }
 
 function updateInternetConnectionIndicator() {
-    var online = !window.navigator || window.navigator.onLine !== false;
+    var browserOnline = !window.navigator || window.navigator.onLine !== false;
+    var online = browserOnline && syncConnectionKnown && syncConnected === true;
+    var checking = browserOnline && !syncConnectionKnown;
     var indicator = document.getElementById('syncIndicator');
     var dot = indicator && indicator.querySelector('.sync-dot');
     var label = document.getElementById('syncText');
-    var status = online ? 'online' : 'offline';
+    var status = online ? 'online' : (checking ? 'connecting' : 'offline');
     if (indicator) indicator.className = 'sync-indicator ' + status;
     if (dot) dot.className = 'sync-dot ' + status;
     if (label) {
-        label.textContent = online ? 'Интернет: подключен' : 'Интернет: нет соединения';
-        label.style.color = online ? '#28a745' : '#d44a6a';
-        label.title = firebaseSyncError ? 'Ошибка синхронизации с облаком: ' + firebaseSyncError :
-            (online ? 'Браузер сообщает, что сетевое соединение доступно.' : 'Устройство не подключено к сети.');
+        label.textContent = online ? 'Интернет: подключен' : (checking ? 'Интернет: проверка подключения...' : 'Интернет: нет соединения');
+        label.style.color = online ? '#28a745' : (checking ? '#b88a9c' : '#d44a6a');
+        label.title = online ? 'Активное соединение с Firebase Realtime Database подтверждено.' :
+            (checking ? 'Ожидается подтверждение соединения с Firebase Realtime Database.' : 'Нет активного соединения с Firebase Realtime Database.');
     }
 }
-window.addEventListener('online', updateInternetConnectionIndicator);
-window.addEventListener('offline', updateInternetConnectionIndicator);
+function updateCloudSyncIndicator() {
+    var browserOnline = !window.navigator || window.navigator.onLine !== false;
+    var connected = browserOnline && syncConnectionKnown && syncConnected === true;
+    var checking = browserOnline && (!syncConnectionKnown || (syncConnected && !deletionLedgersFresh));
+    var hasErrors = !!firebaseSyncError || Object.keys(firebaseCoreDataErrors || {}).length > 0;
+    var active = connected && deletionLedgersFresh && !hasErrors;
+    var status = active ? 'online' : (checking ? 'connecting' : 'offline');
+    var message = active ? 'Синхронизация активна' :
+        (checking ? 'Синхронизация: проверка...' : (hasErrors && connected ? 'Синхронизация с ошибкой' : 'Синхронизация не активна'));
+    var indicator = document.getElementById('cloudSyncIndicator');
+    var dot = indicator && indicator.querySelector('.sync-dot');
+    var label = document.getElementById('cloudSyncText');
+    if (indicator) indicator.className = 'sync-indicator ' + status;
+    if (dot) dot.className = 'sync-dot ' + status;
+    if (label) {
+        label.textContent = message;
+        label.style.color = active ? '#28a745' : (checking ? '#b88a9c' : '#d44a6a');
+        label.title = firebaseSyncError || (!connected ? 'Нет активного соединения с Firebase Realtime Database.' :
+            (!deletionLedgersFresh ? 'Соединение установлено; проверяются актуальные данные перед возобновлением синхронизации.' :
+            (hasErrors ? 'Есть ошибки синхронизации отдельных данных. Подробности доступны в консоли браузера.' : 'Firebase Realtime Database подключена; облачные данные синхронизируются.')));
+    }
+}
+window.addEventListener('online', function() { updateInternetConnectionIndicator(); updateCloudSyncIndicator(); });
+window.addEventListener('offline', function() { updateInternetConnectionIndicator(); updateCloudSyncIndicator(); });
 updateInternetConnectionIndicator();
+updateCloudSyncIndicator();
 
 function setFirebaseSyncError(path, error) {
     var code = error && error.code ? String(error.code) : '';
@@ -2784,6 +2810,7 @@ function setFirebaseSyncError(path, error) {
     window.easyAppSyncFirebaseError = firebaseSyncError;
     var label = document.getElementById('syncText');
     if (label) label.title = 'Ошибка синхронизации с облаком: ' + firebaseSyncError;
+    updateCloudSyncIndicator();
     console.error('Ошибка синхронизации Easy в ' + path + ':', error);
 }
 
@@ -2792,6 +2819,7 @@ function clearFirebaseSyncError() {
     firebaseSyncError = '';
     window.easyAppSyncFirebaseError = '';
     updateInternetConnectionIndicator();
+    updateCloudSyncIndicator();
 }
 
 function setFirebaseCoreDataError(path, error) {
@@ -2822,6 +2850,8 @@ function readFirebaseLedger(path) {
 
 function refreshDeletionLedgersFromServerAndFlush() {
     if (!syncConnected || ledgerRefreshInProgress || typeof db === 'undefined' || !db.ref) return;
+    deletionLedgersFresh = false;
+    updateCloudSyncIndicator();
     ledgerRefreshInProgress = true;
     Promise.all([
         readFirebaseLedger('deleted_stores_data'),
@@ -2845,6 +2875,7 @@ function refreshDeletionLedgersFromServerAndFlush() {
     }).catch(function(err) {
         deletionLedgersFresh = false;
         setFirebaseSyncError(err && err.firebasePath ? err.firebasePath : 'журналы удалений/сбросов', err);
+        updateCloudSyncIndicator();
         console.warn('Не удалось обновить журнал удалений перед синхронизацией:', err);
     }).finally(function() { ledgerRefreshInProgress = false; });
 }
@@ -3560,12 +3591,17 @@ db.ref('.info/connected').on('value', function(snapshot) {
         deletionLedgersFresh = false;
         if (st) st.textContent = 'Нет соединения с облаком';
     }
+    updateInternetConnectionIndicator();
+    updateCloudSyncIndicator();
     if (currentUser) renderAll();
     if (typeof updatePendingSalesNotice === 'function') updatePendingSalesNotice();
 }, function(error) {
-    syncConnectionKnown = false;
+    syncConnectionKnown = true;
     syncConnected = false;
+    deletionLedgersFresh = false;
     setFirebaseSyncError('.info/connected', error);
+    updateInternetConnectionIndicator();
+    updateCloudSyncIndicator();
     if (currentUser) renderAll();
 });
 
@@ -12434,7 +12470,7 @@ body.seller-mode #analyticsSellerPerformancePanel .seller-performance-table td:n
 </style>
 
 <script src="backup-tools.js"></script>
-<script src="stock.js?v=61"></script>
+<script src="stock.js?v=62"></script>
 <script src="business-advisor.js?v=8"></script>
 </body>
 </html>
