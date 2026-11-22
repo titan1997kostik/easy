@@ -11547,104 +11547,100 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     function buildCommunityVehicleSvg(vehicleId){
       var item=getCommunityVehicleItem(vehicleId);
       if(!item)return '';
-      var style=item.style||'classic';
-      var roof='';
-      if(style==='boxy'||style==='gelik'){
-        roof='<path d="M84 79 L91 24 Q93 17 104 17 H216 Q228 18 230 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-      }else if(style==='zaporozhets'){
-        roof='<path d="M88 82 Q91 62 108 49 Q124 37 152 41 Q174 43 190 81 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-      }else if(style==='matiz'){
-        roof='<path d="M84 82 Q87 49 107 35 Q124 24 161 31 Q184 37 202 82 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-      }else if(style==='classic2101'){
-        roof='<path d="M83 79 L106 45 L119 37 H194 L216 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-      }else if(style.indexOf('bmw-')===0){
-        if(style==='bmw-e34')roof='<path d="M83 79 L108 43 L122 34 H194 L221 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-        else if(style==='bmw-e36')roof='<path d="M86 79 L112 45 Q122 36 145 36 H190 Q208 38 226 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-        else if(style==='bmw-e46')roof='<path d="M84 79 L111 44 Q122 35 148 35 H191 Q210 39 229 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-        else if(style==='bmw-e60')roof='<path d="M80 79 L108 43 Q120 32 151 33 H199 Q220 36 238 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-        else if(style==='bmw-e90')roof='<path d="M84 79 L112 45 Q125 34 151 35 H197 Q215 39 231 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-        else roof='<path d="M79 79 L109 42 Q123 31 155 32 H201 Q222 36 241 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-      }else if(style.indexOf('mercedes-w')===0){
-        var rear=style==='mercedes-w220'?'105 45 Q118 35 145 35':style==='mercedes-w221'?'107 43 Q121 32 151 33':style==='mercedes-w222'?'110 40 Q125 29 158 30':'111 38 Q127 27 160 28';
-        roof='<path d="M80 79 L'+rear+' H205 Q224 32 244 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-      }else if(style==='skyline-r34'){
-        roof='<path d="M79 80 L107 48 Q120 35 151 35 H191 Q214 38 232 80 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-      }else if(style==='kia-rio'){
-        roof='<path d="M87 79 L112 48 Q125 37 149 38 H190 Q210 42 225 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-      }else{
-        roof='<path d="M88 79 L116 49 Q126 36 151 35 H191 Q212 37 229 79 Z" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>';
-      }
-      var windows='';
-      if(style==='boxy'||style==='gelik'){
-        windows='<path d="M99 68 L103 28 H151 V70 Z M158 28 H211 Q219 29 220 70 H158 Z" fill="#c9e0e9" stroke="#40515d" stroke-width="2"/><path d="M154 26 V73" stroke="#40515d" stroke-width="3"/>';
-      }else if(style==='zaporozhets'){
-        windows='<path d="M101 76 Q105 55 120 50 Q134 45 151 48 V77 Z M158 48 Q180 48 199 77 H158 Z" fill="#c9e0e9" stroke="#40515d" stroke-width="2"/><path d="M154 47 V78" stroke="#40515d" stroke-width="3"/>';
-      }else if(style==='matiz'){
-        windows='<path d="M98 77 Q103 45 119 39 Q135 31 157 37 V77 Z M163 38 Q184 43 193 77 H163 Z" fill="#c9e0e9" stroke="#40515d" stroke-width="2"/><path d="M160 36 V78" stroke="#40515d" stroke-width="3"/>';
-      }else if(style==='classic2101'||style==='bmw-e34'){
-        windows='<path d="M99 72 L119 43 H151 V73 Z M157 43 H190 Q205 45 218 73 H157 Z" fill="#c9e0e9" stroke="#40515d" stroke-width="2"/><path d="M154 42 V74" stroke="#40515d" stroke-width="3"/>';
-      }else{
-        windows='<path d="M99 73 L121 45 Q130 38 151 39 H153 V73 Z M161 39 H192 Q211 41 224 73 H161 Z" fill="#c9e0e9" stroke="#40515d" stroke-width="2"/><path d="M157 38 V75" stroke="#40515d" stroke-width="3"/>';
-      }
-      var bodyPath='';
-      if(style==='boxy'||style==='gelik'){
-        bodyPath='M27 104 L34 87 Q39 81 60 79 L76 77 L80 62 H235 L247 79 L276 84 Q289 89 293 104 L286 118 H35 Q25 115 27 104 Z';
-      }else if(style==='zaporozhets'){
-        bodyPath='M35 105 Q35 91 56 85 Q75 80 89 82 Q97 62 122 65 Q164 63 190 83 L256 86 Q282 89 288 105 L282 117 H43 Q34 115 35 105 Z';
-      }else if(style==='matiz'){
-        bodyPath='M45 105 Q42 92 57 85 L79 81 Q86 55 111 58 H194 Q216 65 226 84 L269 91 Q283 96 283 107 L276 117 H49 Q42 115 45 105 Z';
-      }else if(style==='skyline-r34'){
-        bodyPath='M25 104 L34 89 Q43 82 64 80 L78 78 L247 78 L275 86 Q289 90 294 103 L287 118 H32 Q24 114 25 104 Z';
-      }else if(style==='classic2101'){
-        bodyPath='M28 103 L35 88 L60 82 L80 79 L241 79 L274 86 Q288 90 291 103 L285 117 H36 Q27 115 28 103 Z';
-      }else if(style.indexOf('mercedes-w')===0){
-        bodyPath='M20 103 L30 88 Q39 81 62 79 L78 77 L255 77 L282 86 Q297 91 299 104 L292 118 H28 Q18 115 20 103 Z';
-      }else if(style.indexOf('bmw-')===0){
-        bodyPath='M25 103 L34 88 Q42 81 62 79 L78 77 L248 77 L276 86 Q289 90 294 103 L287 118 H32 Q23 115 25 103 Z';
-      }else if(style==='kia-rio'){
-        bodyPath='M29 103 L37 89 Q43 82 61 80 L78 78 L239 78 L274 87 Q286 91 289 104 L283 117 H36 Q27 115 29 103 Z';
-      }else{
-        bodyPath='M28 103 L36 89 Q41 82 60 80 L79 78 L239 78 L276 86 Q288 90 291 103 L286 117 H36 Q27 115 28 103 Z';
-      }
-      var trim=(style==='boxy'||style==='gelik')
-        ?'<path d="M31 109 H286" stroke="#242b2c" stroke-width="5"/><rect x="42" y="87" width="18" height="8" rx="2" fill="#f2d9a8"/><rect x="265" y="88" width="16" height="7" rx="2" fill="#f6e4bb"/>'
-        :'<path d="M32 108 H286" stroke="#47535d" stroke-width="3"/><path d="M38 88 L58 84 L69 88" fill="none" stroke="#f6e5bb" stroke-width="4" stroke-linecap="round"/><path d="M269 88 L283 91" stroke="#f5d5c9" stroke-width="4" stroke-linecap="round"/>';
-      if(style==='zaporozhets')trim+='<path d="M51 93 Q57 90 65 92 M258 94 L276 96" stroke="#c4b5a2" stroke-width="3" fill="none"/>';
-      if(style==='classic2101')trim+='<path d="M42 83 H274" stroke="#d9d0c3" stroke-width="2"/><rect x="75" y="82" width="3" height="8" fill="#d9d0c3"/>';
-      if(style==='skyline-r34')trim+='<path d="M211 69 L218 57 L231 57 L228 76" stroke="#293b4f" stroke-width="4" fill="none"/><path d="M30 113 H289" stroke="#273d52" stroke-width="3"/>';
-      if(style==='bmw-e36')trim+='<path d="M42 91 H276" stroke="#e4e8eb" stroke-opacity=".45" stroke-width="1"/>';
-      if(style==='bmw-e46')trim+='<path d="M42 91 H276" stroke="#e4e8eb" stroke-opacity=".6" stroke-width="1.5"/>';
-      if(style==='bmw-e60'||style==='bmw-e90'||style==='bmw-f30')trim+='<path d="M42 91 H276" stroke="#dce5eb" stroke-opacity=".55" stroke-width="1.5"/>';
-      var grille='';
+      var s=item.style||'classic', paint=item.color||'#87939b';
+      var P={
+        classic:{b:'M27 111 L36 94 Q43 86 70 83 L92 80 L117 52 Q131 41 159 41 H220 Q246 44 264 81 L307 89 Q329 93 334 109 L328 131 H31 Q23 127 27 111 Z',r:'M91 81 L116 51 Q131 39 159 39 H218 Q244 42 261 81 Z',g:'M103 76 L125 54 Q137 45 158 45 V79 Z M165 45 H213 Q233 47 250 79 H165 Z',x:91,y:267,rad:21},
+        boxy:{b:'M28 111 L35 91 Q40 84 66 81 L77 72 H280 L297 81 L326 88 Q337 92 339 110 L333 133 H31 Q25 128 28 111 Z',r:'M77 79 L83 28 Q85 21 95 20 H242 Q253 21 256 79 Z',g:'M92 69 L97 31 Q98 27 104 27 H157 V72 Z M165 27 H237 Q244 28 246 72 H165 Z',x:91,y:267,rad:23},
+        zaporozhets:{b:'M29 113 Q27 99 43 91 Q57 84 84 83 Q91 62 118 65 Q157 63 185 84 L268 88 Q307 91 330 106 L333 122 Q329 133 313 133 H44 Q29 130 29 113 Z',r:'M87 83 Q91 62 112 49 Q130 38 157 42 Q184 44 202 84 Z',g:'M100 77 Q106 57 121 53 Q136 47 153 50 V82 Z M160 50 Q181 51 194 81 H160 Z',x:84,y:271,rad:19},
+        classic2101:{b:'M27 112 L34 92 L58 85 L78 81 H275 L302 87 Q326 91 332 107 L328 131 H32 Q25 127 27 112 Z',r:'M78 82 L102 45 L119 36 H231 L253 81 Z',g:'M94 76 L116 44 H157 V77 Z M163 43 H222 Q238 46 247 77 H163 Z',x:91,y:267,rad:21},
+        'bmw-e34':{b:'M25 112 L33 92 L57 85 L79 81 H280 L307 88 Q328 92 333 109 L327 131 H31 Q23 127 25 112 Z',r:'M78 82 L103 45 L119 35 H231 L256 82 Z',g:'M94 76 L116 44 H158 V78 Z M164 43 H219 Q238 46 248 78 H164 Z',x:91,y:267,rad:21},
+        'bmw-e36':{b:'M26 112 L35 94 Q42 86 68 83 L91 80 L115 51 Q129 40 158 40 H220 Q244 43 263 81 L307 89 Q329 93 334 109 L328 131 H32 Q23 127 26 112 Z',r:'M90 81 L115 50 Q129 38 158 38 H218 Q242 41 261 81 Z',g:'M102 76 L123 53 Q135 44 157 44 V79 Z M164 44 H214 Q234 46 251 79 H164 Z',x:91,y:267,rad:21},
+        'bmw-e46':{b:'M26 112 L35 94 Q43 86 69 83 L92 80 L116 50 Q132 38 160 39 H220 Q246 43 264 81 L307 89 Q329 94 334 109 L328 131 H32 Q23 127 26 112 Z',r:'M91 81 L116 49 Q131 37 160 37 H219 Q246 41 262 81 Z',g:'M103 76 L124 52 Q136 43 159 43 V79 Z M165 43 H214 Q235 46 252 79 H165 Z',x:91,y:267,rad:21},
+        'bmw-e60':{b:'M24 112 L34 95 Q43 87 72 83 L94 80 L122 49 Q137 36 166 37 H225 Q251 41 268 81 L307 89 Q329 93 335 109 L329 131 H31 Q22 127 24 112 Z',r:'M93 81 L121 48 Q137 34 166 35 H223 Q250 39 266 81 Z',g:'M106 76 L129 51 Q143 41 165 41 V79 Z M171 41 H219 Q241 44 256 79 H171 Z',x:91,y:267,rad:21},
+        'bmw-e90':{b:'M25 112 L34 94 Q43 86 69 83 L92 80 L117 50 Q131 39 160 39 H222 Q247 42 264 81 L308 89 Q330 93 335 109 L328 131 H31 Q22 127 25 112 Z',r:'M91 81 L117 49 Q132 37 160 37 H220 Q245 40 262 81 Z',g:'M103 76 L125 52 Q137 43 159 43 V79 Z M165 43 H215 Q235 45 252 79 H165 Z',x:91,y:267,rad:21},
+        'bmw-f30':{b:'M22 112 L32 94 Q42 85 73 82 L97 79 L123 47 Q139 33 170 34 H232 Q258 38 274 80 L309 89 Q331 94 337 109 L330 131 H30 Q20 126 22 112 Z',r:'M96 80 L122 46 Q138 31 170 32 H230 Q257 36 272 80 Z',g:'M109 75 L132 49 Q146 38 169 38 V78 Z M175 38 H227 Q246 41 263 78 H175 Z',x:91,y:267,rad:21},
+        'mercedes-w220':{b:'M21 112 L30 94 Q38 86 67 83 L90 80 L117 51 Q134 39 161 39 H220 Q247 42 265 81 L309 89 Q332 93 338 109 L331 131 H28 Q18 127 21 112 Z',r:'M89 81 L116 49 Q133 36 161 36 H218 Q246 40 263 81 Z',g:'M101 76 L124 52 Q137 43 160 43 V79 Z M166 43 H213 Q234 45 252 79 H166 Z',x:91,y:267,rad:22},
+        'mercedes-w221':{b:'M20 112 L30 94 Q38 86 67 83 L91 80 L117 49 Q134 35 163 36 H222 Q249 40 267 81 L310 89 Q333 93 339 109 L331 131 H27 Q17 127 20 112 Z',r:'M90 81 L116 48 Q134 33 163 33 H220 Q248 37 265 81 Z',g:'M102 76 L124 51 Q138 40 162 40 V79 Z M168 40 H215 Q237 43 254 79 H168 Z',x:91,y:267,rad:22},
+        'mercedes-w222':{b:'M19 112 L29 94 Q38 85 68 82 L92 79 L120 46 Q138 33 169 34 H229 Q255 38 271 80 L311 89 Q334 94 340 109 L332 131 H27 Q16 127 19 112 Z',r:'M91 80 L119 45 Q138 30 168 31 H228 Q255 35 270 80 Z',g:'M104 75 L128 48 Q142 38 167 38 V78 Z M173 38 H222 Q244 41 259 78 H173 Z',x:91,y:267,rad:22},
+        'mercedes-w223':{b:'M18 112 L28 94 Q37 85 68 82 L94 79 L124 45 Q143 30 174 31 H235 Q260 34 276 79 L313 89 Q335 94 341 109 L333 131 H26 Q15 127 18 112 Z',r:'M93 79 L123 44 Q142 27 174 28 H234 Q260 31 275 79 Z',g:'M107 74 L132 47 Q148 35 173 35 V78 Z M179 35 H228 Q249 38 265 78 H179 Z',x:91,y:267,rad:22},
+        gelik:{b:'M27 111 L33 85 Q37 79 62 77 L72 69 H281 L296 78 L326 86 Q338 91 340 109 L333 133 H30 Q24 127 27 111 Z',r:'M73 76 L78 20 Q80 15 91 15 H246 Q256 16 257 76 Z',g:'M87 67 L91 24 H157 V69 Z M166 24 H240 Q247 24 248 69 H166 Z',x:91,y:267,rad:24},
+        'kia-rio':{b:'M27 112 L36 94 Q44 87 69 84 L91 81 L116 54 Q130 43 158 43 H217 Q242 46 262 82 L305 89 Q327 93 333 109 L327 130 H32 Q24 127 27 112 Z',r:'M90 82 L116 53 Q131 41 158 41 H216 Q241 44 259 82 Z',g:'M102 77 L123 55 Q135 47 157 47 V80 Z M164 47 H211 Q231 49 248 80 H164 Z',x:91,y:267,rad:21},
+        'skyline-r34':{b:'M24 112 L33 94 Q42 86 70 83 L92 80 L116 57 Q130 45 158 45 H224 Q249 48 268 81 L307 88 Q329 93 335 109 L329 130 H29 Q21 126 24 112 Z',r:'M91 82 L117 55 Q130 42 160 42 H216 Q241 45 259 82 Z',g:'M103 77 L124 56 Q135 48 157 48 V80 Z M164 48 H212 Q231 50 248 80 H164 Z',x:91,y:267,rad:21},
+        matiz:{b:'M36 112 Q31 97 47 89 L77 82 Q83 53 111 52 Q159 43 194 59 Q222 72 235 88 L304 94 Q327 98 331 113 L326 130 H43 Q34 126 36 112 Z',r:'M83 84 Q87 54 109 37 Q129 24 162 29 Q198 33 218 84 Z',g:'M96 78 Q101 49 118 40 Q137 31 158 36 L157 82 Z M164 36 Q196 40 210 81 H164 Z',x:84,y:271,rad:18}
+      };
+      var p=P[s]||P.classic, x=p.x||91, y=p.y||267, radius=p.rad||21;
+      var arch='<path d="M'+(x-31)+' 131 A31 31 0 0 1 '+(x+31)+' 131 M'+(y-31)+' 131 A31 31 0 0 1 '+(y+31)+' 131" fill="none" stroke="'+((s==='boxy'||s==='gelik')?'#252c2d':'#39464d')+'" stroke-width="'+((s==='boxy'||s==='gelik')?6:3.5)+'"/>';
+      var windows='<path d="'+p.g+'" fill="#bad3de" stroke="#465761" stroke-width="2.5" stroke-linejoin="round"/><path d="M160 40 V82" stroke="#3a4850" stroke-width="2.5" opacity=".8"/><path d="M110 49 L127 43 M171 43 H210" stroke="#eef5f5" stroke-width="1.2" opacity=".7"/>';
+      var side=p.s||'';
+      var front='<path d="M307 88 L333 96 L337 111 L330 131 L307 131 Z" fill="'+paint+'" stroke="#303b42" stroke-width="2.5"/>';
+      var grille='', lamps='', rearLamp='<path d="M29 98 Q36 95 42 98 L40 114 L30 115 Z" fill="#c84d45" stroke="#f2d7cd" stroke-width="1.2"/>';
       if(item.brand==='BMW'){
-        grille='<path d="M268 94 Q272 92 274 95 L273 108 Q268 110 266 107Z M278 95 Q282 93 284 97 L282 109 Q278 110 276 107Z" fill="#26333c" stroke="#c2cbd0" stroke-width="1.2"/>';
+        grille='<path d="M319 100 Q323 96 327 100 L327 123 Q322 126 319 122 Z M330 100 Q334 97 337 102 L335 122 Q331 125 328 122 Z" fill="#1e2a31" stroke="#d5dfe3" stroke-width="1.2"/><path d="M321 104 V120 M332 104 V120" stroke="#83939b" stroke-width="1"/>';
+        if(s==='bmw-e34'||s==='bmw-e36')lamps='<path d="M298 94 Q305 90 314 95 L313 106 L298 105 Z" fill="#ecf0e6" stroke="#54636b" stroke-width="1.3"/><circle cx="303" cy="100" r="3.2" fill="#fff5d8"/><circle cx="309" cy="100" r="3.2" fill="#fff5d8"/>';
+        else if(s==='bmw-e46')lamps='<path d="M297 94 Q306 89 315 96 L313 106 L298 105 Z" fill="#edf0e6" stroke="#54636b" stroke-width="1.3"/><ellipse cx="303" cy="100" rx="3" ry="4" fill="#fff5d8"/><ellipse cx="310" cy="100" rx="3" ry="4" fill="#fff5d8"/>';
+        else if(s==='bmw-e60')lamps='<path d="M296 94 Q306 88 316 96 L313 106 L297 105 Z" fill="#edf0e6" stroke="#54636b" stroke-width="1.3"/><path d="M300 98 Q305 92 308 101 M309 96 L313 102" stroke="#fff3d7" stroke-width="2" fill="none"/>';
+        else if(s==='bmw-e90')lamps='<path d="M297 94 Q306 90 315 96 L314 105 L298 105 Z" fill="#edf0e6" stroke="#54636b" stroke-width="1.3"/><path d="M300 99 L311 100" stroke="#fff3d7" stroke-width="2.5"/>';
+        else lamps='<path d="M295 93 Q307 88 318 96 L316 106 L297 105 Z" fill="#edf0e6" stroke="#54636b" stroke-width="1.3"/><path d="M300 99 L314 100" stroke="#fff3d7" stroke-width="2.5"/>';
       }else if(item.brand==='MERCEDES-BENZ'){
-        grille='<path d="M266 94 L284 96 L281 110 L264 108 Z" fill="#29333b" stroke="#b8c1c7" stroke-width="1.2"/><path d="M268 99 H281 M267 103 H280 M266 107 H279" stroke="#c8d0d5" stroke-width="1.3"/><path d="M273 92 L276 87 L279 92 M276 88 V94" stroke="#c7d0d5" stroke-width="1.5" fill="none"/>';
-      }else if(item.brand==='ЗАЗ'||item.brand==='ВАЗ'){
-        grille='<rect x="265" y="96" width="15" height="11" rx="2" fill="#647078" stroke="#d9d0c3" stroke-width="1"/><path d="M268 97 V106 M272 97 V106 M276 97 V106" stroke="#d9d0c3" stroke-width="1"/>';
-      }else if(item.brand==='NISSAN'){
-        grille='<path d="M265 94 L284 96 L281 109 L264 108 Z" fill="#26323b" stroke="#d0d8df" stroke-width="1.2"/><path d="M269 99 H280 M269 103 H279" stroke="#d0d8df" stroke-width="1.4"/>';
+        grille='<path d="M319 99 Q328 96 337 101 L335 122 Q326 125 318 121 Z" fill="#26343d" stroke="#d4dce0" stroke-width="1.3"/><path d="M322 104 H334 M321 109 H334 M320 114 H333" stroke="#bcc8ce" stroke-width="1.4"/><circle cx="328" cy="110" r="6" fill="none" stroke="#e1e7e9" stroke-width="1"/><path d="M328 104 L328 115 M323 113 L332 107 M323 107 L332 113" stroke="#e1e7e9" stroke-width="1"/>';
+        if(s==='mercedes-w220')lamps='<path d="M298 93 Q308 87 318 95 L315 107 Q305 110 297 104 Z" fill="#f2f0e6" stroke="#65727a" stroke-width="1.4"/><ellipse cx="306" cy="100" rx="4" ry="3" fill="#fff8df"/>';
+        else if(s==='mercedes-w221')lamps='<path d="M297 93 L315 94 L319 103 L313 108 L297 105 Z" fill="#f3f0e4" stroke="#65727a" stroke-width="1.4"/><path d="M301 99 H314" stroke="#fff8df" stroke-width="2.5"/>';
+        else lamps='<path d="M296 93 Q307 88 319 95 L316 106 L298 106 Z" fill="#f1f0e8" stroke="#65727a" stroke-width="1.4"/><path d="M300 98 Q307 94 314 100" stroke="#fff8df" stroke-width="2" fill="none"/>';
+      }else if(s==='gelik'||s==='boxy'){
+        grille='<rect x="319" y="99" width="14" height="24" rx="2" fill="#242d30" stroke="#b9c4c1" stroke-width="1.4"/><path d="M323 102 V120 M328 102 V120" stroke="#b5c0bb" stroke-width="1.3"/>';
+        lamps='<circle cx="307" cy="99" r="'+(s==='gelik'?8:7)+'" fill="#f6e9c8" stroke="#56635e" stroke-width="2"/>';
+      }else if(s==='classic2101'){
+        grille='<rect x="319" y="99" width="11" height="21" rx="1" fill="#454d50" stroke="#e8e2d5" stroke-width="1.5"/><path d="M322 101 V118 M326 101 V118" stroke="#c9c5bb" stroke-width="1.5"/>';
+        lamps='<circle cx="307" cy="98" r="6.5" fill="#f5eddb" stroke="#6b675f" stroke-width="2"/>';
+      }else if(s==='zaporozhets'){
+        grille='<rect x="319" y="106" width="11" height="11" rx="4" fill="#596269" stroke="#efe2c7" stroke-width="1.4"/>';
+        lamps='<circle cx="306" cy="103" r="6" fill="#f7e9c8" stroke="#6d6253" stroke-width="2"/>';
+        side+='<path d="M46 89 L56 84 M49 95 L62 88 M53 101 L67 92 M57 106 L72 97" stroke="#39464a" stroke-width="2.4"/>';
+      }else if(s==='skyline-r34'){
+        grille='<path d="M319 103 L333 106 L331 122 L318 122 Z" fill="#172b3b" stroke="#b7c7d1" stroke-width="1.4"/><path d="M321 108 H331 M320 114 H330" stroke="#a5bbc9" stroke-width="1.2"/>';
+        lamps='<path d="M299 96 L313 98 L312 106 L299 104 Z" fill="#eaf3ec" stroke="#5b7486" stroke-width="1.5"/>';
+        side+='<path d="M245 82 L268 65 H295 L291 78 L266 86 Z" fill="#253b4e" stroke="#1e3346" stroke-width="2"/><path d="M251 69 H286" stroke="#9eb5c5" stroke-width="2"/>';
+      }else if(s==='kia-rio'){
+        grille='<path d="M315 102 Q324 99 332 104 L331 119 Q322 124 313 118 Z" fill="#252d31" stroke="#d6dce0" stroke-width="1.3"/><path d="M318 108 Q325 106 330 108 M317 114 H329" stroke="#b8c2c8" stroke-width="1.4"/>';
+        lamps='<path d="M298 95 Q307 92 315 98 L313 106 L299 105 Z" fill="#f4efda" stroke="#657178" stroke-width="1.5"/>';
+      }else if(s==='classic2101'){
+        grille='<rect x="319" y="99" width="11" height="21" rx="1" fill="#454d50" stroke="#e8e2d5" stroke-width="1.5"/>';
+        lamps='<circle cx="307" cy="98" r="6.5" fill="#f5eddb" stroke="#6b675f" stroke-width="2"/>';
+      }else if(s==='matiz'){
+        grille='<path d="M317 108 Q324 105 330 110 L328 121 H316 Z" fill="#273538" stroke="#d0d8d4" stroke-width="1.2"/>';
+        lamps='<circle cx="308" cy="103" r="8" fill="#f8edcf" stroke="#64716d" stroke-width="2"/>';
+        rearLamp='<path d="M39 96 Q45 93 50 95 L47 109 H39Z" fill="#ca5147" stroke="#f4d7c8" stroke-width="1"/>';
       }else{
-        grille='<path d="M267 94 L280 96 L278 109 L264 108 Z" fill="#283238"/><path d="M267 99 H278 M266 103 H277" stroke="#aab3b8" stroke-width="1.2"/>';
+        grille='<path d="M319 101 Q327 97 333 102 L332 120 Q324 124 317 120 Z" fill="#27343b" stroke="#c7d0d5" stroke-width="1.3"/>';
+        lamps='<path d="M298 95 Q308 90 317 97 L314 106 L299 105 Z" fill="#f4f0df" stroke="#65727b" stroke-width="1.5"/>';
       }
-      var sport=(style==='skyline-r34')
-        ?'<path d="M202 69 L207 57 H244 L247 65 M207 57 L201 50 M240 57 L246 50" stroke="#273747" stroke-width="4" fill="none" stroke-linecap="round"/>'
-        :(style.indexOf('bmw-')===0||style.indexOf('mercedes-w')===0)
-          ?'<path d="M112 29 H205" stroke="#fff" stroke-opacity=".28" stroke-width="2"/>'
-          :'';
-      var wheels=(style==='zaporozhets'||style==='matiz')?{left:83,right:234,r:18}:{left:89,right:235,r:22};
-      var wheelMarkup='<circle cx="'+wheels.left+'" cy="111" r="'+wheels.r+'" fill="#262d33" stroke="#151a1e" stroke-width="3"/><circle cx="'+wheels.left+'" cy="111" r="'+Math.round(wheels.r*.5)+'" fill="#c4cbd0" stroke="#7b858c" stroke-width="3"/><circle cx="'+wheels.left+'" cy="111" r="3" fill="#626b72"/>'+
-        '<circle cx="'+wheels.right+'" cy="111" r="'+wheels.r+'" fill="#262d33" stroke="#151a1e" stroke-width="3"/><circle cx="'+wheels.right+'" cy="111" r="'+Math.round(wheels.r*.5)+'" fill="#c4cbd0" stroke="#7b858c" stroke-width="3"/><circle cx="'+wheels.right+'" cy="111" r="3" fill="#626b72"/>';
-      var bodyText=item.brand==='MERCEDES-BENZ'?'MERCEDES':item.brand;
-      return '<svg viewBox="0 0 320 150" role="img" aria-label="'+item.fullTitle+'" xmlns="http://www.w3.org/2000/svg">'+
-        '<ellipse cx="162" cy="124" rx="127" ry="8" fill="#685d66" opacity=".18"/>'+
-        '<path d="'+bodyPath+'" fill="'+item.color+'" stroke="#34414a" stroke-width="3" stroke-linejoin="round"/>'+
-        roof+windows+sport+trim+
-        '<path d="M28 100 Q34 93 48 93" stroke="#e9edf0" stroke-width="4" fill="none"/>'+
-        '<path d="M45 108 H273" stroke="#222a2e" stroke-width="3" opacity=".35"/>'+
-        wheelMarkup+grille+
-        '<path d="M51 93 L67 92" stroke="#e9edf0" stroke-width="3" stroke-linecap="round"/>'+
-        '<text x="160" y="142" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="800" letter-spacing="1.1" fill="#61717a">'+bodyText+'</text></svg>';
+      if(s==='skyline-r34')rearLamp='<circle cx="37" cy="104" r="4" fill="#d14b4b" stroke="#f1d8d7" stroke-width="1"/><circle cx="37" cy="115" r="4" fill="#d14b4b" stroke="#f1d8d7" stroke-width="1"/>';
+      var bumpers='<path d="M31 118 H331" stroke="#28333a" stroke-width="3" opacity=".8"/><path d="M43 129 H325" stroke="#d4dce0" stroke-width="1.4" opacity=".8"/>';
+      if(s==='classic2101')bumpers='<path d="M29 117 H330" stroke="#d8d3c7" stroke-width="4"/><path d="M40 128 H324" stroke="#5d5b55" stroke-width="2"/>';
+      if(s==='zaporozhets')bumpers='<path d="M38 119 H328" stroke="#f0dfbb" stroke-width="3"/><path d="M43 127 H319" stroke="#8f7754" stroke-width="2"/>';
+      if(s==='boxy'||s==='gelik')bumpers='<path d="M32 118 H334" stroke="#242c2f" stroke-width="5"/><path d="M35 131 H331" stroke="#d5dbd6" stroke-width="2"/>';
+      var mirror='<path d="M120 53 L114 46 L105 48 L108 53 L116 56" fill="#293943" stroke="#354550" stroke-width="1.4"/>';
+      function makeWheel(cx){
+        var spokes='';
+        var count=(s==='boxy'||s==='gelik')?6:8;
+        for(var i=0;i<count;i++){
+          var a=i*Math.PI*2/count;
+          spokes+='<path d="M'+(cx+Math.cos(a)*6).toFixed(1)+' '+(121+Math.sin(a)*6).toFixed(1)+' L'+(cx+Math.cos(a)*(radius-5)).toFixed(1)+' '+(121+Math.sin(a)*(radius-5)).toFixed(1)+'" stroke="#8d9aa2" stroke-width="2.2" stroke-linecap="round"/>';
+        }
+        return '<g><circle cx="'+cx+'" cy="121" r="'+radius+'" fill="#20272c" stroke="#10161a" stroke-width="3"/><circle cx="'+cx+'" cy="121" r="'+(radius-3)+'" fill="#39434a"/><circle cx="'+cx+'" cy="121" r="'+(radius-7)+'" fill="#aeb8be" stroke="#e0e5e8" stroke-width="1.5"/>'+spokes+'<circle cx="'+cx+'" cy="121" r="5" fill="#606c74" stroke="#d9e0e3" stroke-width="1.2"/></g>';
+      }
+      var wheels=makeWheel(x)+makeWheel(y);
+      var gloss='<path d="M40 94 Q115 85 185 88 Q252 88 305 99" fill="none" stroke="#ffffff" stroke-width="2" opacity=".28"/><path d="M44 126 H318" fill="none" stroke="#1d272d" stroke-width="2" opacity=".25"/>';
+      var badge=item.brand==='BMW'?'BMW':item.brand==='MERCEDES-BENZ'?'S-CLASS':item.brand==='NISSAN'?'GT-R':item.brand==='ЗАЗ'?'ЗАЗ':item.brand==='ВАЗ'?'ЖИГУЛИ':item.brand==='LADA'?'LADA':item.brand==='KIA'?'KIA':'MATIZ';
+      return '<svg viewBox="0 0 360 166" role="img" aria-label="'+item.fullTitle+'" xmlns="http://www.w3.org/2000/svg">'+
+        '<ellipse cx="180" cy="147" rx="151" ry="8" fill="#514b50" opacity=".16"/>'+
+        '<path d="'+p.b+'" fill="'+paint+'" stroke="#303b42" stroke-width="2.8" stroke-linejoin="round"/>'+
+        '<path d="'+p.b+'" fill="none" stroke="#ffffff" stroke-width="1.2" opacity=".19"/>'+
+        '<path d="'+p.r+'" fill="'+paint+'" stroke="#303b42" stroke-width="2.8" stroke-linejoin="round"/>'+
+        windows+arch+side+mirror+gloss+bumpers+rearLamp+front+lamps+grille+wheels+
+        '<path d="M'+(x-20)+' 111 Q'+x+' 91 '+(x+20)+' 111 M'+(y-20)+' 111 Q'+y+' 91 '+(y+20)+' 111" stroke="#202a2f" stroke-width="3" fill="none" opacity=".75"/>'+
+        '<path d="M43 137 H321" stroke="#2b363c" stroke-width="2" opacity=".45"/>'+
+        '<text x="180" y="160" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="800" letter-spacing="1.1" fill="#66747c">'+badge+'</text></svg>';
     }
         function buildCommunityAvatarScene(userId,previewClothingId,previewVehicleId){
       var state=getCommunityUserGameState(userId);
