@@ -83,8 +83,7 @@
     if(!product||product.org!==org())return '';
     if(product.status!=='active')return product.status==='pending'?'Карточка ожидает проверки':'Карточка не опубликована';
     var direction=storeDirection(sid);
-    if(!direction)return 'У магазина не задано направление склада';
-    if(direction!=='mixed'&&product.direction!==direction)return 'Направление карточки не совпадает с направлением магазина';
+    if(direction&&direction!=='mixed'&&product.direction!==direction)return 'Направление карточки не совпадает с направлением магазина';
     var balance=balances[sid]&&balances[sid][String(product.id)]||{};
     var sizes=Array.isArray(balance.sizes)?balance.sizes:[];
     if(!sizes.length)return 'Есть остаток ('+units+' шт.), но не добавлены размеры';
@@ -1044,7 +1043,7 @@
     return {ok:true,mainLocations:mainLocations,sourceLocations:sourceLocations,mainOrigin:mainOrigin,sourceOrigin:sourceOrigin,allLocations:allLocations};
   }
   function mergeCompareCardHtml(product,role,locations){
-    var total=locations.reduce(function(sum,location){return sum+qty(product.id,location);},0);
+    var total=locations.reduce(function(sum,location){return sum+stockBalanceUnits(product.id,location);},0);
     var direction=product.direction==='krossy'?'Кроссы':product.direction==='easy'?'Изи':'Не назначено';
     var html='<div style="min-width:0;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--card,#fff);">';
     html+='<div style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">'+esc(role)+'</div>';
@@ -1059,7 +1058,7 @@
     locations.forEach(function(location){
       var balance=balances[location]&&balances[location][String(product.id)]||{};
       var sizes=Array.isArray(balance.sizes)?balance.sizes.map(String):[];
-      var quantity=qty(product.id,location);
+      var quantity=stockBalanceUnits(product.id,location);
       html+='<div style="padding:7px 8px;border:1px solid var(--border);border-radius:8px;min-width:0;">';
       html+='<div style="display:flex;justify-content:space-between;gap:6px;align-items:baseline;"><span style="font-size:12px;font-weight:600;overflow-wrap:anywhere;">'+esc(stockLocationName(location))+'</span><b style="font-size:12px;white-space:nowrap;">'+quantity+' шт.</b></div>';
       html+='<div style="font-size:11px;color:var(--text-light);margin-top:3px;overflow-wrap:anywhere;">Размеры: '+(quantity>0?(sizes.length?esc(sizeLabel(sizes)):'не указаны'):'нет остатка')+'</div></div>';
