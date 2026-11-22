@@ -704,39 +704,10 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-avatar-panel-title{font-size:14px;font-weight:850;margin-bottom:10px;color:var(--text)}
 .community-avatar-stage{display:flex;align-items:center;justify-content:center;width:100%;max-width:260px;margin:0 auto;aspect-ratio:220/290;overflow:hidden;border-radius:18px;background:#f7eff5}
 .community-avatar-stage svg{display:block;width:100%;height:100%}
-.community-avatar-scene{position:relative;display:block;width:100%;height:100%;min-height:260px;overflow:hidden;border-radius:inherit;background:linear-gradient(145deg,#f7eff5,#fce8f0)}
+.community-avatar-scene{display:block;width:100%;height:100%;min-height:260px;overflow:hidden;border-radius:inherit;background:linear-gradient(145deg,#f7eff5,#fce8f0)}
 .community-avatar-stage .community-avatar-scene{min-height:0;height:100%}
-.community-avatar-person{position:absolute;left:0;bottom:0;width:100%;height:100%;z-index:1;display:flex;align-items:flex-end;justify-content:center}
+.community-avatar-person{width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center}
 .community-avatar-person svg{display:block;width:100%;height:100%;object-fit:contain}
-.community-avatar-scene.has-vehicle .community-avatar-person{left:-7%;width:77%}
-.community-avatar-vehicle{position:absolute;right:-2%;bottom:7%;width:64%;z-index:2;filter:drop-shadow(0 5px 4px rgba(65,49,62,.16))}
-.community-avatar-vehicle img{display:block;width:100%;height:100%;max-height:118px;object-fit:cover;border-radius:9px;border:2px solid rgba(255,255,255,.9);background:#fff}.community-vehicle-photo-link{display:flex;align-items:center;justify-content:center;width:100%;height:100%;text-decoration:none}.community-vehicle-photo{display:block;width:100%;height:126px;object-fit:contain;border-radius:8px;background:#fff}
-.community-profile-avatar-custom{width:158px!important;height:104px!important;flex:0 0 158px;border-radius:17px!important;display:block!important}
-.community-profile-avatar-custom .community-avatar-scene{min-height:0;height:100%;border-radius:17px}
-.community-vehicle-section{margin:8px 0 22px;padding:16px;border:1px solid var(--border);border-radius:15px;background:linear-gradient(145deg,#fff,#fff8fb)}
-.community-vehicle-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.community-vehicle-head h3{border:0;padding:0;margin:0 0 4px;font-size:17px}
-.community-vehicle-head p{font-size:12px;line-height:1.5;color:var(--text-light);max-width:680px;margin:0}
-.community-vehicle-active{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:13px 0;padding:10px 12px;border:1px solid #e9d7a8;border-radius:11px;background:#fffbef}
-.community-vehicle-active strong{font-size:12px}.community-vehicle-active span{font-size:11px;color:var(--text-light)}
-.community-vehicle-categories{display:flex;gap:6px;flex-wrap:wrap;margin:13px 0 10px}
-.community-vehicle-category{border:1px solid var(--border);border-radius:20px;background:#fff;color:var(--text-light);padding:7px 10px;font-size:11px;font-weight:750;cursor:pointer}
-.community-vehicle-category.active{background:#fbe4ed;border-color:#e9a9c2;color:#a83f70}
-.community-vehicle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
-.community-vehicle-card{display:flex;flex-direction:column;gap:7px;min-width:0;padding:11px;border:1px solid var(--border);border-radius:13px;background:#fff}
-.community-vehicle-card.active{border-color:#80bba1;background:#f6fcf8}
-.community-vehicle-card.previewing{border-color:#d39abd;box-shadow:0 0 0 2px rgba(211,154,189,.13)}
-.community-vehicle-art{display:grid;place-items:center;min-height:126px;padding:4px;border-radius:10px;background:linear-gradient(145deg,#f4f5f6,#e9edf0);overflow:hidden}
-.community-vehicle-art .community-vehicle-photo-link{min-height:118px}.community-vehicle-art .community-vehicle-photo{max-width:100%;height:118px;object-fit:contain}
-.community-vehicle-brand{font-size:9px;letter-spacing:.08em;font-weight:850;color:#a17d90;text-transform:uppercase}
-.community-vehicle-card h4{font-size:13px;line-height:1.3;margin:0}
-.community-vehicle-card p{font-size:10px;line-height:1.45;color:var(--text-light);margin:0;min-height:29px;flex:1}
-.community-vehicle-meta{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
-.community-vehicle-price{font-size:12px;font-weight:850;color:#855f0b}
-.community-vehicle-tag{font-size:9px;padding:4px 7px;border-radius:20px;background:#f6eff4;color:#76566a;font-weight:750}
-.community-vehicle-card button{width:100%;font-size:11px;padding:8px 9px}
-.community-vehicle-preview{background:#f8f1f7!important;color:#795a70!important;border:1px solid #ead8e4!important}
-@media(max-width:680px){.community-profile-avatar-custom{width:132px!important;height:92px!important;flex-basis:132px}.community-vehicle-section{padding:12px}.community-vehicle-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.community-vehicle-card{padding:8px}.community-vehicle-art{min-height:96px}.community-vehicle-art .community-vehicle-photo{height:94px}.community-vehicle-art .community-vehicle-photo-link{min-height:94px}.community-vehicle-card h4{font-size:11px}.community-vehicle-card p{font-size:9px}}
 .community-avatar-caption{text-align:center;color:var(--text-light);font-size:11px;margin:9px 0 10px;min-height:16px}
 .community-avatar-preview-actions{display:flex;justify-content:center}
 .community-clothing-categories{display:flex;gap:6px;overflow-x:auto;padding:2px 0 11px;margin-bottom:3px}
@@ -755,7 +726,6 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-shop-section-title{margin:22px 0 7px;border:0;padding:0;font-size:17px}
 .community-profile-avatar-custom{overflow:hidden;padding:0!important;background:#f7eff5!important}
 .community-profile-avatar-custom svg{display:block;width:100%;height:100%}
-.community-profile-avatar-custom .community-avatar-vehicle img{width:100%;height:100%;max-height:82px;object-fit:cover}
 @media(max-width:850px){.community-avatar-editor{grid-template-columns:minmax(0,1fr)}.community-avatar-stage{max-width:220px}.community-avatar-preview-panel{display:flex;flex-direction:column;align-items:center}.community-avatar-panel-title{align-self:flex-start;width:100%}}
 @media(max-width:520px){.community-clothing-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.community-clothing-card{padding:9px}.community-clothing-card h4{font-size:11px}.community-clothing-card p{font-size:10px}}
 .community-owned-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
@@ -11299,7 +11269,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации'), communityPage=makePage('community','Сообщество EASY');
     communityPage.insertAdjacentHTML('beforeend', `
       <section class="community-intro">
-        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Сообщество EASY</h3><p>Общий чат организации, личные переписки, профили сотрудников и игровой магазин с гардеробом и автосалоном. Собирай образы и покупай автомобили, знакомые по российским дорогам.</p></div>
+        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Сообщество EASY</h3><p>Общий чат организации, личные переписки, профили сотрудников и игровой магазин с гардеробом. Создавай свой образ, собирай комплекты и открывай новые вещи.</p></div>
         <span class="community-org-pill" id="communityOrgLabel">Организация</span>
       </section>
       <div class="community-subnav" role="tablist" aria-label="Разделы сообщества">
@@ -11466,7 +11436,6 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     ];
     var communityClothingCategory='all';
     var communityAvatarPreviewItemId='';
-    var communityVehiclePreviewId='';
     var communityClothingCategories=[
       {id:'all',label:'Всё',icon:'✨'},
       {id:'top',label:'Верх',icon:'👕'},
@@ -11475,36 +11444,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       {id:'head',label:'Головные уборы',icon:'🧢'},
       {id:'accessory',label:'Аксессуары',icon:'🕶️'}
     ];
-    var communityVehicleCategory='all';
-    var communityVehiclePreviewId='';
-    var communityVehicleCategories=[
-      {id:'all',label:'Все авто'},
-      {id:'sedan',label:'Седаны'},
-      {id:'hatchback',label:'Хэтчбеки'},
-      {id:'crossover',label:'Кроссоверы'},
-      {id:'offroad',label:'Внедорожники'},
-      {id:'premium',label:'Премиум'}
-    ];
-    var communityVehicleCatalog=[
-      {id:'car-lada-granta',brand:'LADA',title:'Granta',fullTitle:'LADA Granta',type:'sedan',category:'sedan',price:8500,color:'#c7cbd1',description:'Знакомый городской седан на каждый день.',style:'classic',photoFile:"2024 Lada Granta sedan white front.jpg",photoCredit:"Throwawayacc222 — CC0 1.0",photoPage:"https://commons.wikimedia.org/wiki/File:2024_Lada_Granta_sedan_white_front.jpg"},
-      {id:'car-niva-legend',brand:'LADA',title:'Niva Legend',fullTitle:'LADA Niva Legend',type:'offroad',category:'offroad',price:15000,color:'#71835d',description:'Классическая российская Нива с узнаваемым силуэтом.',style:'boxy',photoFile:"Auto Lada Niva Moscow Vosmaya ulitsa Sokolinoy Gory Е354ОО799 2025-08 1756480951.JPG",photoCredit:"Artem Svetlov — CC BY 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:Auto_Lada_Niva_Moscow_Vosmaya_ulitsa_Sokolinoy_Gory_Е354ОО799_2025-08_1756480951.JPG"},
-      {id:'car-zaz-968',brand:'ЗАЗ',title:'968М «Запорожец»',fullTitle:'ЗАЗ-968М «Запорожец»',type:'hatchback',category:'hatchback',price:3500,color:'#d5a45c',description:'Легендарный компактный автомобиль с округлым кузовом.',style:'zaporozhets',photoFile:"ZAZ-968M.JPG",photoCredit:"Kirill Borisenko — CC BY-SA 3.0",photoPage:"https://commons.wikimedia.org/wiki/File:ZAZ-968M.JPG"},
-      {id:'car-vaz-2101',brand:'ВАЗ',title:'2101 «Копейка»',fullTitle:'ВАЗ-2101 «Жигули»',type:'sedan',category:'sedan',price:4500,color:'#e2c99b',description:'Классические «Жигули» первого поколения.',style:'classic2101',photoFile:"VAZ-2101.jpg",photoCredit:"Midnight Runner — CC BY-SA 3.0",photoPage:"https://commons.wikimedia.org/wiki/File:VAZ-2101.jpg"},
-      {id:'car-bmw-e36',brand:'BMW',title:'E36',fullTitle:'BMW 3 Series E36',type:'sedan',category:'sedan',price:16000,color:'#6685a5',description:'Легендарная «тройка» девяностых.',style:'bmw-e36',photoFile:"BMW 318i (E36) Front.jpg",photoCredit:"M.rJirapat — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_318i_(E36)_Front.jpg"},
-      {id:'car-bmw-e46',brand:'BMW',title:'E46',fullTitle:'BMW 3 Series E46',type:'sedan',category:'sedan',price:18000,color:'#496e91',description:'Одна из самых узнаваемых классических BMW.',style:'bmw-e46',photoFile:"BMW E46 sedan.jpg",photoCredit:"MichalPL — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_E46_sedan.jpg"},
-      {id:'car-bmw-e60',brand:'BMW',title:'E60',fullTitle:'BMW 5 Series E60',type:'sedan',category:'premium',price:24000,color:'#6b7585',description:'Выразительная «пятёрка» с динамичным дизайном.',style:'bmw-e60',photoFile:"BMW 5er (E60) front 20100508.jpg",photoCredit:"M 93 — лицензия атрибуции (см. страницу файла)",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_5er_(E60)_front_20100508.jpg"},
-      {id:'car-bmw-e90',brand:'BMW',title:'E90',fullTitle:'BMW 3 Series E90',type:'sedan',category:'premium',price:26000,color:'#9a9fa5',description:'Спортивный седан третьей серии.',style:'bmw-e90',photoFile:"BMW E90 front 20090301.jpg",photoCredit:"Rudolf Stricker — лицензия атрибуции (см. страницу файла)",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_E90_front_20090301.jpg"},
-      {id:'car-bmw-f30',brand:'BMW',title:'F30',fullTitle:'BMW 3 Series F30',type:'sedan',category:'premium',price:32000,color:'#3f668a',description:'Современная классика BMW с длинным капотом.',style:'bmw-f30',photoFile:"BMW 320d M Sport (F30) front.jpg",photoCredit:"Tokumeigakarinoaoshima — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_320d_M_Sport_(F30)_front.jpg"},
-      {id:'car-mercedes-w220',brand:'MERCEDES-BENZ',title:'S-Class W220',fullTitle:'Mercedes-Benz S-Class W220',type:'sedan',category:'premium',price:26000,color:'#b2b7bb',description:'Представительский S-класс начала 2000-х.',style:'mercedes-w220',photoFile:"Mercedes-Benz S Class W220 (9940090793).jpg",photoCredit:"nakhon100 — CC BY 2.0",photoPage:"https://commons.wikimedia.org/wiki/File:Mercedes-Benz_S_Class_W220_(9940090793).jpg"},
-      {id:'car-mercedes-w221',brand:'MERCEDES-BENZ',title:'S-Class W221',fullTitle:'Mercedes-Benz S-Class W221',type:'sedan',category:'premium',price:32000,color:'#596c7b',description:'Солидный S-класс с узнаваемой линией кузова.',style:'mercedes-w221',photoFile:"Mercedes-Benz W221.jpg",photoCredit:"Ra-smit — CC BY-SA 3.0",photoPage:"https://commons.wikimedia.org/wiki/File:Mercedes-Benz_W221.jpg"},
-      {id:'car-mercedes-w222',brand:'MERCEDES-BENZ',title:'S-Class W222',fullTitle:'Mercedes-Benz S-Class W222',type:'sedan',category:'premium',price:42000,color:'#252d35',description:'Роскошный представительский седан.',style:'mercedes-w222',photoFile:"MERCEDES-BENZ S-CLASS (W222) HONG KONG.jpg",photoCredit:"Dinkun Chen — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_S-CLASS_(W222)_HONG_KONG.jpg"},
-      {id:'car-mercedes-w223',brand:'MERCEDES-BENZ',title:'S-Class W223',fullTitle:'Mercedes-Benz S-Class W223',type:'sedan',category:'premium',price:55000,color:'#7b8791',description:'Современный флагманский S-класс.',style:'mercedes-w223',photoFile:"0 Mercedes-Benz W223 3.jpg",photoCredit:"Benespit — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:0_Mercedes-Benz_W223_3.jpg"},
-      {id:'car-mercedes-g-class',brand:'MERCEDES-BENZ',title:'G-Class',fullTitle:'Mercedes-Benz G-Class «Гелик»',type:'offroad',category:'offroad',price:65000,color:'#3b4641',description:'Легендарный угловатый внедорожник G-класса.',style:'gelik',photoFile:"2019 Mercedes G 63 AMG 4Matic Auto.jpg",photoCredit:"Calreyn88 — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:2019_Mercedes_G_63_AMG_4Matic_Auto.jpg"},
-      {id:'car-kia-rio',brand:'KIA',title:'Rio',fullTitle:'Kia Rio',type:'sedan',category:'sedan',price:12000,color:'#bd5360',description:'Практичный городской седан.',style:'kia-rio',photoFile:"2012 Kia Rio (UB MY12) Si sedan (2016-01-04) 01.jpg",photoCredit:"OSX — CC0 1.0",photoPage:"https://commons.wikimedia.org/wiki/File:2012_Kia_Rio_(UB_MY12)_Si_sedan_(2016-01-04)_01.jpg"},
-      {id:'car-nissan-skyline-r34',brand:'NISSAN',title:'Skyline GT-R R34',fullTitle:'Nissan Skyline GT-R R34',type:'hatchback',category:'premium',price:70000,color:'#3977a7',description:'Культовое японское купе с гоночным характером.',style:'skyline-r34',photoFile:"1999 Nissan Skyline (R34) GT-R IMG 4990.jpg",photoCredit:"Alexander Migl — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:1999_Nissan_Skyline_(R34)_GT-R_IMG_4990.jpg"},
-      {id:'car-bmw-e34',brand:'BMW',title:'E34',fullTitle:'BMW 5 Series E34',type:'sedan',category:'sedan',price:14000,color:'#6484a3',description:'Классическая «пятёрка» с угловатым силуэтом 90-х.',style:'bmw-e34',photoFile:"BMW E34.JPG",photoCredit:"Thomas doerfer — CC BY-SA 3.0",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_E34.JPG"},
-      {id:'car-daewoo-matiz',brand:'DAEWOO',title:'Matiz',fullTitle:'Daewoo Matiz',type:'hatchback',category:'hatchback',price:5000,color:'#7eaaa0',description:'Маленький и узнаваемый городской автомобиль.',style:'matiz',photoFile:"Daewoo Matiz 20090815 front.JPG",photoCredit:"M 93 — лицензия атрибуции (см. страницу файла)",photoPage:"https://commons.wikimedia.org/wiki/File:Daewoo_Matiz_20090815_front.JPG"}
-    ];    function communitySafeKey(value){return String(value==null?'':value).replace(/[.#$\[\]\/]/g,'_')||'empty';}
+function communitySafeKey(value){return String(value==null?'':value).replace(/[.#$\[\]\/]/g,'_')||'empty';}
     function getCommunityOrgKey(){
       var user=window.currentUser;
       if(!user)return 'mine';
@@ -11537,30 +11477,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     function getCommunityClothingItem(itemId){
       return communityClothingCatalog.find(function(item){return item.id===String(itemId||'');})||null;
     }
-    function getCommunityVehicleItem(vehicleId){
-      return communityVehicleCatalog.find(function(item){return item.id===String(vehicleId||'');})||null;
-    }
-    function getCommunityActiveVehicle(state){
-      var garage=state&&state.garage&&typeof state.garage==='object'?state.garage:{};
-      return getCommunityVehicleItem(garage.activeVehicleId);
-    }
-    function buildCommunityVehicleSvg(vehicleId){
-      var item=getCommunityVehicleItem(vehicleId);
-      if(!item||!item.photoFile)return '';
-      var src='https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(item.photoFile)+'?width=900';
-      var alt=String(item.fullTitle||'Автомобиль').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-      var credit=String(item.photoCredit||'Фотография Wikimedia Commons').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-      var page=String(item.photoPage||'https://commons.wikimedia.org/').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-      return '<a class="community-vehicle-photo-link" href="'+page+'" target="_blank" rel="noopener noreferrer" aria-label="Источник фотографии: '+credit+'"><img class="community-vehicle-photo" src="'+src+'" alt="'+alt+'" title="'+credit+'" loading="lazy" decoding="async" referrerpolicy="no-referrer"></a>';
-    }
-        function buildCommunityAvatarScene(userId,previewClothingId,previewVehicleId){
-      var state=getCommunityUserGameState(userId);
-      var active=getCommunityActiveVehicle(state);
-      var preview=getCommunityVehicleItem(previewVehicleId);
-      var vehicle=preview||active;
-      var markup='<div class="community-avatar-scene'+(vehicle?' has-vehicle':'')+'"><div class="community-avatar-person">'+buildCommunityAvatarSvg(userId,previewClothingId)+'</div>';
-      if(vehicle)markup+='<div class="community-avatar-vehicle">'+buildCommunityVehicleSvg(vehicle.id)+'</div>';
-      return markup+'</div>';
+    function buildCommunityAvatarScene(userId,previewClothingId){
+      return '<div class="community-avatar-scene"><div class="community-avatar-person">'+buildCommunityAvatarSvg(userId,previewClothingId)+'</div></div>';
     }
     function buildCommunityAvatarSvg(userId,previewItemId){
       var state=getCommunityUserGameState(userId);
@@ -11888,16 +11806,13 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       var equipped=getCommunityEquippedClothes(state);
       var owned=communityStatusCatalog.filter(function(item){return !!purchases[item.id];});
       var ownedClothes=communityClothingCatalog.filter(function(item){return !!purchases[item.id];});
-      var ownedVehicles=communityVehicleCatalog.filter(function(item){return !!purchases[item.id];});
-      var activeVehicle=getCommunityActiveVehicle(state);
-      if(owned.length||ownedClothes.length||ownedVehicles.length){
+      if(owned.length||ownedClothes.length){
         var chips=document.createElement('div');chips.className='community-owned-list';
         owned.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent=item.icon+' '+item.title+(String(state.activeStatusId||'')===item.id?' · надет':'');chips.appendChild(chip);});
         ownedClothes.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent=item.icon+' '+item.title+(String(equipped[item.slot]||'')===item.id?' · надето':'');chips.appendChild(chip);});
-        ownedVehicles.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent='🚗 '+item.fullTitle+(activeVehicle&&activeVehicle.id===item.id?' · выбран':'');chips.appendChild(chip);});
         collection.appendChild(chips);
       }else{
-        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных предметов. Первые вещи, автомобили и статусы уже ждут в магазине.';collection.appendChild(collectionNote);
+        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных предметов. Первые вещи и статусы уже ждут в магазине.';collection.appendChild(collectionNote);
       }
       card.appendChild(collection);
       var action=document.createElement('button');action.type='button';action.className='btn btn-primary';action.style.marginTop='14px';
@@ -11925,16 +11840,11 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       var editor=document.createElement('section');editor.className='community-avatar-editor';
       var previewPanel=document.createElement('div');previewPanel.className='community-avatar-preview-panel';
       var previewTitle=document.createElement('div');previewTitle.className='community-avatar-panel-title';previewTitle.textContent='Твой аватар';
-      var avatarStage=document.createElement('div');avatarStage.className='community-avatar-stage';avatarStage.innerHTML=buildCommunityAvatarScene(user.id,communityAvatarPreviewItemId,communityVehiclePreviewId);
-      var previewCaption=document.createElement('div');previewCaption.className='community-avatar-caption';previewCaption.textContent=(communityAvatarPreviewItemId||communityVehiclePreviewId)?'Примерка · предмет ещё не куплен':'Текущий образ · меняй вещи и автомобиль как захочешь';
+      var avatarStage=document.createElement('div');avatarStage.className='community-avatar-stage';avatarStage.innerHTML=buildCommunityAvatarScene(user.id,communityAvatarPreviewItemId);
+      var previewCaption=document.createElement('div');previewCaption.className='community-avatar-caption';previewCaption.textContent=communityAvatarPreviewItemId?'Примерка · предмет ещё не куплен':'Текущий образ · меняй вещи как захочешь';
       var previewActions=document.createElement('div');previewActions.className='community-avatar-preview-actions';
-      if(communityAvatarPreviewItemId||communityVehiclePreviewId){
-        var resetPreview=document.createElement('button');resetPreview.type='button';resetPreview.className='btn btn-secondary';resetPreview.textContent='Сбросить примерку';resetPreview.addEventListener('click',function(){communityAvatarPreviewItemId='';communityVehiclePreviewId='';renderCommunityShop();});previewActions.appendChild(resetPreview);
-      }
-      var garageState=getCommunityUserGameState(user.id);
-      var activeGarageVehicle=getCommunityActiveVehicle(garageState);
-      if(activeGarageVehicle){
-        var hideVehicle=document.createElement('button');hideVehicle.type='button';hideVehicle.className='btn btn-secondary';hideVehicle.style.marginLeft='7px';hideVehicle.textContent='Убрать авто';hideVehicle.addEventListener('click',function(){setCommunityActiveVehicle(null);});previewActions.appendChild(hideVehicle);
+      if(communityAvatarPreviewItemId){
+        var resetPreview=document.createElement('button');resetPreview.type='button';resetPreview.className='btn btn-secondary';resetPreview.textContent='Сбросить примерку';resetPreview.addEventListener('click',function(){communityAvatarPreviewItemId='';renderCommunityShop();});previewActions.appendChild(resetPreview);
       }
       previewPanel.appendChild(previewTitle);previewPanel.appendChild(avatarStage);previewPanel.appendChild(previewCaption);previewPanel.appendChild(previewActions);
       var wardrobe=document.createElement('div');wardrobe.className='community-avatar-wardrobe';
@@ -11969,7 +11879,6 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(!items.length){var emptyClothes=document.createElement('div');emptyClothes.className='community-empty';emptyClothes.textContent='В этой категории пока нет вещей.';clothingGrid.appendChild(emptyClothes);}
       wardrobe.appendChild(wardrobeTitle);wardrobe.appendChild(categories);wardrobe.appendChild(clothingGrid);
       editor.appendChild(previewPanel);editor.appendChild(wardrobe);host.appendChild(editor);
-      renderCommunityVehicleShowroom(host,user,wallet);
 
       var statusTitle=document.createElement('h3');statusTitle.className='community-shop-section-title';statusTitle.textContent='Статусы профиля';host.appendChild(statusTitle);
       var statusNote=document.createElement('p');statusNote.style.cssText='font-size:12px;color:var(--text-light);margin:0 0 8px;';statusNote.textContent='Статусы отображаются рядом с именем в сообществе и сообщениях.';host.appendChild(statusNote);
@@ -11991,104 +11900,6 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         article.appendChild(icon);article.appendChild(heading);article.appendChild(description);article.appendChild(price);article.appendChild(button);statusGrid.appendChild(article);
       });
       host.appendChild(statusGrid);
-    }
-    function renderCommunityVehicleShowroom(host,user,wallet){
-      var state=getCommunityUserGameState(user.id);
-      var garage=state.garage&&typeof state.garage==='object'?state.garage:{};
-      var activeId=String(garage.activeVehicleId||'');
-      var activeVehicle=getCommunityVehicleItem(activeId);
-      var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
-      var ownedCount=communityVehicleCatalog.filter(function(item){return !!purchases[item.id];}).length;
-      var section=document.createElement('section');section.className='community-vehicle-section';
-      var head=document.createElement('div');head.className='community-vehicle-head';
-      var titleBlock=document.createElement('div');
-      var title=document.createElement('h3');title.textContent='Автосалон и мой гараж';titleBlock.appendChild(title);
-      var description=document.createElement('p');description.textContent='Выбирай настоящие модели, знакомые по российским дорогам. Машину можно примерить до покупки, а купленные автомобили навсегда остаются в гараже.';titleBlock.appendChild(description);
-      var count=document.createElement('span');count.className='community-org-pill';count.textContent='В гараже: '+ownedCount;
-      head.appendChild(titleBlock);head.appendChild(count);section.appendChild(head);
-      var activeRow=document.createElement('div');activeRow.className='community-vehicle-active';
-      var activeText=document.createElement('div');
-      var activeLabel=document.createElement('strong');activeLabel.textContent=activeVehicle?'Сейчас у аватара: '+activeVehicle.fullTitle:'У аватара пока нет автомобиля';activeText.appendChild(activeLabel);
-      var activeHint=document.createElement('span');activeHint.textContent=activeVehicle?'Выбери другую машину в гараже — смена бесплатная.':'Купи первую машину, чтобы она появилась рядом с персонажем.';activeText.appendChild(activeHint);
-      activeRow.appendChild(activeText);
-      if(activeVehicle){
-        var clearButton=document.createElement('button');clearButton.type='button';clearButton.className='btn btn-secondary';clearButton.textContent='Убрать с аватара';clearButton.addEventListener('click',function(){setCommunityActiveVehicle(null);});activeRow.appendChild(clearButton);
-      }
-      section.appendChild(activeRow);
-      var categories=document.createElement('div');categories.className='community-vehicle-categories';
-      communityVehicleCategories.forEach(function(category){
-        var button=document.createElement('button');button.type='button';button.className='community-vehicle-category'+(communityVehicleCategory===category.id?' active':'');button.textContent=category.label;
-        button.setAttribute('aria-pressed',communityVehicleCategory===category.id?'true':'false');
-        button.addEventListener('click',function(){communityVehicleCategory=category.id;renderCommunityShop();});
-        categories.appendChild(button);
-      });
-      section.appendChild(categories);
-      var grid=document.createElement('div');grid.className='community-vehicle-grid';
-      communityVehicleCatalog.filter(function(item){return communityVehicleCategory==='all'||item.category===communityVehicleCategory;}).forEach(function(item){
-        var owned=!!purchases[item.id];
-        var active=activeId===item.id;
-        var previewing=String(communityVehiclePreviewId||'')===item.id;
-        var card=document.createElement('article');card.className='community-vehicle-card'+(active?' active':'')+(previewing?' previewing':'');
-        var art=document.createElement('div');art.className='community-vehicle-art';art.innerHTML=buildCommunityVehicleSvg(item.id);
-        var brand=document.createElement('div');brand.className='community-vehicle-brand';brand.textContent=item.brand;
-        var model=document.createElement('h4');model.textContent=item.title;
-        var description=document.createElement('p');description.textContent=item.description;
-        var meta=document.createElement('div');meta.className='community-vehicle-meta';
-        var price=document.createElement('span');price.className='community-vehicle-price';price.textContent=formatCommunityCoins(item.price);
-        var tag=document.createElement('span');tag.className='community-vehicle-tag';tag.textContent=item.type==='sedan'?'Седан':item.type==='hatchback'?'Хэтчбек':item.type==='crossover'?'Кроссовер':item.type==='offroad'?'Внедорожник':'Премиум';
-        meta.appendChild(price);meta.appendChild(tag);
-        var previewButton=document.createElement('button');previewButton.type='button';previewButton.className='btn community-vehicle-preview';previewButton.textContent=previewing?'Примеряешь':'Примерить';
-        previewButton.addEventListener('click',function(){communityVehiclePreviewId=previewing?'':item.id;communityAvatarPreviewItemId='';renderCommunityShop();});
-        var action=document.createElement('button');action.type='button';action.className='btn '+(active?'btn-secondary':'btn-primary');
-        if(active){action.textContent='Выбрана';action.disabled=true;}
-        else if(owned){action.textContent='Выбрать из гаража';action.addEventListener('click',function(){setCommunityActiveVehicle(item.id);});}
-        else{action.textContent='Купить автомобиль';action.disabled=wallet.balance<item.price;action.addEventListener('click',function(){buyCommunityVehicle(item.id);});}
-        card.appendChild(art);card.appendChild(brand);card.appendChild(model);card.appendChild(description);card.appendChild(meta);card.appendChild(previewButton);card.appendChild(action);grid.appendChild(card);
-      });
-      section.appendChild(grid);host.appendChild(section);
-    }
-    function setCommunityActiveVehicle(vehicleId){
-      if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
-      var state=getCommunityUserGameState(window.currentUser.id);
-      var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
-      if(vehicleId&&!purchases[vehicleId]){alert('Сначала купи этот автомобиль.');return;}
-      if(vehicleId&&!getCommunityVehicleItem(vehicleId))return;
-      db.ref('community_game_data/'+communitySafeKey(getCommunityOrgKey())+'/'+communitySafeKey(window.currentUser.id)).update({
-        'garage/activeVehicleId':vehicleId||null,
-        updatedAt:Date.now()
-      }).then(function(){
-        communityVehiclePreviewId='';renderCommunityShop();
-        if(communityCurrentTab==='profile'&&String(communitySelectedUserId)===String(window.currentUser.id))renderCommunityProfile(String(window.currentUser.id));
-      }).catch(function(error){alert('Не удалось сменить автомобиль: '+String(error&&error.message||error));});
-    }
-    function buyCommunityVehicle(vehicleId){
-      if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
-      var item=getCommunityVehicleItem(vehicleId);if(!item)return;
-      var userId=String(window.currentUser.id);
-      var earned=getCommunityRevenueForUser(window.currentUser);
-      var ref=db.ref('community_game_data/'+communitySafeKey(getCommunityOrgKey())+'/'+communitySafeKey(userId));
-      var failureReason='';
-      ref.transaction(function(current){
-        current=current&&typeof current==='object'?current:{};
-        var purchases=current.purchases&&typeof current.purchases==='object'?current.purchases:{};
-        if(purchases[item.id]){failureReason='owned';return;}
-        var spent=Object.keys(purchases).reduce(function(total,key){return total+(purchases[key]?Math.max(0,Number(purchases[key].price)||0):0);},0);
-        if(earned-spent<item.price){failureReason='funds';return;}
-        purchases[item.id]={id:item.id,title:item.fullTitle,price:item.price,purchasedAt:Date.now(),type:'vehicle',category:item.category};
-        current.purchases=purchases;
-        current.garage=current.garage&&typeof current.garage==='object'?current.garage:{};
-        current.garage.activeVehicleId=item.id;
-        current.updatedAt=Date.now();
-        return current;
-      },function(error,committed){
-        if(error){alert('Не удалось купить автомобиль: '+String(error.message||error));return;}
-        if(!committed){
-          alert(failureReason==='owned'?'Этот автомобиль уже есть в гараже.':failureReason==='funds'?'Недостаточно звёзд для покупки.':'Покупка не выполнена. Обнови страницу и повтори.');
-          return;
-        }
-        communityVehiclePreviewId='';renderCommunityShop();
-        if(communityCurrentTab==='profile'&&String(communitySelectedUserId)===String(userId))renderCommunityProfile(userId);
-      },false);
     }
     function setCommunityEquippedClothing(itemId,equip){
       if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
