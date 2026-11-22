@@ -11413,7 +11413,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       {id:'achievement',label:'За достижения',icon:'🏆'}
     ];
     var communityStatusCategory='all';
-    function communitySafeKey(value)function communitySafeKey(value){return String(value==null?'':value).replace(/[.#$\[\]\/]/g,'_')||'empty';}
+    function communitySafeKey(value){return String(value==null?'':value).replace(/[.#$\[\]\/]/g,'_')||'empty';}
     function getCommunityOrgKey(){
       var user=window.currentUser;
       if(!user)return 'mine';
