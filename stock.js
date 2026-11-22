@@ -70,6 +70,38 @@
     return !!d && (d === 'mixed' || d === p.direction);
   }
   function qty(pId,sId){ return Number(balances[String(sId)] && balances[String(sId)][String(pId)] && balances[String(sId)][String(pId)].quantity || 0); }
+  function stockBalanceUnits(productId,locationId){
+    var balance=balances[String(locationId)]&&balances[String(locationId)][String(productId)]||{};
+    var sizeCount=Array.isArray(balance.sizes)?balance.sizes.length:0;
+    return Math.max(qty(productId,locationId),sizeCount);
+  }
+  function saleOptionIssue(product,locationId){
+    var sid=String(locationId||'');
+    if(visibleStoreIds().map(String).indexOf(sid)===-1)return '';
+    var units=stockBalanceUnits(product.id,sid);
+    if(units<=0)return '';
+    if(!product||product.org!==org())return '';
+    if(product.status!=='active')return product.status==='pending'?'Карточка ожидает проверки':'Карточка не опубликована';
+    var direction=storeDirection(sid);
+    if(!direction)return 'У магазина не задано направление склада';
+    if(direction!=='mixed'&&product.direction!==direction)return 'Направление карточки не совпадает с направлением магазина';
+    var balance=balances[sid]&&balances[sid][String(product.id)]||{};
+    var sizes=Array.isArray(balance.sizes)?balance.sizes:[];
+    if(!sizes.length)return 'Есть остаток ('+units+' шт.), но не добавлены размеры';
+    return '';
+  }
+  function getSaleOptionIssues(product,locationFilter){
+    var locations=visibleStoreIds().map(String);
+    if(locationFilter&&locationFilter!=='all'){
+      locationFilter=String(locationFilter);
+      if(locations.indexOf(locationFilter)===-1)return [];
+      locations=[locationFilter];
+    }
+    return locations.map(function(location){
+      var reason=saleOptionIssue(product,location);
+      return reason?{location:location,reason:reason,quantity:stockBalanceUnits(product.id,location)}:null;
+    }).filter(Boolean);
+  }
   function sizeLabel(sizes){
     var counts={}; (Array.isArray(sizes)?sizes:[]).forEach(function(s){var k=String(s);counts[k]=(counts[k]||0)+1;});
     var letters=['XXS','XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
@@ -354,8 +386,15 @@
     var stores=visibleStoreIds();
     var locations=stockLocationIds();
     if(isAdmin() && selectedStoreId!=='all' && locations.length && locations.indexOf(String(selectedStoreId))===-1){ selectedStoreId=String(stores[0]||warehouseId()); persistSelectedStore(); }
-    var list=allProducts().filter(function(p){return isAdmin() ? (activeFilter==='all' || (activeFilter==='pending' ? p.status==='pending' : activeFilter==='active' ? p.status==='active' : p.direction===activeFilter)) : sellerCanSee(p);});
-    if(isAdmin() && adminTab==='shops' && selectedStoreId!=='all') list=list.filter(function(p){return qty(p.id,selectedStoreId)>0;});
+    var list=allProducts().filter(function(p){
+      if(!isAdmin())return sellerCanSee(p);
+      if(activeFilter==='error')return getSaleOptionIssues(p,selectedStoreId).length>0;
+      if(activeFilter==='all')return true;
+      if(activeFilter==='pending')return p.status==='pending';
+      if(activeFilter==='active')return p.status==='active';
+      return p.direction===activeFilter;
+    });
+    if(isAdmin() && adminTab==='shops' && selectedStoreId!=='all' && activeFilter!=='error') list=list.filter(function(p){return qty(p.id,selectedStoreId)>0;});
     if(searchText) list=list.filter(function(p){return norm([p.name,p.article,p.category,p.color,p.size,p.brand,p.model].join(' ')).indexOf(norm(searchText))!==-1;});
     list.sort(function(a,b){return Number(b.updatedAt||b.createdAt||0)-Number(a.updatedAt||a.createdAt||0);});
     var html='';
@@ -374,22 +413,24 @@
     }
     if(!isAdmin() || adminTab==='shops'){
     html+='<div class="card" style="margin-bottom:14px;"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;"><div><h3 style="margin:0 0 4px;">'+(isAdmin()?(selectedStoreId==='all'?'Все товары':'Товары: «'+esc(stockLocationName(selectedStoreId))+'»'):'Товары')+'</h3><div style="font-size:12px;color:var(--text-light);">'+(isAdmin()?'Общий каталог организации':'Каталог вашего магазина')+'</div></div>'+(isAdmin()&&selectedStoreId!=='all'?'<button class="btn btn-secondary" type="button" id="stockOpenCatalog">＋ Из общего каталога</button>':'')+'<button class="btn btn-primary" type="button" onclick="stockOpenForm()">＋ Новая карточка</button>'+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"><input id="stockSearch" type="search" placeholder="Поиск по названию, артикулу, цвету…" value="'+esc(searchText)+'" oninput="stockSetSearch(this.value)" style="flex:1;min-width:180px;">';
-    if(isAdmin()) html+='<select id="stockFilter" onchange="stockSetFilter(this.value)" style="min-width:150px;"><option value="all" '+(activeFilter==='all'?'selected':'')+'>Все карточки</option><option value="pending" '+(activeFilter==='pending'?'selected':'')+'>Ожидают проверки</option><option value="active" '+(activeFilter==='active'?'selected':'')+'>Опубликованные</option><option value="krossy" '+(activeFilter==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(activeFilter==='easy'?'selected':'')+'>Изи</option></select>';
+    if(isAdmin()) html+='<select id="stockFilter" onchange="stockSetFilter(this.value)" style="min-width:150px;"><option value="all" '+(activeFilter==='all'?'selected':'')+'>Все карточки</option><option value="pending" '+(activeFilter==='pending'?'selected':'')+'>Ожидают проверки</option><option value="active" '+(activeFilter==='active'?'selected':'')+'>Опубликованные</option><option value="krossy" '+(activeFilter==='krossy'?'selected':'')+'>Кроссы</option><option value="easy" '+(activeFilter==='easy'?'selected':'')+'>Изи</option><option value="error" '+(activeFilter==='error'?'selected':'')+'>С ошибкой</option></select>';
     html+='</div><div id="stockStatus" style="font-size:12px;margin-top:8px;color:var(--text-light);"></div></div>';
     if(isAdmin()&&mergeSelectingId){
       var selectedMain=products[mergeSelectingId];
-      html+='<div class="card" style="margin-bottom:12px;border:1px solid var(--warning);"><b>Выбрана главная карточка:</b> '+esc(selectedMain&&selectedMain.name||'Товар')+'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">Теперь выберите вторую карточку. Если у обеих карточек есть остатки в одной локации, размеры и количество будут сложены без потери товара.</div></div>';
+      html+='<div class="card" style="margin-bottom:12px;border:1px solid var(--warning);"><b>Выбрана главная карточка:</b> '+esc(selectedMain&&selectedMain.name||'Товар')+'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">'+(mergeSelectingStoreId==='all'?'Теперь выберите вторую карточку. Остатки и размеры объединятся отдельно во всех магазинах и на складе хранения.':'Теперь выберите вторую карточку. Если у обеих карточек есть остатки в одной локации, размеры и количество будут сложены без потери товара.')+'</div></div>';
     }
-    if(!list.length) html+='<div class="card" style="text-align:center;color:var(--text-light);">В выбранном магазине или на складе пока нет товаров с остатком.</div>';
+    if(!list.length) html+='<div class="card" style="text-align:center;color:var(--text-light);">'+(activeFilter==='error'?'Карточек с остатком, которые не попадают в список продажи, не найдено.':'В выбранном магазине или на складе пока нет товаров с остатком.')+'</div>';
     list.forEach(function(p){
       var balanceStoreId=isAdmin()?String(selectedStoreId):String(storeId());
       var currentBalance=balances[balanceStoreId]&&balances[balanceStoreId][String(p.id)]||{};
-      var q=isAdmin()?(selectedStoreId==='all'?locations.reduce(function(sum,loc){return sum+qty(p.id,loc);},0):qty(p.id,selectedStoreId)):qty(p.id,storeId());
+      var q=isAdmin()?(selectedStoreId==='all'?locations.reduce(function(sum,loc){return sum+stockBalanceUnits(p.id,loc);},0):qty(p.id,selectedStoreId)):qty(p.id,storeId());
       var shownSizes=selectedStoreId==='all'&&isAdmin()?locations.reduce(function(all,loc){var b=balances[loc]&&balances[loc][String(p.id)];return all.concat(b&&Array.isArray(b.sizes)?b.sizes:[]);},[]):(Array.isArray(currentBalance.sizes)?currentBalance.sizes:[]);
       var sizesHtml=shownSizes.length?'<div style="font-size:13px;margin-top:6px;"><span style="color:var(--text-light);">Размеры:</span> <b>'+esc(sizeLabel(shownSizes))+'</b></div>':'<div style="font-size:12px;color:var(--text-light);margin-top:6px;">Размеры пока не добавлены</div>';
       var state=p.status==='pending'?'Ожидает проверки':p.status==='active'?'Опубликован':'Архив';
       var costHtml=isAdmin()&&p.purchaseCost!=null?'<div style="font-size:13px;margin-top:5px;">Закупка: <b>'+esc(p.purchaseCost)+'</b></div>':'';
-      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div '+(isSeller()&&p.status==='active'?'data-stock-photo="'+esc(p.id)+'" title="Нажмите, чтобы заменить фото"':'')+' style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;'+(isSeller()&&p.status==='active'?'cursor:pointer;outline:1px dashed var(--primary);':'')+'">'+(p.photoUrl?'<img src="'+esc(cardPhotoUrl(p.photoUrl))+'" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b '+(isSeller()&&p.status==='active'?'data-stock-rename="'+esc(p.id)+'" title="Нажмите, чтобы изменить название" style="cursor:pointer;border-bottom:1px dashed var(--primary);"':'')+'>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color].filter(Boolean).join(' · '))+'</div>'+sizesHtml+'<div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div>'+costHtml+'<div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?(selectedStoreId==='all'?' шт. всего':' шт. в этом магазине'):' шт.')+'</div></div><div class="stock-card-actions" style="display:flex;gap:5px;flex-wrap:wrap;">';
+      var saleIssues=isAdmin()&&activeFilter==='error'?getSaleOptionIssues(p,selectedStoreId):[];
+      var saleIssueHtml=saleIssues.length?'<div style="font-size:12px;line-height:1.45;color:#b42336;margin-top:7px;padding:7px 9px;border:1px solid #efc1c8;border-radius:8px;background:#fff7f7;"><b>Не попадает в продажу:</b> '+esc(saleIssues.map(function(item){return stockLocationName(item.location)+': '+item.reason;}).join(' · '))+'</div>':'';
+      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div '+(isSeller()&&p.status==='active'?'data-stock-photo="'+esc(p.id)+'" title="Нажмите, чтобы заменить фото"':'')+' style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;'+(isSeller()&&p.status==='active'?'cursor:pointer;outline:1px dashed var(--primary);':'')+'">'+(p.photoUrl?'<img src="'+esc(cardPhotoUrl(p.photoUrl))+'" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b '+(isSeller()&&p.status==='active'?'data-stock-rename="'+esc(p.id)+'" title="Нажмите, чтобы изменить название" style="cursor:pointer;border-bottom:1px dashed var(--primary);"':'')+'>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color].filter(Boolean).join(' · '))+'</div>'+sizesHtml+'<div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div>'+costHtml+(isAdmin()&&selectedStoreId==='all'?'<div style="font-size:13px;margin-top:7px;"><span style="color:var(--text-light);">Остатки по локациям:</span><div style="font-weight:600;margin-top:3px;">'+esc(locations.map(function(location){return stockLocationName(location)+': '+stockBalanceUnits(p.id,location)+' шт.';}).join(' · '))+'</div></div>':'<div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. в этом магазине':' шт.')+'</div>')+saleIssueHtml+'</div><div class="stock-card-actions" style="display:flex;gap:5px;flex-wrap:wrap;">';
       if(canEditCard(p)) html+='<button class="btn btn-secondary" type="button" onclick="stockOpenForm(\''+esc(p.id)+'\')">Изменить</button>';
       if(isAdmin() && selectedStoreId!=='all' && p.status==='active') html+='<button class="btn btn-primary" type="button" onclick="stockMove(\''+esc(p.id)+'\',\''+esc(balanceStoreId)+'\')">Переместить</button>';
       if(isAdmin() && p.status==='active'){
@@ -463,8 +504,11 @@
     root.querySelectorAll('[data-stock-photo]').forEach(function(el){el.addEventListener('click',function(){chooseProductPhoto(el.getAttribute('data-stock-photo'));});});
     root.querySelectorAll('[data-stock-merge-start]').forEach(function(b){b.addEventListener('click',function(){
       var origin=String(selectedStoreId||'');
-      if(!origin||origin==='all'||stockLocationIds().map(String).indexOf(origin)===-1){alert('Сначала откройте конкретный магазин или склад и выберите карточку в нём.');return;}
       var productId=String(b.getAttribute('data-stock-merge-start')||'');
+      if(origin==='all'){
+        mergeSelectingId=productId;mergeSelectingStoreId='all';render();return;
+      }
+      if(!origin||stockLocationIds().map(String).indexOf(origin)===-1){alert('Сначала откройте конкретный магазин или склад и выберите карточку в нём.');return;}
       if(qty(productId,origin)<=0){alert('У этой карточки нет остатка в выбранной локации.');return;}
       mergeSelectingId=productId;mergeSelectingStoreId=origin;render();
     });});
@@ -977,10 +1021,9 @@
     modal.addEventListener('click',function(event){if(event.target===modal)close();});
   }
   function activeStockLocations(productId){
-    // Include the organization's warehouse as well as retail stores.
-    return stockLocationIds().filter(function(location){
-      return Number(qty(productId,location))>0;
-    }).map(String);
+    // Include retail stores and the organization's warehouse, even if the quantity field is stale
+    // but the size list still contains physical units.
+    return stockLocationIds().filter(function(location){return stockBalanceUnits(productId,location)>0;}).map(String);
   }
   function mergeEligibility(mainId,sourceId,mainOrigin,sourceOrigin){
     var main=products[String(mainId)],source=products[String(sourceId)];
@@ -990,12 +1033,15 @@
     if(main.org!==source.org || (main.direction&&source.direction&&main.direction!==source.direction))return {ok:false,reason:'Карточки должны относиться к одной организации и направлению.'};
     var locations=stockLocationIds().map(String);
     mainOrigin=String(mainOrigin||'');sourceOrigin=String(sourceOrigin||'');
-    if(!mainOrigin||!sourceOrigin||mainOrigin==='all'||sourceOrigin==='all'||locations.indexOf(mainOrigin)===-1||locations.indexOf(sourceOrigin)===-1)return {ok:false,reason:'Выберите для каждой карточки отдельный магазин или склад хранения.'};
-    if(mainOrigin===sourceOrigin)return {ok:false,reason:'Нельзя объединять две карточки из одного магазина или склада. Выберите другую локацию.'};
-    if(qty(mainId,mainOrigin)<=0)return {ok:false,reason:'У первой карточки нет остатка в выбранной локации: '+stockLocationName(mainOrigin)+'.'};
-    if(qty(sourceId,sourceOrigin)<=0)return {ok:false,reason:'У второй карточки нет остатка в выбранной локации: '+stockLocationName(sourceOrigin)+'.'};
+    var allLocations=mainOrigin==='all'&&sourceOrigin==='all';
+    if(!allLocations){
+      if(!mainOrigin||!sourceOrigin||mainOrigin==='all'||sourceOrigin==='all'||locations.indexOf(mainOrigin)===-1||locations.indexOf(sourceOrigin)===-1)return {ok:false,reason:'Выберите для каждой карточки отдельный магазин или склад хранения.'};
+      if(mainOrigin===sourceOrigin)return {ok:false,reason:'Нельзя объединять две карточки из одного магазина или склада. Выберите другую локацию.'};
+      if(qty(mainId,mainOrigin)<=0)return {ok:false,reason:'У первой карточки нет остатка в выбранной локации: '+stockLocationName(mainOrigin)+'.'};
+      if(qty(sourceId,sourceOrigin)<=0)return {ok:false,reason:'У второй карточки нет остатка в выбранной локации: '+stockLocationName(sourceOrigin)+'.'};
+    }
     var mainLocations=activeStockLocations(mainId),sourceLocations=activeStockLocations(sourceId);
-    return {ok:true,mainLocations:mainLocations,sourceLocations:sourceLocations,mainOrigin:mainOrigin,sourceOrigin:sourceOrigin};
+    return {ok:true,mainLocations:mainLocations,sourceLocations:sourceLocations,mainOrigin:mainOrigin,sourceOrigin:sourceOrigin,allLocations:allLocations};
   }
   function mergeCompareCardHtml(product,role,locations){
     var total=locations.reduce(function(sum,location){return sum+qty(product.id,location);},0);
@@ -1042,9 +1088,9 @@
       +mergeCompareCardHtml(source,'Объединяемая карточка · будет закрыта',locations)
       +'</div>'
       +'<div style="margin-top:12px;padding:11px;border:1px solid var(--border);border-radius:9px;font-size:13px;">'
-      +'<b>Что произойдёт:</b> остатки и размеры второй карточки будут перенесены в первую в локациях: '
-      +'<b>'+esc(eligibility.sourceLocations.map(function(location){return stockLocationName(location);}).join(', '))+'</b>. '
-      +'Первая карточка из «'+esc(stockLocationName(mainOrigin))+'» останется основной. Вторая карточка из «'+esc(stockLocationName(sourceOrigin))+'» будет объединена с ней.</div>'
+      +'<b>Что произойдёт:</b> остатки и размеры второй карточки будут перенесены в первую '
+      +(eligibility.allLocations?'во всех магазинах и на складе хранения.':'в локациях: <b>'+esc(eligibility.sourceLocations.map(function(location){return stockLocationName(location);}).join(', '))+'</b>.')+' '
+      +(eligibility.allLocations?'Главная карточка останется основной, а вторая карточка будет объединена с ней.':'Первая карточка из «'+esc(stockLocationName(mainOrigin))+'» останется основной. Вторая карточка из «'+esc(stockLocationName(sourceOrigin))+'» будет объединена с ней.')+'</div>'
       +'<div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px;">'
       +'<button type="button" class="btn btn-secondary" data-merge-close>Отмена</button>'
       +'<button type="button" class="btn btn-warning" data-merge-confirm>Подтвердить объединение</button>'
@@ -1077,16 +1123,17 @@
       currentEligibility.sourceLocations.forEach(function(location){
         var sourceBalance=balances[location]&&balances[location][sourceId]||{};
         var mainBalance=balances[location]&&balances[location][mainId]||{};
-        var sourceQuantity=Number(sourceBalance.quantity||0);
+        var sourceSizes=Array.isArray(sourceBalance.sizes)?sourceBalance.sizes.map(String):[];
+        var mainSizes=Array.isArray(mainBalance.sizes)?mainBalance.sizes.map(String):[];
+        var sourceQuantity=Math.max(Number(sourceBalance.quantity||0),sourceSizes.length);
         if(sourceQuantity<=0)return;
-        var mainQuantity=Number(mainBalance.quantity||0);
+        var mainQuantity=Math.max(Number(mainBalance.quantity||0),mainSizes.length);
         var combinedBalance=Object.assign({},sourceBalance,mainBalance,{
           quantity:mainQuantity+sourceQuantity,
           updatedAt:now
         });
         if(Array.isArray(sourceBalance.sizes)||Array.isArray(mainBalance.sizes)){
-          combinedBalance.sizes=(Array.isArray(mainBalance.sizes)?mainBalance.sizes.map(String):[])
-            .concat(Array.isArray(sourceBalance.sizes)?sourceBalance.sizes.map(String):[]);
+          combinedBalance.sizes=mainSizes.concat(sourceSizes);
         }
         patch[BALANCES_PATH+'/'+location+'/'+mainId]=combinedBalance;
         patch[BALANCES_PATH+'/'+location+'/'+sourceId]=null;
