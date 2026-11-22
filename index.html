@@ -11935,45 +11935,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         communityAvatarPreviewItemId='';renderCommunityShop();
       },false);
     }
-        function renderCommunityShop(){
-      var host=document.getElementById('communityShopContent');
-      if(!host||!window.currentUser)return;
-      host.textContent='';
-      var user=window.currentUser;
-      var wallet=getCommunityWallet(user);
-      if(communityGameLoadError){
-        var error=document.createElement('div');error.className='community-empty';error.textContent='Не удалось загрузить игровой кошелёк из Firebase. Проверьте подключение и попробуйте обновить страницу.';host.appendChild(error);return;
-      }
-      var walletCard=document.createElement('div');walletCard.className='community-wallet-card';
-      var balanceBlock=document.createElement('div');var balanceLabel=document.createElement('span');balanceLabel.textContent='Доступно для покупок';var balance=document.createElement('strong');balance.textContent=formatCommunityCoins(wallet.balance);balanceBlock.appendChild(balanceLabel);balanceBlock.appendChild(balance);
-      var earnedBlock=document.createElement('div');var earnedLabel=document.createElement('span');earnedLabel.textContent='Всего заработано';var earned=document.createElement('strong');earned.style.fontSize='18px';earned.textContent=formatCommunityCoins(wallet.earned);earnedBlock.appendChild(earnedLabel);earnedBlock.appendChild(earned);
-      var spentBlock=document.createElement('div');var spentLabel=document.createElement('span');spentLabel.textContent='Потрачено';var spent=document.createElement('strong');spent.style.fontSize='18px';spent.textContent=formatCommunityCoins(wallet.spent);spentBlock.appendChild(spentLabel);spentBlock.appendChild(spent);
-      walletCard.appendChild(balanceBlock);walletCard.appendChild(earnedBlock);walletCard.appendChild(spentBlock);host.appendChild(walletCard);
-      var note=document.createElement('p');note.style.cssText='font-size:12px;color:var(--text-light);margin:12px 0 4px;line-height:1.5;';note.textContent='Монеты начисляются автоматически: 1 ⭐ за каждый 1 ₽ вашей выручки по не возвращённым продажам. Купленные статусы можно надевать и снимать — повторно покупать их не нужно.';host.appendChild(note);
-      var grid=document.createElement('div');grid.className='community-shop-grid';
-      communityStatusCatalog.forEach(function(item){
-        var state=getCommunityUserGameState(user.id);
-        var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
-        var owned=!!purchases[item.id];
-        var active=String(state.activeStatusId||'')===item.id;
-        var article=document.createElement('article');article.className='community-shop-item';
-        var icon=document.createElement('div');icon.className='community-shop-item-icon';icon.textContent=item.icon;
-        var heading=document.createElement('h4');heading.textContent=item.title;
-        var description=document.createElement('p');description.textContent=item.description;
-        var price=document.createElement('div');price.className='community-shop-price';price.textContent=formatCommunityCoins(item.price);
-        var button=document.createElement('button');button.type='button';button.className=active?'btn btn-secondary':'btn btn-primary';
-        if(active){button.textContent='Снять статус';button.addEventListener('click',function(){setCommunityActiveStatus(null);});}
-        else if(owned){button.textContent='Надеть';button.addEventListener('click',function(){setCommunityActiveStatus(item.id);});}
-        else{
-          button.textContent='Купить';
-          button.disabled=wallet.balance<item.price;
-          button.addEventListener('click',function(){buyCommunityStatus(item.id);});
-        }
-        article.appendChild(icon);article.appendChild(heading);article.appendChild(description);article.appendChild(price);article.appendChild(button);grid.appendChild(article);
-      });
-      host.appendChild(grid);
-    }
-    function setCommunityActiveStatus(statusId){
+        function setCommunityActiveStatus(statusId){
       if(!window.currentUser)return;
       var userId=String(window.currentUser.id);
       var state=getCommunityUserGameState(userId);
