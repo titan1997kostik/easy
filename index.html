@@ -649,12 +649,6 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-subtab{flex:0 0 auto;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text-light);padding:9px 13px;font-size:13px;font-weight:700;cursor:pointer}
 .community-subtab.active{border-color:#e9a9c2;background:#fbe4ed;color:#a83f70}
 .community-view{display:none}.community-view.active{display:block}
-.community-secure-note{padding:14px 15px;border:1px solid #ead7a1;border-radius:12px;background:#fff9e9;color:#755b20;font-size:13px;line-height:1.55;margin-bottom:14px}
-.community-secure-note strong{display:block;margin-bottom:4px;color:#684c12}
-.community-chat-placeholder{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
-.community-placeholder-card{background:#fff;border:1px solid var(--border);border-radius:13px;padding:16px;min-width:0}
-.community-placeholder-card p{font-size:12px;color:var(--text-light);line-height:1.5;margin:7px 0 12px}
-.community-placeholder-icon{font-size:25px;margin-bottom:8px}
 .community-directory-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .community-directory-toolbar input{flex:1;min-width:180px;max-width:420px}
 .community-directory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
@@ -662,6 +656,12 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-person-card:hover{border-color:#e4a2bc;background:#fffafd}
 .community-person-avatar{width:44px;height:44px;flex:0 0 44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:#fbe4ed;color:#a83f70;font-size:17px;font-weight:800}
 .community-person-meta{min-width:0;flex:1}.community-person-meta strong{display:block;font-size:13px;overflow-wrap:anywhere}.community-person-meta span{display:block;font-size:11px;color:var(--text-light);margin-top:3px}
+.community-name-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.community-status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:20px;background:#fff2c9;color:#805b06;border:1px solid #efd58e;font-size:10px;font-weight:800;line-height:1.25;white-space:nowrap}
+.community-status-vip{background:#fbe5f1;color:#a83f70;border-color:#efbfd4}
+.community-status-legend{background:#eee8ff;color:#6345a7;border-color:#d4c6ff}
+.community-status-star{background:#e5f4ff;color:#28658e;border-color:#b9dff8}
+.community-status-fire{background:#ffebe3;color:#a64d2d;border-color:#f6c4af}
 .community-profile-card{background:#fff;border:1px solid var(--border);border-radius:15px;padding:18px}
 .community-profile-header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
 .community-profile-avatar{width:72px;height:72px;border-radius:22px;display:flex;align-items:center;justify-content:center;background:#fbe4ed;color:#a83f70;font-size:27px;font-weight:800}
@@ -670,8 +670,44 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-profile-stat strong{display:block;font-size:14px}.community-profile-stat span{font-size:11px;color:var(--text-light)}
 .community-empty{padding:24px 16px;text-align:center;border:1px dashed var(--border);border-radius:12px;color:var(--text-light);font-size:13px;line-height:1.55;background:#fff}
 .community-back{border:0;background:transparent;color:#a83f70;font-weight:700;cursor:pointer;padding:0 0 12px;font-size:13px}
-.community-disabled-action{opacity:.58;cursor:not-allowed}
-@media(max-width:680px){.community-intro{padding:14px}.community-directory-grid{grid-template-columns:1fr}.community-profile-card{padding:14px}.community-subtab{padding:9px 11px;font-size:12px}}
+.community-messenger{display:grid;grid-template-columns:230px minmax(0,1fr);gap:12px;min-height:520px}
+.community-chat-sidebar,.community-chat-main{background:#fff;border:1px solid var(--border);border-radius:14px;min-width:0;overflow:hidden}
+.community-chat-sidebar{padding:10px}
+.community-chat-section-label{padding:8px 9px 5px;color:var(--text-light);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.community-chat-nav-button{display:flex;align-items:center;gap:9px;width:100%;padding:10px;border:0;border-radius:10px;background:transparent;color:var(--text);font-size:13px;font-weight:700;text-align:left;cursor:pointer}
+.community-chat-nav-button:hover,.community-chat-nav-button.active{background:#fbeaf1;color:#a83f70}
+.community-chat-nav-avatar{width:30px;height:30px;flex:0 0 30px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f5edf2;font-size:14px}
+.community-chat-main{display:flex;flex-direction:column;min-height:520px}
+.community-chat-header{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.community-chat-header strong{font-size:14px}.community-chat-header span{display:block;color:var(--text-light);font-size:11px;margin-top:3px}
+.community-chat-messages{flex:1;min-height:300px;max-height:540px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#fffafd}
+.community-chat-empty{margin:auto;text-align:center;color:var(--text-light);font-size:13px;padding:20px}
+.community-message-row{display:flex;justify-content:flex-start}.community-message-row.own{justify-content:flex-end}
+.community-message-bubble{max-width:min(82%,560px);padding:9px 12px;border:1px solid var(--border);border-radius:13px 13px 13px 4px;background:#fff;overflow-wrap:anywhere}
+.community-message-row.own .community-message-bubble{background:#fbeaf1;border-color:#f0c6d8;border-radius:13px 13px 4px 13px}
+.community-message-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px}
+.community-message-meta strong{font-size:11px}.community-message-meta time{font-size:10px;color:var(--text-light);margin-left:auto}
+.community-message-text{font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.community-chat-status{min-height:17px;padding:0 14px;color:var(--text-light);font-size:11px}
+.community-message-form{display:flex;align-items:flex-end;gap:8px;padding:10px 12px;border-top:1px solid var(--border);background:#fff}
+.community-message-form textarea{flex:1;min-width:0;min-height:42px;max-height:110px;resize:vertical;border:1px solid var(--border);border-radius:10px;padding:10px;font:inherit;font-size:13px}
+.community-message-form button{flex:0 0 auto}
+.community-wallet-card{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 18px;border:1px solid #efd6a2;border-radius:14px;background:linear-gradient(120deg,#fff9e8,#fff)}
+.community-wallet-card strong{font-size:24px;color:#855f0b}.community-wallet-card span{display:block;font-size:11px;color:var(--text-light);margin-top:3px}
+.community-shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:14px}
+.community-shop-item{display:flex;flex-direction:column;gap:10px;padding:15px;border:1px solid var(--border);border-radius:14px;background:#fff;min-width:0}
+.community-shop-item-icon{font-size:30px}.community-shop-item h4{margin:0;font-size:14px}.community-shop-item p{margin:0;color:var(--text-light);font-size:12px;line-height:1.45;flex:1}
+.community-shop-price{font-size:13px;font-weight:800;color:#855f0b}
+.community-owned-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.community-owned-chip{display:inline-flex;padding:6px 9px;border-radius:20px;background:#f7f1f5;color:#725365;font-size:11px;font-weight:700}
+.community-leaderboard{display:flex;flex-direction:column;gap:8px}
+.community-leader-row{display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--border);border-radius:12px;background:#fff}
+.community-leader-rank{width:28px;flex:0 0 28px;font-weight:900;color:#a83f70;text-align:center}
+.community-leader-person{min-width:0;flex:1}.community-leader-person strong{font-size:13px}.community-leader-person span{display:block;font-size:11px;color:var(--text-light);margin-top:3px}
+.community-leader-value{text-align:right;font-size:13px;font-weight:800;white-space:nowrap}
+.community-leader-value span{display:block;color:var(--text-light);font-size:10px;font-weight:500;margin-top:2px}
+@media(max-width:760px){.community-messenger{grid-template-columns:1fr;min-height:0}.community-chat-sidebar{display:flex;gap:4px;overflow-x:auto;align-items:center}.community-chat-section-label{display:none}.community-chat-nav-button{width:auto;flex:0 0 auto}.community-chat-main{min-height:500px}.community-chat-messages{max-height:55vh}.community-message-bubble{max-width:90%}}
+@media(max-width:680px){.community-intro{padding:14px}.community-directory-grid{grid-template-columns:1fr}.community-profile-card{padding:14px}.community-subtab{padding:9px 11px;font-size:12px}.community-wallet-card{padding:14px}}
 </style>
 
 </head>
@@ -3173,6 +3209,7 @@ function applySalesSnapshot(snapshot) {
         }
     });
     sales = arr;
+    if (typeof window.easyAppSyncRefreshGame === 'function') window.easyAppSyncRefreshGame();
     if (typeof window.stockInvalidateReplenishmentCache === 'function') window.stockInvalidateReplenishmentCache();
     invalidateAnalyticsCache();
     scheduleLocalCacheSave();
@@ -6201,6 +6238,7 @@ function handleSecureSaveSale(saleData) {
         completeSaleObj.itemDetails = detailedName;
     }
     sales.push(completeSaleObj);
+    if (typeof window.easyAppSyncRefreshGame === 'function') window.easyAppSyncRefreshGame();
     saveAllToLocal();
     uploadPendingLocalRecord('sales_data/' + saleId, completeSaleObj);
     if (typeof renderCashWidget === 'function') renderCashWidget();
@@ -11195,20 +11233,35 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации'), communityPage=makePage('community','Сообщество EASY');
     communityPage.insertAdjacentHTML('beforeend', `
       <section class="community-intro">
-        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Внутреннее сообщество сотрудников</h3><p>Общайтесь с коллегами, находите сотрудников и открывайте их персональные страницы. Общий чат и личные сообщения появятся после подключения защищённой авторизации.</p></div>
+        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Сообщество EASY</h3><p>Общий чат организации, личные переписки, профили сотрудников и игровой магазин. За выручку от продаж продавцы получают монеты и тратят их на оформление профиля.</p></div>
         <span class="community-org-pill" id="communityOrgLabel">Организация</span>
       </section>
       <div class="community-subnav" role="tablist" aria-label="Разделы сообщества">
         <button type="button" class="community-subtab active" data-community-tab="messages" role="tab" aria-selected="true">💬 Сообщения</button>
         <button type="button" class="community-subtab" data-community-tab="employees" role="tab" aria-selected="false">👥 Сотрудники</button>
         <button type="button" class="community-subtab" data-community-tab="profile" role="tab" aria-selected="false">🙋 Мой профиль</button>
-        <button type="button" class="community-subtab" data-community-tab="activity" role="tab" aria-selected="false">✨ Активность</button>
+        <button type="button" class="community-subtab" data-community-tab="shop" role="tab" aria-selected="false">🛍️ Магазин</button>
+        <button type="button" class="community-subtab" data-community-tab="activity" role="tab" aria-selected="false">🏆 Рейтинг</button>
       </div>
       <section class="community-view active" id="communityView-messages" role="tabpanel">
-        <div class="community-secure-note"><strong>Чаты пока не подключены</strong>Сейчас вход в EASY выполняется через внутреннюю сессию приложения, без Firebase Authentication. До настройки серверной проверки и правил доступа личные переписки и отправку сообщений не включаем, чтобы не раскрыть их другим пользователям.</div>
-        <div class="community-chat-placeholder">
-          <article class="community-placeholder-card"><div class="community-placeholder-icon">🌐</div><h3 style="border:0;padding:0;margin:0 0 4px;">Общий чат EASY</h3><p>Один общий чат для сотрудников текущей организации. Сообщения будут обновляться в реальном времени.</p><button type="button" class="btn btn-secondary community-disabled-action" disabled>Скоро будет доступен</button></article>
-          <article class="community-placeholder-card"><div class="community-placeholder-icon">✉️</div><h3 style="border:0;padding:0;margin:0 0 4px;">Личные сообщения</h3><p>Можно будет открыть переписку с любым сотрудником своей организации прямо из его профиля.</p><button type="button" class="btn btn-secondary community-disabled-action" disabled>Скоро будет доступно</button></article>
+        <div class="community-messenger">
+          <aside class="community-chat-sidebar">
+            <div style="width:100%;">
+              <div class="community-chat-section-label">Общение</div>
+              <button type="button" class="community-chat-nav-button active" id="communityGeneralChatButton"><span class="community-chat-nav-avatar">🌐</span><span>Общий чат</span></button>
+              <div class="community-chat-section-label">Личные сообщения</div>
+              <div id="communityDirectList"><div style="padding:10px;color:var(--text-light);font-size:12px;">Загрузка сотрудников…</div></div>
+            </div>
+          </aside>
+          <div class="community-chat-main">
+            <div class="community-chat-header"><div><strong id="communityChatTitle">Общий чат организации</strong><span id="communityChatSubtitle">Все сотрудники вашей организации</span></div><span id="communityChatCount"></span></div>
+            <div class="community-chat-messages" id="communityMessagesList" role="log" aria-live="polite"><div class="community-chat-empty">Загружаем сообщения…</div></div>
+            <div class="community-chat-status" id="communityMessagesStatus"></div>
+            <form class="community-message-form" id="communityMessageForm">
+              <textarea id="communityMessageInput" rows="1" maxlength="1500" placeholder="Напишите сообщение…" aria-label="Текст сообщения"></textarea>
+              <button type="submit" class="btn btn-primary" id="communitySendButton">Отправить</button>
+            </form>
+          </div>
         </div>
       </section>
       <section class="community-view" id="communityView-employees" role="tabpanel" hidden>
@@ -11218,12 +11271,20 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       <section class="community-view" id="communityView-profile" role="tabpanel" hidden>
         <div id="communityProfileContent"></div>
       </section>
+      <section class="community-view" id="communityView-shop" role="tabpanel" hidden>
+        <div id="communityShopContent"><div class="community-empty">Загружаем игровой баланс…</div></div>
+      </section>
       <section class="community-view" id="communityView-activity" role="tabpanel" hidden>
-        <div class="community-empty"><div style="font-size:28px;margin-bottom:8px;">✨</div><strong style="display:block;color:var(--text);margin-bottom:5px;">Лента активности появится позже</strong>Здесь будут отображаться игровые покупки, новые достижения и другие события профилей. Личные сообщения и служебные данные в ленту не попадут.</div>
+        <div style="margin-bottom:12px;"><h3 style="margin:0 0 4px;border:0;padding:0;">Рейтинг продавцов</h3><p style="font-size:12px;color:var(--text-light);margin:0;">По общей выручке. 1 ⭐ начисляется за каждый 1 ₽ выручки по продажам, которые не были возвращены.</p></div>
+        <div id="communityLeaderboardContent" class="community-leaderboard"><div class="community-empty">Считаем рейтинг…</div></div>
       </section>
     `);
     var communitySearchInput=document.getElementById('communityDirectorySearch');
     if(communitySearchInput)communitySearchInput.addEventListener('input',renderCommunityDirectory);
+    var communityMessageForm=document.getElementById('communityMessageForm');
+    if(communityMessageForm)communityMessageForm.addEventListener('submit',function(event){event.preventDefault();sendCommunityMessage();});
+    var communityGeneralChatButton=document.getElementById('communityGeneralChatButton');
+    if(communityGeneralChatButton)communityGeneralChatButton.addEventListener('click',function(){communityActivePeerId='';renderCommunityMessagesView();});
     communityPage.querySelectorAll('[data-community-tab]').forEach(function(button){button.addEventListener('click',function(){showCommunityTab(button.dataset.communityTab);});});
     purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все магазины</option></select></div><div class="form-group"><label for="purchaseCategorySelect">Категория товара</label><select id="purchaseCategorySelect" onchange="renderPurchaseRecommendations()"><option value="all">Все категории</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Магазин: <b id="purchaseQueueCityLabel">Все магазины</b></p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
     var purchaseQueueCardNode=document.getElementById('purchaseQueueCard');
@@ -11302,6 +11363,28 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
 
     var communityCurrentTab='messages';
     var communitySelectedUserId='';
+    var communityActivePeerId='';
+    var communityCurrentOrgKey='';
+    var communityGameRef=null;
+    var communityGameListener=null;
+    var communityGameStateByUser=Object.create(null);
+    var communityGameLoadError=false;
+    var communityMessagesRef=null;
+    var communityMessagesListener=null;
+    var communityMessagesPath='';
+    var communityMessagesData=[];
+    var communityStatusCatalog=[
+      {id:'spark',title:'Звезда смены',icon:'🌟',price:500,description:'Небольшой знак того, что вы задаёте темп.',badgeClass:'community-status-star'},
+      {id:'vip',title:'VIP',icon:'💎',price:1500,description:'Особый статус рядом с именем в EASY.',badgeClass:'community-status-vip'},
+      {id:'fire',title:'Хит продаж',icon:'🔥',price:3000,description:'Для тех, кто регулярно закрывает сильные смены.',badgeClass:'community-status-fire'},
+      {id:'legend',title:'Легенда EASY',icon:'👑',price:7000,description:'Самый заметный статус магазина.',badgeClass:'community-status-legend'}
+    ];
+    function communitySafeKey(value){return String(value==null?'':value).replace(/[.#$\[\]\/]/g,'_')||'empty';}
+    function getCommunityOrgKey(){
+      var user=window.currentUser;
+      if(!user)return 'mine';
+      return (typeof window.isSuperAdmin==='function'&&window.isSuperAdmin(user))?(window.currentOrgFilter||'mine'):(user.org||'mine');
+    }
     function getCommunityMembers(){
       if(!window.currentUser||!Array.isArray(window.users))return [];
       return window.users.filter(function(user){
@@ -11319,12 +11402,220 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     function getCommunityOrgLabel(){
       var user=window.currentUser;
       if(!user)return 'Организация';
-      var key=(typeof window.isSuperAdmin==='function'&&window.isSuperAdmin(user))?(window.currentOrgFilter||'mine'):(user.org||'mine');
+      var key=getCommunityOrgKey();
       var orgs=window.ORGS||{};
       return String(orgs[key]||'Организация');
     }
+    function getCommunityStatusItem(statusId){
+      return communityStatusCatalog.find(function(item){return item.id===String(statusId||'');})||null;
+    }
+    function getCommunityUserGameState(userId){
+      return communityGameStateByUser[String(userId||'')]||{};
+    }
+    function getCommunitySpent(state){
+      var purchases=state&&state.purchases&&typeof state.purchases==='object'?state.purchases:{};
+      return Object.keys(purchases).reduce(function(total,key){
+        var item=purchases[key];
+        return total+(item?Math.max(0,Number(item.price)||0):0);
+      },0);
+    }
+    function getCommunityRevenueForUser(user){
+      if(!user||user.id==null)return 0;
+      var userId=String(user.id);
+      var username=String(user.username||'');
+      var orgKey=String(user.org||getCommunityOrgKey());
+      var total=0;
+      (sales||[]).forEach(function(sale){
+        if(!sale||sale.returned===true||String(sale.returned)==='true')return;
+        if(typeof window.isSaleRecordDeleted==='function'&&window.isSaleRecordDeleted(sale.id))return;
+        if(typeof window.isStoreDeleted==='function'&&window.isStoreDeleted(sale.storeId))return;
+        if(typeof window.isRecordBeforeStoreReset==='function'&&window.isRecordBeforeStoreReset(sale))return;
+        if(sale.storeId!=null&&typeof window.getStoreOrg==='function'&&String(window.getStoreOrg(sale.storeId))!==orgKey)return;
+        var saleSellerId=String(sale.sellerId||sale.shiftUserId||'');
+        var matches=saleSellerId?saleSellerId===userId:(!sale.sellerId&&!sale.shiftUserId&&!!username&&String(sale.sellerUsername||'')===username);
+        if(!matches)return;
+        total+=Math.max(0,Number(sale.price)||0);
+      });
+      return Math.max(0,Math.round(total));
+    }
+    function getCommunityWallet(user){
+      var earned=getCommunityRevenueForUser(user);
+      var state=getCommunityUserGameState(user&&user.id);
+      var spent=getCommunitySpent(state);
+      return {earned:earned,spent:spent,balance:Math.max(0,earned-spent)};
+    }
+    function formatCommunityCoins(value){
+      return Math.round(Number(value)||0).toLocaleString('ru-RU')+' ⭐';
+    }
+    function appendCommunityStatus(parent,userId,fallbackStatusId){
+      if(!parent)return;
+      var state=getCommunityUserGameState(userId);
+      var item=getCommunityStatusItem(state.activeStatusId||fallbackStatusId);
+      if(!item)return;
+      var badge=document.createElement('span');
+      badge.className='community-status-badge '+item.badgeClass;
+      badge.textContent=item.icon+' '+item.title;
+      parent.appendChild(badge);
+    }
+    function appendCommunityName(parent,user){
+      var line=document.createElement('span');line.className='community-name-line';
+      var name=document.createElement('strong');name.textContent=String(user&& (user.communityNickname||user.name||user.username)||'Сотрудник');
+      line.appendChild(name);
+      appendCommunityStatus(line,user&&user.id);
+      parent.appendChild(line);
+    }
+    function stopCommunityMessagesListener(){
+      if(communityMessagesRef&&communityMessagesListener)communityMessagesRef.off('value',communityMessagesListener);
+      communityMessagesRef=null;communityMessagesListener=null;communityMessagesPath='';communityMessagesData=[];
+    }
+    function stopCommunityGameListener(){
+      if(communityGameRef&&communityGameListener)communityGameRef.off('value',communityGameListener);
+      communityGameRef=null;communityGameListener=null;communityGameStateByUser=Object.create(null);
+    }
+    function startCommunityGameListener(){
+      if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
+      var key=communitySafeKey(getCommunityOrgKey());
+      if(communityCurrentOrgKey===key&&communityGameRef)return;
+      stopCommunityGameListener();
+      communityCurrentOrgKey=key;
+      communityGameLoadError=false;
+      communityGameRef=db.ref('community_game_data/'+key);
+      communityGameListener=function(snapshot){
+        communityGameStateByUser=snapshot.val()||{};
+        communityGameLoadError=false;
+        if(isCommunityPageActive())renderCommunityCurrentView();
+      };
+      communityGameRef.on('value',communityGameListener,function(error){
+        communityGameLoadError=true;
+        console.warn('Не удалось загрузить игровую коллекцию:',error);
+        if(isCommunityPageActive())renderCommunityCurrentView();
+      });
+    }
+    function isCommunityPageActive(){
+      var page=document.getElementById('workspacePage-community');
+      return !!(page&&page.classList.contains('active'));
+    }
+    function communityBuildChatId(peerId){
+      if(!peerId)return 'general';
+      var ids=[String(window.currentUser&&window.currentUser.id||''),String(peerId)].sort();
+      return 'dm_'+communitySafeKey(ids[0])+'_'+communitySafeKey(ids[1]);
+    }
+    function getCommunityActivePeer(){
+      if(!communityActivePeerId)return null;
+      return getCommunityMembers().find(function(user){return String(user.id)===String(communityActivePeerId);})||null;
+    }
+    function renderCommunityMessagesList(){
+      var host=document.getElementById('communityMessagesList');
+      if(!host)return;
+      host.textContent='';
+      if(!communityMessagesData.length){
+        var empty=document.createElement('div');empty.className='community-chat-empty';
+        empty.textContent='Пока нет сообщений. Начните разговор первым!';
+        host.appendChild(empty);return;
+      }
+      communityMessagesData.forEach(function(message){
+        if(!message||!String(message.text||'').trim())return;
+        var own=String(message.senderId||'')===String(window.currentUser&&window.currentUser.id||'');
+        var row=document.createElement('div');row.className='community-message-row'+(own?' own':'');
+        var bubble=document.createElement('article');bubble.className='community-message-bubble';
+        var meta=document.createElement('div');meta.className='community-message-meta';
+        var sender=document.createElement('strong');sender.textContent=own?'Вы':String(message.senderName||'Сотрудник');meta.appendChild(sender);
+        appendCommunityStatus(meta,message.senderId,message.senderStatusId);
+        var time=document.createElement('time');var stamp=Number(message.createdAt)||0;time.textContent=stamp?new Date(stamp).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'';meta.appendChild(time);
+        var body=document.createElement('div');body.className='community-message-text';body.textContent=String(message.text||'');
+        bubble.appendChild(meta);bubble.appendChild(body);row.appendChild(bubble);host.appendChild(row);
+      });
+      host.scrollTop=host.scrollHeight;
+    }
+    function renderCommunityMessagesView(){
+      var list=document.getElementById('communityDirectList');
+      var generalButton=document.getElementById('communityGeneralChatButton');
+      var title=document.getElementById('communityChatTitle');
+      var subtitle=document.getElementById('communityChatSubtitle');
+      if(!list||!title)return;
+      var members=getCommunityMembers().filter(function(user){return String(user.id)!==String(window.currentUser&&window.currentUser.id||'');});
+      var peer=getCommunityActivePeer();
+      if(communityActivePeerId&&!peer)communityActivePeerId='';
+      peer=getCommunityActivePeer();
+      if(generalButton)generalButton.classList.toggle('active',!peer);
+      list.textContent='';
+      if(!members.length){
+        var noPeers=document.createElement('div');noPeers.style.cssText='padding:9px;color:var(--text-light);font-size:11px;';noPeers.textContent='Пока нет других сотрудников';list.appendChild(noPeers);
+      }else{
+        members.forEach(function(user){
+          var button=document.createElement('button');button.type='button';button.className='community-chat-nav-button'+(peer&&String(peer.id)===String(user.id)?' active':'');
+          button.addEventListener('click',function(){communityActivePeerId=String(user.id);renderCommunityMessagesView();});
+          var avatar=document.createElement('span');avatar.className='community-chat-nav-avatar';avatar.textContent=String(user.name||user.username||'?').trim().charAt(0).toLocaleUpperCase('ru-RU')||'?';
+          var name=document.createElement('span');name.style.cssText='min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';name.textContent=String(user.communityNickname||user.name||user.username||'Сотрудник');
+          button.appendChild(avatar);button.appendChild(name);appendCommunityStatus(button,user.id);list.appendChild(button);
+        });
+      }
+      var chatId=communityBuildChatId(peer&&peer.id);
+      if(peer){
+        title.textContent=String(peer.communityNickname||peer.name||peer.username||'Личные сообщения');
+        subtitle.textContent=getCommunityStoreLabel(peer);
+      }else{
+        title.textContent='Общий чат организации';
+        subtitle.textContent='Все сотрудники · '+getCommunityOrgLabel();
+      }
+      var path=communitySafeKey(getCommunityOrgKey())+'/'+chatId;
+      if(communityMessagesPath!==path){
+        stopCommunityMessagesListener();
+        communityMessagesPath=path;
+        communityMessagesData=[];
+        var host=document.getElementById('communityMessagesList');
+        if(host){host.textContent='';var loading=document.createElement('div');loading.className='community-chat-empty';loading.textContent='Загружаем сообщения…';host.appendChild(loading);}
+        var status=document.getElementById('communityMessagesStatus');if(status)status.textContent='Подключение к чату…';
+        communityMessagesRef=db.ref('community_messages_data/'+path).limitToLast(100);
+        communityMessagesListener=function(snapshot){
+          var data=snapshot.val()||{};
+          communityMessagesData=Object.keys(data).map(function(id){return Object.assign({id:id},data[id]||{});}).filter(function(item){return !!item.text;});
+          communityMessagesData.sort(function(a,b){return (Number(a.createdAt)||0)-(Number(b.createdAt)||0);});
+          var statusNode=document.getElementById('communityMessagesStatus');if(statusNode)statusNode.textContent='';
+          renderCommunityMessagesList();
+        };
+        communityMessagesRef.on('value',communityMessagesListener,function(error){
+          var statusNode=document.getElementById('communityMessagesStatus');if(statusNode)statusNode.textContent='Не удалось загрузить чат: '+String(error&&error.message||'ошибка Firebase');
+        });
+      }else{
+        renderCommunityMessagesList();
+      }
+    }
+    function sendCommunityMessage(){
+      var input=document.getElementById('communityMessageInput');
+      var status=document.getElementById('communityMessagesStatus');
+      var textValue=String(input&&input.value||'').trim();
+      if(!textValue||!window.currentUser)return;
+      if(textValue.length>1500)textValue=textValue.slice(0,1500);
+      var peer=getCommunityActivePeer();
+      var chatId=communityBuildChatId(peer&&peer.id);
+      var user=window.currentUser;
+      var payload={
+        text:textValue,
+        senderId:String(user.id),
+        senderName:String(user.communityNickname||user.name||user.username||'Сотрудник'),
+        senderStatusId:String(getCommunityUserGameState(user.id).activeStatusId||''),
+        createdAt:Date.now(),
+        org:communitySafeKey(getCommunityOrgKey()),
+        chatType:peer?'direct':'general'
+      };
+      var messageRef=db.ref('community_messages_data/'+communitySafeKey(getCommunityOrgKey())+'/'+chatId).push();
+      var button=document.getElementById('communitySendButton');if(button)button.disabled=true;
+      messageRef.set(payload).then(function(){
+        if(input)input.value='';
+        if(status)status.textContent='';
+      }).catch(function(error){
+        if(status)status.textContent='Не удалось отправить сообщение: '+String(error&&error.message||'ошибка Firebase');
+      }).then(function(){if(button)button.disabled=false;});
+    }
+    function openCommunityDirect(userId){
+      var target=getCommunityMembers().find(function(user){return String(user.id)===String(userId);});
+      if(!target||String(target.id)===String(window.currentUser&&window.currentUser.id))return;
+      communityActivePeerId=String(target.id);
+      showCommunityTab('messages');
+    }
     function showCommunityTab(tab){
-      var allowed=['messages','employees','profile','activity'];
+      var allowed=['messages','employees','profile','shop','activity'];
       if(allowed.indexOf(tab)===-1)tab='messages';
       communityCurrentTab=tab;
       communityPage.querySelectorAll('[data-community-tab]').forEach(function(button){
@@ -11337,8 +11628,14 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         view.classList.toggle('active',active);
         view.hidden=!active;
       });
-      if(tab==='employees')renderCommunityDirectory();
-      if(tab==='profile')renderCommunityProfile(String(window.currentUser&&window.currentUser.id||''));
+      renderCommunityCurrentView();
+    }
+    function renderCommunityCurrentView(){
+      if(communityCurrentTab==='messages')renderCommunityMessagesView();
+      if(communityCurrentTab==='employees')renderCommunityDirectory();
+      if(communityCurrentTab==='profile')renderCommunityProfile(String(communitySelectedUserId||window.currentUser&&window.currentUser.id||''));
+      if(communityCurrentTab==='shop')renderCommunityShop();
+      if(communityCurrentTab==='activity')renderCommunityLeaderboard();
     }
     function renderCommunityDirectory(){
       var grid=document.getElementById('communityDirectoryGrid');
@@ -11358,12 +11655,12 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       }
       filtered.forEach(function(user){
         var button=document.createElement('button');button.type='button';button.className='community-person-card';
-        button.addEventListener('click',function(){renderCommunityProfile(String(user.id));showCommunityTab('profile');});
+        button.addEventListener('click',function(){communitySelectedUserId=String(user.id);showCommunityTab('profile');});
         var avatar=document.createElement('span');avatar.className='community-person-avatar';avatar.textContent=String(user.name||user.username||'?').trim().charAt(0).toLocaleUpperCase('ru-RU')||'?';
         var meta=document.createElement('span');meta.className='community-person-meta';
-        var name=document.createElement('strong');name.textContent=String(user.communityNickname||user.name||user.username||'Сотрудник');
+        appendCommunityName(meta,user);
         var details=document.createElement('span');details.textContent=getCommunityStoreLabel(user)+(String(user.id)===String(window.currentUser&&window.currentUser.id)?' · Это вы':'');
-        meta.appendChild(name);meta.appendChild(details);button.appendChild(avatar);button.appendChild(meta);grid.appendChild(button);
+        meta.appendChild(details);button.appendChild(avatar);button.appendChild(meta);grid.appendChild(button);
       });
     }
     function renderCommunityProfile(userId){
@@ -11375,37 +11672,161 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         var missing=document.createElement('div');missing.className='community-empty';missing.textContent='Профиль не найден или недоступен в вашей организации.';host.appendChild(missing);return;
       }
       communitySelectedUserId=String(user.id);
+      var own=String(user.id)===String(window.currentUser&&window.currentUser.id);
+      var wallet=getCommunityWallet(user);
       var card=document.createElement('article');card.className='community-profile-card';
       var back=document.createElement('button');back.type='button';back.className='community-back';back.textContent='← К списку сотрудников';back.addEventListener('click',function(){showCommunityTab('employees');});card.appendChild(back);
       var header=document.createElement('div');header.className='community-profile-header';
       var avatar=document.createElement('div');avatar.className='community-profile-avatar';avatar.textContent=String(user.name||user.username||'?').trim().charAt(0).toLocaleUpperCase('ru-RU')||'?';
       var info=document.createElement('div');info.style.minWidth='0';
-      var title=document.createElement('h3');title.style.cssText='border:0;padding:0;margin:0 0 4px;font-size:20px;';title.textContent=String(user.communityNickname||user.name||user.username||'Сотрудник');
-      var subtitle=document.createElement('p');subtitle.style.cssText='font-size:13px;color:var(--text-light);';subtitle.textContent=getCommunityStoreLabel(user);
-      info.appendChild(title);info.appendChild(subtitle);header.appendChild(avatar);header.appendChild(info);card.appendChild(header);
+      var nameLine=document.createElement('div');nameLine.className='community-name-line';
+      var title=document.createElement('h3');title.style.cssText='border:0;padding:0;margin:0;font-size:20px;';title.textContent=String(user.communityNickname||user.name||user.username||'Сотрудник');nameLine.appendChild(title);appendCommunityStatus(nameLine,user.id);
+      var subtitle=document.createElement('p');subtitle.style.cssText='font-size:13px;color:var(--text-light);margin:5px 0 0;';subtitle.textContent=getCommunityStoreLabel(user);
+      info.appendChild(nameLine);info.appendChild(subtitle);header.appendChild(avatar);header.appendChild(info);card.appendChild(header);
       var stats=document.createElement('div');stats.className='community-profile-stats';
-      [{label:'Роль',value:user.role==='admin'?'Администратор':'Продавец'},{label:'Организация',value:getCommunityOrgLabel()}].forEach(function(entry){
+      [{label:'Роль',value:user.role==='admin'?'Администратор':'Продавец'},{label:'Магазин',value:getCommunityStoreLabel(user)}].forEach(function(entry){
         var stat=document.createElement('div');stat.className='community-profile-stat';var strong=document.createElement('strong');strong.textContent=entry.value;var caption=document.createElement('span');caption.textContent=entry.label;stat.appendChild(strong);stat.appendChild(caption);stats.appendChild(stat);
       });
+      if(own){
+        [{label:'Выручка',value:formatCommunityCoins(wallet.earned)},{label:'Баланс',value:formatCommunityCoins(wallet.balance)}].forEach(function(entry){
+          var stat=document.createElement('div');stat.className='community-profile-stat';var strong=document.createElement('strong');strong.textContent=entry.value;var caption=document.createElement('span');caption.textContent=entry.label;stat.appendChild(strong);stat.appendChild(caption);stats.appendChild(stat);
+        });
+      }
       card.appendChild(stats);
       var collection=document.createElement('div');collection.style.cssText='margin-top:18px;padding-top:15px;border-top:1px solid var(--border);';
       var collectionTitle=document.createElement('h4');collectionTitle.style.margin='0 0 7px';collectionTitle.textContent='Игровая коллекция';collection.appendChild(collectionTitle);
-      var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Здесь будут отображаться предметы, которые сотрудник приобрёл за игровую валюту и решил показать коллегам. Игровой магазин ещё не подключён.';collection.appendChild(collectionNote);
-      card.appendChild(collection);
-      if(String(user.id)!==String(window.currentUser&&window.currentUser.id)){
-        var action=document.createElement('button');action.type='button';action.className='btn btn-secondary community-disabled-action';action.disabled=true;action.textContent='Личные сообщения скоро будут доступны';action.style.marginTop='14px';card.appendChild(action);
+      var state=getCommunityUserGameState(user.id);
+      var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
+      var owned=communityStatusCatalog.filter(function(item){return !!purchases[item.id];});
+      if(owned.length){
+        var chips=document.createElement('div');chips.className='community-owned-list';
+        owned.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent=item.icon+' '+item.title+(String(state.activeStatusId||'')===item.id?' · надет':'');chips.appendChild(chip);});
+        collection.appendChild(chips);
       }else{
-        var own=document.createElement('p');own.style.cssText='font-size:12px;color:var(--text-light);margin-top:12px;';own.textContent='Это ваша страница. Настройка ника, аватара и видимости коллекции появится вместе с игровым профилем.';card.appendChild(own);
+        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных предметов. Первые статусы уже ждут в магазине.';collection.appendChild(collectionNote);
       }
+      card.appendChild(collection);
+      var action=document.createElement('button');action.type='button';action.className='btn btn-primary';action.style.marginTop='14px';
+      if(own){action.textContent='Открыть игровой магазин';action.addEventListener('click',function(){showCommunityTab('shop');});}
+      else{action.textContent='Написать сообщение';action.addEventListener('click',function(){openCommunityDirect(user.id);});}
+      card.appendChild(action);
       host.appendChild(card);
     }
+    function renderCommunityShop(){
+      var host=document.getElementById('communityShopContent');
+      if(!host||!window.currentUser)return;
+      host.textContent='';
+      var user=window.currentUser;
+      var wallet=getCommunityWallet(user);
+      if(communityGameLoadError){
+        var error=document.createElement('div');error.className='community-empty';error.textContent='Не удалось загрузить игровой кошелёк из Firebase. Проверьте подключение и попробуйте обновить страницу.';host.appendChild(error);return;
+      }
+      var walletCard=document.createElement('div');walletCard.className='community-wallet-card';
+      var balanceBlock=document.createElement('div');var balanceLabel=document.createElement('span');balanceLabel.textContent='Доступно для покупок';var balance=document.createElement('strong');balance.textContent=formatCommunityCoins(wallet.balance);balanceBlock.appendChild(balanceLabel);balanceBlock.appendChild(balance);
+      var earnedBlock=document.createElement('div');var earnedLabel=document.createElement('span');earnedLabel.textContent='Всего заработано';var earned=document.createElement('strong');earned.style.fontSize='18px';earned.textContent=formatCommunityCoins(wallet.earned);earnedBlock.appendChild(earnedLabel);earnedBlock.appendChild(earned);
+      var spentBlock=document.createElement('div');var spentLabel=document.createElement('span');spentLabel.textContent='Потрачено';var spent=document.createElement('strong');spent.style.fontSize='18px';spent.textContent=formatCommunityCoins(wallet.spent);spentBlock.appendChild(spentLabel);spentBlock.appendChild(spent);
+      walletCard.appendChild(balanceBlock);walletCard.appendChild(earnedBlock);walletCard.appendChild(spentBlock);host.appendChild(walletCard);
+      var note=document.createElement('p');note.style.cssText='font-size:12px;color:var(--text-light);margin:12px 0 4px;line-height:1.5;';note.textContent='Монеты начисляются автоматически: 1 ⭐ за каждый 1 ₽ вашей выручки по не возвращённым продажам. Купленные статусы можно надевать и снимать — повторно покупать их не нужно.';host.appendChild(note);
+      var grid=document.createElement('div');grid.className='community-shop-grid';
+      communityStatusCatalog.forEach(function(item){
+        var state=getCommunityUserGameState(user.id);
+        var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
+        var owned=!!purchases[item.id];
+        var active=String(state.activeStatusId||'')===item.id;
+        var article=document.createElement('article');article.className='community-shop-item';
+        var icon=document.createElement('div');icon.className='community-shop-item-icon';icon.textContent=item.icon;
+        var heading=document.createElement('h4');heading.textContent=item.title;
+        var description=document.createElement('p');description.textContent=item.description;
+        var price=document.createElement('div');price.className='community-shop-price';price.textContent=formatCommunityCoins(item.price);
+        var button=document.createElement('button');button.type='button';button.className=active?'btn btn-secondary':'btn btn-primary';
+        if(active){button.textContent='Снять статус';button.addEventListener('click',function(){setCommunityActiveStatus(null);});}
+        else if(owned){button.textContent='Надеть';button.addEventListener('click',function(){setCommunityActiveStatus(item.id);});}
+        else{
+          button.textContent='Купить';
+          button.disabled=wallet.balance<item.price;
+          button.addEventListener('click',function(){buyCommunityStatus(item.id);});
+        }
+        article.appendChild(icon);article.appendChild(heading);article.appendChild(description);article.appendChild(price);article.appendChild(button);grid.appendChild(article);
+      });
+      host.appendChild(grid);
+    }
+    function setCommunityActiveStatus(statusId){
+      if(!window.currentUser)return;
+      var userId=String(window.currentUser.id);
+      var state=getCommunityUserGameState(userId);
+      var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
+      if(statusId&&!purchases[statusId])return;
+      db.ref('community_game_data/'+communitySafeKey(getCommunityOrgKey())+'/'+communitySafeKey(userId)).update({activeStatusId:statusId||null,updatedAt:Date.now()}).then(function(){
+        var status=document.getElementById('communityMessagesStatus');
+        if(status)status.textContent='';
+      }).catch(function(error){alert('Не удалось изменить статус: '+String(error&&error.message||error));});
+    }
+    function buyCommunityStatus(statusId){
+      if(!window.currentUser)return;
+      var item=getCommunityStatusItem(statusId);
+      if(!item)return;
+      var userId=String(window.currentUser.id);
+      var earned=getCommunityRevenueForUser(window.currentUser);
+      var ref=db.ref('community_game_data/'+communitySafeKey(getCommunityOrgKey())+'/'+communitySafeKey(userId));
+      var failureReason='';
+      ref.transaction(function(current){
+        current=current&&typeof current==='object'?current:{};
+        var purchases=current.purchases&&typeof current.purchases==='object'?current.purchases:{};
+        if(purchases[item.id]){failureReason='owned';return;}
+        var spent=Object.keys(purchases).reduce(function(total,key){return total+(purchases[key]?Math.max(0,Number(purchases[key].price)||0):0);},0);
+        if(earned-spent<item.price){failureReason='funds';return;}
+        purchases[item.id]={id:item.id,title:item.title,price:item.price,purchasedAt:Date.now()};
+        current.purchases=purchases;
+        current.activeStatusId=item.id;
+        current.updatedAt=Date.now();
+        return current;
+      },function(error,committed){
+        if(error){alert('Не удалось купить предмет: '+String(error.message||error));return;}
+        if(!committed){
+          alert(failureReason==='owned'?'Этот предмет уже куплен.':failureReason==='funds'?'Недостаточно монет для покупки.':'Покупка не выполнена. Обновите страницу и повторите.');
+          return;
+        }
+        renderCommunityShop();
+      },false);
+    }
+    function renderCommunityLeaderboard(){
+      var host=document.getElementById('communityLeaderboardContent');
+      if(!host)return;
+      host.textContent='';
+      var sellers=getCommunityMembers().filter(function(user){return user.role!=='admin';}).map(function(user){
+        var wallet=getCommunityWallet(user);
+        return {user:user,wallet:wallet};
+      }).sort(function(a,b){return b.wallet.earned-a.wallet.earned;});
+      if(!sellers.length){
+        var empty=document.createElement('div');empty.className='community-empty';empty.textContent='В этой организации пока нет продавцов.';host.appendChild(empty);return;
+      }
+      sellers.forEach(function(entry,index){
+        var row=document.createElement('div');row.className='community-leader-row';
+        var rank=document.createElement('div');rank.className='community-leader-rank';rank.textContent=String(index+1);
+        var person=document.createElement('div');person.className='community-leader-person';appendCommunityName(person,entry.user);
+        var store=document.createElement('span');store.textContent=getCommunityStoreLabel(entry.user);person.appendChild(store);
+        var value=document.createElement('div');value.className='community-leader-value';value.textContent=formatCommunityCoins(entry.wallet.earned);
+        var available=document.createElement('span');available.textContent='Баланс '+formatCommunityCoins(entry.wallet.balance);value.appendChild(available);
+        row.appendChild(rank);row.appendChild(person);row.appendChild(value);host.appendChild(row);
+      });
+    }
     function renderCommunityPage(){
+      var nextOrgKey=communitySafeKey(getCommunityOrgKey());
+      if(communityCurrentOrgKey&&communityCurrentOrgKey!==nextOrgKey){
+        stopCommunityMessagesListener();
+        communityActivePeerId='';
+      }
+      communityCurrentOrgKey=nextOrgKey;
+      startCommunityGameListener();
       var label=document.getElementById('communityOrgLabel');
       if(label)label.textContent=getCommunityOrgLabel();
-      if(communityCurrentTab==='employees')renderCommunityDirectory();
-      if(communityCurrentTab==='profile')renderCommunityProfile(String(communitySelectedUserId||window.currentUser&&window.currentUser.id||''));
+      renderCommunityCurrentView();
     }
     window.easyAppSyncRenderCommunity=renderCommunityPage;
+    window.easyAppSyncRefreshGame=function(){
+      if(!isCommunityPageActive())return;
+      renderCommunityCurrentView();
+    };
 
     quick.querySelectorAll('[data-jump]').forEach(function(b){b.addEventListener('click',function(){var target=b.dataset.jump;if(target==='sale'){showPage('sale');var el=document.getElementById('prodName');if(el){el.focus({preventScroll:true});el.scrollIntoView({behavior:'smooth',block:'center'});}}else if(target==='expense'){showPage('dashboard');var el2=document.getElementById('expenseAmount');if(el2){el2.focus();el2.scrollIntoView({behavior:'smooth',block:'center'});}}else if(target==='tasks'){showPage('tasks');}else if(target==='costs'){if(!window.isPurchaseCostOwner||!window.isPurchaseCostOwner())return;var costStatus=document.getElementById('saleCostStatusFilter');var costStart=document.getElementById('saleCostStartDate');var costEnd=document.getElementById('saleCostEndDate');var costSearch=document.getElementById('saleCostSearch');if(costStatus)costStatus.value='missing';if(costStart)costStart.value='';if(costEnd)costEnd.value='';if(costSearch)costSearch.value='';showPage('costs');if(typeof renderPurchaseCosts==='function')renderPurchaseCosts();}else if(target==='purchaseJournal'){if(!window.currentUser||window.currentUser.role!=='admin'||!window.isSuperAdmin||!window.isSuperAdmin(window.currentUser))return;showPage('dashboard');setTimeout(function(){var card=document.getElementById('purchaseJournalCard');var name=document.getElementById('purchaseJournalName');if(card)card.scrollIntoView({behavior:'smooth',block:'start'});if(name&&!name.disabled)name.focus({preventScroll:true});},60);}else showPage('cash');});});
     function showPage(id){
@@ -11423,6 +11844,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(id==='analytics'&&typeof drawChart==='function')drawChart();
       if(id==='analytics'&&typeof window.renderBusinessAdvisor==='function')window.renderBusinessAdvisor();
       if(id==='tasks'&&typeof renderTasks==='function')renderTasks();
+      if(id==='community'&&typeof renderCommunityPage==='function')renderCommunityPage();
       if(id==='staff'){if(typeof renderUserManageTable==='function')renderUserManageTable();if(typeof renderEmployeePerformance==='function')renderEmployeePerformance();}
       if(id==='stores'&&typeof renderStoresManagement==='function')renderStoresManagement();
       if(id==='salary'){if(typeof renderSalaryManagement==='function')renderSalaryManagement();if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(false);}
