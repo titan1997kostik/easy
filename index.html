@@ -11921,7 +11921,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(!pages[id])id='dashboard';
       if(id==='purchase'&&(!window.currentUser||window.currentUser.role!=='admin'))id='dashboard';
       if(id==='costs'&&(!window.isPurchaseCostOwner||!window.isPurchaseCostOwner()))id='dashboard';
-      if(window.currentUser&&window.currentUser.role==='seller'&&(id==='audit'||id==='orgs'))id='dashboard';
+      if(window.currentUser&&window.currentUser.role==='seller'&&(id==='audit'||id==='orgs'||id==='community'))id='dashboard';
       document.querySelectorAll('#workspaceShell .workspace-page').forEach(function(page){page.classList.toggle('active',page.id==='workspacePage-'+id);});
       document.querySelectorAll('#workspaceShell .nav-link, .mobile-nav .nav-link').forEach(function(b){b.classList.toggle('active',b.dataset.page===id);});
       if(id==='dashboard'){if(window.currentUser&&window.currentUser.role==='admin'&&typeof startAdminPersonalTasksListener==='function')startAdminPersonalTasksListener();if(typeof renderCashWidget==='function')renderCashWidget();if(typeof renderSalaryBlock==='function')renderSalaryBlock();if(typeof renderCashMetrics==='function')renderCashMetrics();if(typeof renderShiftBtn==='function')renderShiftBtn();if(typeof renderCalendar==='function')renderCalendar();if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(false);if(typeof updatePurchaseCostDashboardNotice==='function')updatePurchaseCostDashboardNotice();if(typeof updateTaskAttentionIndicator==='function')updateTaskAttentionIndicator();}
@@ -11956,11 +11956,12 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         if (costsPageEl && costsPageEl.classList.contains('active')) showPage('dashboard');
       }
       document.querySelectorAll('[data-page="audit"]').forEach(function(link){link.style.display=sellerMode?'none':'';});
+      document.querySelectorAll('[data-page="community"]').forEach(function(link){link.style.display=sellerMode?'none':'';});
       document.querySelectorAll('[data-page="orgs"]').forEach(function(link){
         if (sellerMode) link.style.display='none';
         else { var orgPanel = document.getElementById('orgsManagePanel'); link.style.display=(!orgPanel || orgPanel.classList.contains('hidden') || orgPanel.style.display==='none')?'none':''; }
       });
-      if (sellerMode && ((pages.audit && pages.audit.classList.contains('active')) || (pages.orgs && pages.orgs.classList.contains('active')))) showPage('dashboard');
+      if (sellerMode && ((pages.audit && pages.audit.classList.contains('active')) || (pages.orgs && pages.orgs.classList.contains('active')) || (pages.community && pages.community.classList.contains('active')))) showPage('dashboard');
     }
     var observer=new MutationObserver(syncAdminNav);['adminPanel','storesManagePanel','salaryManagePanel','orgsManagePanel'].forEach(function(id){var el=document.getElementById(id);if(el)observer.observe(el,{attributes:true,attributeFilter:['class','style']});});
     syncAdminNav();
