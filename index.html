@@ -706,6 +706,12 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-leader-person{min-width:0;flex:1}.community-leader-person strong{font-size:13px}.community-leader-person span{display:block;font-size:11px;color:var(--text-light);margin-top:3px}
 .community-leader-value{text-align:right;font-size:13px;font-weight:800;white-space:nowrap}
 .community-leader-value span{display:block;color:var(--text-light);font-size:10px;font-weight:500;margin-top:2px}
+.community-person-meta .community-name-line,.community-leader-person .community-name-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:0;color:var(--text)}
+.community-person-meta .community-status-badge,.community-leader-person .community-status-badge{display:inline-flex;margin:0;color:#805b06}
+.community-person-meta .community-status-vip,.community-leader-person .community-status-vip{color:#a83f70}
+.community-person-meta .community-status-legend,.community-leader-person .community-status-legend{color:#6345a7}
+.community-person-meta .community-status-star,.community-leader-person .community-status-star{color:#28658e}
+.community-person-meta .community-status-fire,.community-leader-person .community-status-fire{color:#a64d2d}
 @media(max-width:760px){.community-messenger{grid-template-columns:1fr;min-height:0}.community-chat-sidebar{display:flex;gap:4px;overflow-x:auto;align-items:center}.community-chat-section-label{display:none}.community-chat-nav-button{width:auto;flex:0 0 auto}.community-chat-main{min-height:500px}.community-chat-messages{max-height:55vh}.community-message-bubble{max-width:90%}}
 @media(max-width:680px){.community-intro{padding:14px}.community-directory-grid{grid-template-columns:1fr}.community-profile-card{padding:14px}.community-subtab{padding:9px 11px;font-size:12px}.community-wallet-card{padding:14px}}
 </style>
@@ -11814,6 +11820,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       var nextOrgKey=communitySafeKey(getCommunityOrgKey());
       if(communityCurrentOrgKey&&communityCurrentOrgKey!==nextOrgKey){
         stopCommunityMessagesListener();
+        stopCommunityGameListener();
         communityActivePeerId='';
       }
       communityCurrentOrgKey=nextOrgKey;
