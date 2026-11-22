@@ -699,35 +699,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-shop-item-icon{font-size:30px}.community-shop-item h4{margin:0;font-size:14px}.community-shop-item p{margin:0;color:var(--text-light);font-size:12px;line-height:1.45;flex:1}
 .community-shop-price{font-size:13px;font-weight:800;color:#855f0b}
 
-.community-avatar-editor{display:grid;grid-template-columns:minmax(230px,310px) minmax(0,1fr);gap:14px;margin:14px 0 22px;align-items:start}
-.community-avatar-preview-panel,.community-avatar-wardrobe{border:1px solid var(--border);border-radius:15px;background:#fff;padding:14px;min-width:0}
-.community-avatar-panel-title{font-size:14px;font-weight:850;margin-bottom:10px;color:var(--text)}
-.community-avatar-stage{display:flex;align-items:center;justify-content:center;width:100%;max-width:260px;margin:0 auto;aspect-ratio:220/290;overflow:hidden;border-radius:18px;background:linear-gradient(145deg,#fff8fb,#f0dce9);box-shadow:inset 0 0 0 1px rgba(255,255,255,.7),0 7px 22px rgba(69,47,65,.08)}
-.community-avatar-stage svg{display:block;width:100%;height:100%}
-.community-avatar-scene{display:block;width:100%;height:100%;min-height:260px;overflow:hidden;border-radius:inherit;background:linear-gradient(145deg,#f7eff5,#fce8f0)}
-.community-avatar-stage .community-avatar-scene{min-height:0;height:100%}
-.community-avatar-person{width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center}
-.community-avatar-person svg{display:block;width:100%;height:100%;object-fit:contain}
-.community-avatar-caption{text-align:center;color:var(--text-light);font-size:11px;margin:9px 0 10px;min-height:16px}
-.community-avatar-preview-actions{display:flex;justify-content:center}
-.community-clothing-categories{display:flex;gap:6px;overflow-x:auto;padding:2px 0 11px;margin-bottom:3px}
-.community-clothing-category{flex:0 0 auto;border:1px solid var(--border);border-radius:20px;background:#fff;color:var(--text-light);font-size:11px;font-weight:750;padding:7px 10px;cursor:pointer}
-.community-clothing-category.active{background:#fbe4ed;border-color:#e9a9c2;color:#a83f70}
-.community-clothing-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:9px}
-.community-clothing-card{display:flex;flex-direction:column;gap:7px;padding:11px;border:1px solid var(--border);border-radius:12px;background:#fff;min-width:0}
-.community-clothing-card.equipped{border-color:#80bba1;background:#f5fcf8}
-.community-clothing-card.previewing{border-color:#d39abd;box-shadow:0 0 0 2px rgba(211,154,189,.13)}
-.community-clothing-art{display:flex;align-items:center;justify-content:center;min-height:96px;padding:3px;border-radius:10px;background:linear-gradient(135deg,#fbf5f8,#f2edf5);overflow:hidden}.community-clothing-art svg{display:block;width:100%;height:92px;max-width:150px;object-fit:contain;filter:drop-shadow(0 3px 3px rgba(58,43,63,.12))}
-.community-clothing-card h4{font-size:12px;line-height:1.3;margin:0;min-height:30px}
-.community-clothing-card p{font-size:10px;line-height:1.4;color:var(--text-light);margin:0;min-height:42px;flex:1}
-.community-clothing-card .community-shop-price{font-size:12px}
-.community-clothing-card button{width:100%;font-size:11px;padding:8px 9px}
-.community-clothing-preview-button{margin-top:2px}
 .community-shop-section-title{margin:22px 0 7px;border:0;padding:0;font-size:17px}
-.community-profile-avatar-custom{overflow:hidden;padding:0!important;background:#f7eff5!important}
-.community-profile-avatar-custom svg{display:block;width:100%;height:100%}
-@media(max-width:850px){.community-avatar-editor{grid-template-columns:minmax(0,1fr)}.community-avatar-stage{max-width:220px}.community-avatar-preview-panel{display:flex;flex-direction:column;align-items:center}.community-avatar-panel-title{align-self:flex-start;width:100%}}
-@media(max-width:520px){.community-clothing-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.community-clothing-card{padding:9px}.community-clothing-card h4{font-size:11px}.community-clothing-card p{font-size:10px}}
 .community-owned-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
 .community-owned-chip{display:inline-flex;padding:6px 9px;border-radius:20px;background:#f7f1f5;color:#725365;font-size:11px;font-weight:700}
 .community-leaderboard{display:flex;flex-direction:column;gap:8px}
@@ -11269,14 +11241,14 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации'), communityPage=makePage('community','Сообщество EASY');
     communityPage.insertAdjacentHTML('beforeend', `
       <section class="community-intro">
-        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Сообщество EASY</h3><p>Общий чат организации, личные переписки, профили сотрудников и игровой магазин с гардеробом. Создавай свой образ, собирай комплекты и открывай новые вещи.</p></div>
+        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Сообщество EASY</h3><p>Общий чат организации, личные переписки, профили сотрудников и магазин игровых наград. Зарабатывай звёзды за продажи, открывай статусы и собирай достижения.</p></div>
         <span class="community-org-pill" id="communityOrgLabel">Организация</span>
       </section>
       <div class="community-subnav" role="tablist" aria-label="Разделы сообщества">
         <button type="button" class="community-subtab active" data-community-tab="messages" role="tab" aria-selected="true">💬 Сообщения</button>
         <button type="button" class="community-subtab" data-community-tab="employees" role="tab" aria-selected="false">👥 Сотрудники</button>
         <button type="button" class="community-subtab" data-community-tab="profile" role="tab" aria-selected="false">🙋 Мой профиль</button>
-        <button type="button" class="community-subtab" data-community-tab="shop" role="tab" aria-selected="false">🛍️ Магазин</button>
+        <button type="button" class="community-subtab" data-community-tab="shop" role="tab" aria-selected="false">🎁 Магазин наград</button>
         <button type="button" class="community-subtab" data-community-tab="activity" role="tab" aria-selected="false">🏆 Рейтинг</button>
       </div>
       <section class="community-view active" id="communityView-messages" role="tabpanel">
@@ -11415,36 +11387,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       {id:'fire',title:'Хит продаж',icon:'🔥',price:3000,description:'Для тех, кто регулярно закрывает сильные смены.',badgeClass:'community-status-fire'},
       {id:'legend',title:'Легенда EASY',icon:'👑',price:7000,description:'Самый заметный статус магазина.',badgeClass:'community-status-legend'}
     ];
-    var communityClothingCatalog=[
-      {id:'tee-rose',title:'Футболка EASY',icon:'👕',slot:'top',category:'top',price:600,description:'Лёгкая футболка в фирменном стиле.',color:'#d985a8',style:'tee'},
-      {id:'hoodie-mint',title:'Мятное худи',icon:'🧥',slot:'top',category:'top',price:1400,description:'Уютное худи для спокойных смен.',color:'#65ad9b',style:'hoodie'},
-      {id:'hoodie-graphite',title:'Графитовое худи',icon:'🖤',slot:'top',category:'top',price:1800,description:'Минималистичный городской образ.',color:'#48505e',style:'hoodie'},
-      {id:'varsity-blue',title:'Бомбер EASY',icon:'🎽',slot:'top',category:'top',price:2800,description:'Контрастный бомбер с яркими деталями.',color:'#477eb4',style:'jacket'},
-      {id:'suit-midnight',title:'Костюм «Бизнес»',icon:'🤵',slot:'top',category:'top',price:6000,description:'Строгий образ для настоящей легенды.',color:'#34425e',style:'suit'},
-      {id:'jeans-classic',title:'Классические джинсы',icon:'👖',slot:'bottom',category:'bottom',price:700,description:'Базовая вещь на каждый день.',color:'#4779aa',style:'pants'},
-      {id:'joggers-graphite',title:'Спортивные джоггеры',icon:'🩶',slot:'bottom',category:'bottom',price:900,description:'Свободная посадка и городской стиль.',color:'#626a78',style:'pants'},
-      {id:'cargo-olive',title:'Карго хаки',icon:'🪖',slot:'bottom',category:'bottom',price:1600,description:'Практичные брюки с объёмными карманами.',color:'#78815b',style:'cargo'},
-      {id:'shorts-summer',title:'Летние шорты',icon:'🩳',slot:'bottom',category:'bottom',price:800,description:'Для тёплых дней и лёгких образов.',color:'#c98d56',style:'shorts'},
-      {id:'sneakers-white',title:'Белые кроссовки',icon:'👟',slot:'shoes',category:'shoes',price:500,description:'Универсальная пара под любой стиль.',color:'#f5f2ed',style:'sneakers'},
-      {id:'high-tops-red',title:'Красные высокие кеды',icon:'👟',slot:'shoes',category:'shoes',price:1100,description:'Яркий акцент в образе.',color:'#c95e70',style:'high'},
-      {id:'boots-black',title:'Чёрные ботинки',icon:'🥾',slot:'shoes',category:'shoes',price:1700,description:'Брутальная обувь для уверенного шага.',color:'#343641',style:'boots'},
-      {id:'cap-pink',title:'Розовая кепка',icon:'🧢',slot:'head',category:'head',price:800,description:'Добавляет образу характер.',color:'#d77fa5',style:'cap'},
-      {id:'beanie-purple',title:'Фиолетовая шапка',icon:'🧶',slot:'head',category:'head',price:1000,description:'Тёплый аксессуар с ярким цветом.',color:'#806bb0',style:'beanie'},
-      {id:'glasses-dark',title:'Солнцезащитные очки',icon:'🕶️',slot:'accessory',category:'accessory',price:1200,description:'Немного загадочности и уверенности.',color:'#303744',style:'glasses'},
-      {id:'headphones-purple',title:'Большие наушники',icon:'🎧',slot:'accessory',category:'accessory',price:1800,description:'Для тех, кто всегда на своей волне.',color:'#8765b5',style:'headphones'},
-      {id:'chain-gold',title:'Золотая цепочка',icon:'📿',slot:'accessory',category:'accessory',price:2300,description:'Яркая деталь премиального образа.',color:'#d5a63b',style:'chain'}
-    ];
-    var communityClothingCategory='all';
-    var communityAvatarPreviewItemId='';
-    var communityClothingCategories=[
-      {id:'all',label:'Всё',icon:'✨'},
-      {id:'top',label:'Верх',icon:'👕'},
-      {id:'bottom',label:'Низ',icon:'👖'},
-      {id:'shoes',label:'Обувь',icon:'👟'},
-      {id:'head',label:'Головные уборы',icon:'🧢'},
-      {id:'accessory',label:'Аксессуары',icon:'🕶️'}
-    ];
-function communitySafeKey(value){return String(value==null?'':value).replace(/[.#$\[\]\/]/g,'_')||'empty';}
+    function communitySafeKey(value){return String(value==null?'':value).replace(/[.#$\[\]\/]/g,'_')||'empty';}
     function getCommunityOrgKey(){
       var user=window.currentUser;
       if(!user)return 'mine';
@@ -11474,119 +11417,7 @@ function communitySafeKey(value){return String(value==null?'':value).replace(/[.
     function getCommunityStatusItem(statusId){
       return communityStatusCatalog.find(function(item){return item.id===String(statusId||'');})||null;
     }
-    function getCommunityClothingItem(itemId){
-      return communityClothingCatalog.find(function(item){return item.id===String(itemId||'');})||null;
-    }
-    function buildCommunityAvatarScene(userId,previewClothingId){
-      return '<div class="community-avatar-scene"><div class="community-avatar-person">'+buildCommunityAvatarSvg(userId,previewClothingId)+'</div></div>';
-    }
-    function buildCommunityAvatarSvg(userId,previewItemId){
-      var state=getCommunityUserGameState(userId);
-      var avatarState=state.avatar&&typeof state.avatar==='object'?state.avatar:{};
-      var equipped=Object.assign({},avatarState.equipped&&typeof avatarState.equipped==='object'?avatarState.equipped:{});
-      var preview=getCommunityClothingItem(previewItemId);
-      if(preview)equipped[preview.slot]=preview.id;
-      function item(slot){return getCommunityClothingItem(equipped[slot]);}
-      var top=item('top'),bottom=item('bottom'),shoes=item('shoes'),head=item('head'),accessory=item('accessory');
-      var topColor=top?top.color:'#5489ad';
-      var bottomColor=bottom?bottom.color:'#52647d';
-      var shoeColor=shoes?shoes.color:'#f3f0ed';
-      var skin='#d9a17f';
-      var hair='#4b3740';
-      var topStyle=top?top.style:'tee';
-      var bottomStyle=bottom?bottom.style:'pants';
-      var topDetails='';
-      var bottomDetails='';
-      var sleeves='';
-      if(topStyle==='hoodie'){
-        sleeves='<path d="M79 111 Q69 119 65 145 L58 170 Q57 179 65 182 Q72 184 77 173 L91 135Z M141 111 Q151 119 155 145 L162 170 Q163 179 155 182 Q148 184 143 173 L129 135Z" fill="'+topColor+'" stroke="#473f4a" stroke-opacity=".3" stroke-width="2"/><path d="M61 166 L76 170 M144 170 L159 166" stroke="#ffffff" stroke-opacity=".45" stroke-width="3"/>';
-        topDetails='<path d="M88 105 Q110 92 132 105 L126 126 Q110 118 94 126Z" fill="#27313a" fill-opacity=".22" stroke="#ffffff" stroke-opacity=".55" stroke-width="2.5"/><path d="M104 126 L107 148 M116 126 L113 148" stroke="#f8f4f0" stroke-width="2" stroke-linecap="round"/><circle cx="104" cy="126" r="2" fill="#f8f4f0"/><circle cx="116" cy="126" r="2" fill="#f8f4f0"/><path d="M91 151 Q110 146 129 151 L126 168 Q110 173 94 168Z" fill="#26333a" fill-opacity=".12" stroke="#ffffff" stroke-opacity=".32" stroke-width="1.5"/><path d="M94 173 Q110 178 126 173" fill="none" stroke="#ffffff" stroke-opacity=".38" stroke-width="2"/><path d="M84 116 L80 144 M136 116 L140 144" stroke="#ffffff" stroke-opacity=".2" stroke-width="2"/>';
-      }else if(topStyle==='jacket'){
-        sleeves='<path d="M79 109 Q68 117 64 145 L57 170 Q57 180 66 182 Q73 182 77 171 L92 132Z M141 109 Q152 117 156 145 L163 170 Q163 180 154 182 Q147 182 143 171 L128 132Z" fill="'+topColor+'" stroke="#343d50" stroke-opacity=".5" stroke-width="2"/><path d="M59 157 L76 161 M144 161 L161 157" stroke="#f4edf0" stroke-width="4"/><path d="M59 164 L75 168 M145 168 L161 164" stroke="#f4edf0" stroke-width="2"/>';
-        topDetails='<path d="M110 104 L110 183" stroke="#f5edf1" stroke-width="3"/><path d="M91 106 L103 120 L110 113 L117 120 L129 106" fill="none" stroke="#f5edf1" stroke-width="3"/><path d="M92 145 L104 148 L104 162 L91 160Z M116 148 L129 145 L129 160 L116 162Z" fill="#ffffff" fill-opacity=".1" stroke="#ffffff" stroke-opacity=".55" stroke-width="1.5"/><path d="M96 108 L106 123 M124 108 L114 123" stroke="#ffffff" stroke-opacity=".32" stroke-width="2"/><circle cx="110" cy="132" r="2" fill="#f7e7e9"/><circle cx="110" cy="146" r="2" fill="#f7e7e9"/><circle cx="110" cy="160" r="2" fill="#f7e7e9"/><path d="M94 174 Q110 178 126 174" stroke="#f6eaf0" stroke-width="3" fill="none"/><path d="M82 119 L88 136 M138 119 L132 136" stroke="#ffffff" stroke-opacity=".35" stroke-width="2"/><path d="M95 151 L101 156 L95 161Z" fill="#f5edf1"/>';
-      }else if(topStyle==='suit'){
-        sleeves='<path d="M79 109 Q68 117 64 145 L57 170 Q57 180 66 182 Q73 182 77 171 L92 132Z M141 109 Q152 117 156 145 L163 170 Q163 180 154 182 Q147 182 143 171 L128 132Z" fill="'+topColor+'" stroke="#252d40" stroke-opacity=".55" stroke-width="2"/><path d="M59 166 L75 170 M145 170 L161 166" stroke="#263047" stroke-width="3"/>';
-        topDetails='<path d="M92 103 L108 132 L101 151 L83 111Z" fill="#f7f3eb" stroke="#b7b8c1" stroke-width="1"/><path d="M128 103 L112 132 L119 151 L137 111Z" fill="#f7f3eb" stroke="#b7b8c1" stroke-width="1"/><path d="M108 126 L112 126 L118 159 L110 169 L102 159Z" fill="#b94f67" stroke="#883d58" stroke-width="1"/><path d="M110 132 L110 181" stroke="#d7dce5" stroke-width="1.5"/><path d="M87 148 L100 153 L98 160 L85 156Z" fill="#263a57" stroke="#d9dce4" stroke-width="1"/><path d="M120 145 L132 145 L132 149 L120 149Z" fill="#f5f2ec"/><circle cx="122" cy="165" r="1.8" fill="#e1d6c3"/><circle cx="122" cy="174" r="1.8" fill="#e1d6c3"/>';
-      }else{
-        sleeves='<path d="M80 109 Q69 117 65 145 L58 170 Q58 179 66 182 Q73 182 77 171 L91 132Z M140 109 Q151 117 155 145 L162 170 Q162 179 154 182 Q147 182 143 171 L129 132Z" fill="'+topColor+'" stroke="#473f4a" stroke-opacity=".28" stroke-width="2"/><path d="M60 166 Q67 169 75 166 M145 166 Q153 169 160 166" stroke="#ffffff" stroke-opacity=".35" stroke-width="2"/>';
-        topDetails='<path d="M95 108 Q110 118 125 108" fill="none" stroke="#ffffff" stroke-opacity=".72" stroke-width="3"/><path d="M89 118 Q84 140 86 160 M131 118 Q136 140 134 160" fill="none" stroke="#ffffff" stroke-opacity=".15" stroke-width="2"/><path d="M92 174 Q110 178 128 174" fill="none" stroke="#ffffff" stroke-opacity=".38" stroke-width="2"/><path d="M119 145 L130 145 L130 154 L119 154Z" fill="#ffffff" fill-opacity=".1" stroke="#ffffff" stroke-opacity=".35" stroke-width="1"/><text x="110" y="139" text-anchor="middle" font-size="7" font-weight="900" letter-spacing="1" fill="#ffffff" fill-opacity=".88">EASY</text>';
-      }
-      if(bottomStyle==='shorts'){
-        bottomDetails='<path d="M78 178 Q110 185 142 178 L138 218 L113 220 L110 205 L106 220 L82 218Z" fill="'+bottomColor+'" stroke="#343946" stroke-opacity=".48" stroke-width="2"/><path d="M110 187 L110 214" stroke="#ffffff" stroke-opacity=".48" stroke-width="2"/><path d="M84 185 L101 187 L99 198 L84 197Z M119 187 L136 185 L136 197 L121 198Z" fill="#ffffff" fill-opacity=".09" stroke="#ffffff" stroke-opacity=".35" stroke-width="1.3"/><path d="M83 214 L104 216 M116 216 L137 214" stroke="#ffffff" stroke-opacity=".28" stroke-width="2"/><path d="M92 181 L93 188 M128 181 L127 188" stroke="#e7d9c7" stroke-width="2"/>';
-      }else{
-        bottomDetails='<path d="M78 176 Q110 183 142 176 L137 257 L113 257 L110 207 L105 257 L82 257Z" fill="'+bottomColor+'" stroke="#343946" stroke-opacity=".48" stroke-width="2"/><path d="M110 185 L110 249" stroke="#ffffff" stroke-opacity=".3" stroke-width="1.8"/><path d="M84 187 Q91 193 101 191 L101 202 Q92 204 84 198Z M119 191 Q129 193 136 187 L136 198 Q128 204 119 202Z" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".34" stroke-width="1.3"/><path d="M85 205 L82 249 M135 205 L138 249" stroke="#ffffff" stroke-opacity=".22" stroke-width="1.5"/><path d="M86 251 L104 251 M116 251 L134 251" stroke="#ffffff" stroke-opacity=".25" stroke-width="2"/><path d="M99 185 L99 193 M121 185 L121 193" stroke="#e7d9c7" stroke-width="2"/><path d="M99 194 L105 198 M121 194 L115 198" stroke="#333b4c" stroke-opacity=".5" stroke-width="1.5"/>';
-        if(bottom&&bottom.id==='joggers-graphite')bottomDetails+='<path d="M84 211 L87 249 M136 211 L133 249" stroke="#d5d8de" stroke-opacity=".65" stroke-width="2.5"/><path d="M82 254 Q94 259 106 254 M114 254 Q126 259 138 254" stroke="#303541" stroke-width="3" fill="none"/>';
-        if(bottomStyle==='cargo')bottomDetails+='<rect x="81" y="207" width="19" height="22" rx="3" fill="#626d4b" stroke="#c0c49e" stroke-width="1.5"/><rect x="120" y="207" width="19" height="22" rx="3" fill="#626d4b" stroke="#c0c49e" stroke-width="1.5"/><path d="M83 212 L98 212 M122 212 L137 212" stroke="#e1dfbf" stroke-opacity=".65" stroke-width="1.5"/><circle cx="91" cy="218" r="1.5" fill="#e1dfbf"/><circle cx="129" cy="218" r="1.5" fill="#e1dfbf"/>';
-      }
-      var shoeShape='';
-      if(shoes&&shoes.style==='boots'){
-        shoeShape='<path d="M82 237 L105 237 L108 260 Q100 270 76 266 Q72 262 77 254Z M115 237 L138 237 L145 260 Q143 267 118 266 Q112 263 115 237Z" fill="'+shoeColor+'" stroke="#242631" stroke-width="2"/><path d="M80 251 L105 251 M117 251 L142 251" stroke="#aab0b9" stroke-opacity=".6" stroke-width="2"/><path d="M86 240 L101 240 L101 251 L86 251Z M120 240 L135 240 L135 251 L120 251Z" fill="#ffffff" fill-opacity=".08"/><path d="M88 242 L98 249 M92 241 L102 248 M122 241 L132 248 M118 242 L128 249" stroke="#d3c9bd" stroke-width="1.6"/><circle cx="88" cy="243" r="1.5" fill="#d7cbbd"/><circle cx="98" cy="247" r="1.5" fill="#d7cbbd"/><circle cx="122" cy="243" r="1.5" fill="#d7cbbd"/><circle cx="132" cy="247" r="1.5" fill="#d7cbbd"/><path d="M76 263 Q93 270 108 263 M117 263 Q133 270 145 261" fill="none" stroke="#777985" stroke-width="2.5"/>';
-      }else if(shoes&&shoes.style==='high'){
-        shoeShape='<path d="M82 238 L105 238 L108 261 Q99 270 76 266 Q72 261 78 253Z M115 238 L137 238 L145 261 Q143 267 118 266 Q112 263 115 238Z" fill="'+shoeColor+'" stroke="#8e394a" stroke-width="2"/><path d="M84 240 L104 240 L104 253 L84 253Z M117 240 L137 240 L137 253 L117 253Z" fill="#ffffff" fill-opacity=".12" stroke="#ffffff" stroke-opacity=".5" stroke-width="1"/><path d="M85 248 L104 248 M117 248 L138 248" stroke="#f7dce1" stroke-width="2"/><path d="M87 242 L101 251 M92 241 L105 249 M119 241 L133 251 M115 249 L129 241" stroke="#fff4f3" stroke-width="1.6"/><path d="M76 263 Q94 270 108 263 M117 263 Q133 270 145 261" fill="none" stroke="#f7dce1" stroke-width="3"/>';
-      }else{
-        shoeShape='<path d="M82 248 L105 248 L110 262 Q101 270 76 266 Q72 261 79 254Z M115 248 L138 248 L145 261 Q143 267 118 266 Q111 263 115 248Z" fill="'+shoeColor+'" stroke="#777985" stroke-opacity=".65" stroke-width="1.8"/><path d="M83 251 Q94 254 105 251 L107 258 Q95 262 80 258Z M116 251 Q127 254 138 251 L141 258 Q126 262 114 258Z" fill="#ffffff" fill-opacity=".25"/><path d="M89 250 L101 258 M94 250 L106 256 M119 256 L131 250 M115 258 L127 250" stroke="#aeb2bc" stroke-width="1.6"/><path d="M76 263 Q94 270 109 263 M117 263 Q133 270 145 261" fill="none" stroke="#d6d4d5" stroke-width="2.5"/><path d="M84 253 L104 253 M117 253 L139 253" stroke="#ffffff" stroke-opacity=".65" stroke-width="1"/>';
-      }
-      var headwear='';
-      if(head&&head.style==='cap')headwear='<path d="M78 49 Q81 17 110 17 Q140 18 144 49 L136 57 Q111 48 86 58Z" fill="'+head.color+'" stroke="#59404f" stroke-opacity=".5" stroke-width="1.8"/><path d="M126 49 Q153 46 160 57 Q148 66 126 60Z" fill="'+head.color+'" stroke="#59404f" stroke-opacity=".5" stroke-width="1.8"/><path d="M87 48 Q111 39 137 48" stroke="#ffffff" stroke-opacity=".35" stroke-width="2" fill="none"/><path d="M109 23 L111 39" stroke="#ffffff" stroke-opacity=".35" stroke-width="2"/><path d="M94 34 Q110 27 126 34" stroke="#ffffff" stroke-opacity=".25" stroke-width="1.5" fill="none"/>';
-      if(head&&head.style==='beanie')headwear='<path d="M80 52 Q81 17 110 17 Q140 18 142 52 L139 64 Q110 55 82 64Z" fill="'+head.color+'" stroke="#51445c" stroke-opacity=".5" stroke-width="1.8"/><path d="M82 48 Q110 39 140 48 L140 60 Q111 52 82 61Z" fill="#ffffff" fill-opacity=".25" stroke="#ffffff" stroke-opacity=".35" stroke-width="1"/><path d="M88 27 Q110 18 133 29" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="2"/><circle cx="111" cy="17" r="5.5" fill="'+head.color+'" stroke="#51445c" stroke-opacity=".4"/><path d="M94 24 L91 45 M128 24 L131 45" stroke="#ffffff" stroke-opacity=".18" stroke-width="1.5"/>';
-      var accessoryShape='';
-      if(accessory&&accessory.style==='glasses')accessoryShape='<path d="M82 61 Q95 55 106 62 L105 75 Q94 82 85 74Z M114 62 Q126 55 139 61 L136 74 Q126 82 115 75Z" fill="'+accessory.color+'" stroke="#1f2631" stroke-width="2.5"/><path d="M85 64 Q95 59 102 64 L99 72 Q92 75 87 71Z M117 64 Q127 59 135 64 L132 71 Q124 75 119 72Z" fill="#ffffff" fill-opacity=".18"/><path d="M105 66 L115 66" stroke="#1f2631" stroke-width="3"/><path d="M82 64 L77 62 M139 64 L144 62" stroke="#1f2631" stroke-width="2"/>';
-      if(accessory&&accessory.style==='headphones')accessoryShape='<path d="M76 67 Q76 22 110 22 Q146 22 146 67" fill="none" stroke="'+accessory.color+'" stroke-width="9"/><path d="M81 53 Q84 31 101 27 M119 27 Q138 32 141 53" fill="none" stroke="#ffffff" stroke-opacity=".32" stroke-width="2.5"/><rect x="71" y="57" width="16" height="31" rx="7" fill="'+accessory.color+'" stroke="#45384f" stroke-opacity=".35" stroke-width="1.5"/><rect x="133" y="57" width="16" height="31" rx="7" fill="'+accessory.color+'" stroke="#45384f" stroke-opacity=".35" stroke-width="1.5"/><rect x="75" y="63" width="8" height="19" rx="4" fill="#ffffff" fill-opacity=".2"/><rect x="137" y="63" width="8" height="19" rx="4" fill="#ffffff" fill-opacity=".2"/>';
-      if(accessory&&accessory.style==='chain')accessoryShape='<path d="M91 111 Q110 140 129 111" fill="none" stroke="#7d5c20" stroke-width="5"/><path d="M91 111 Q110 139 129 111" fill="none" stroke="'+accessory.color+'" stroke-width="3.2" stroke-dasharray="3 2"/><path d="M110 132 L116 138 L110 147 L104 138Z" fill="'+accessory.color+'" stroke="#916c29" stroke-width="1.4"/><path d="M110 135 L113 138 L110 142Z" fill="#fff4bd" fill-opacity=".8"/>';
-      return '<svg viewBox="0 0 220 290" role="img" aria-label="Аватар сотрудника" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="avatarBackdrop" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff8fb"/><stop offset="1" stop-color="#f0dce9"/></linearGradient><linearGradient id="avatarSkin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2c3a2"/><stop offset="1" stop-color="'+skin+'"/></linearGradient></defs><rect width="220" height="290" rx="25" fill="url(#avatarBackdrop)"/><circle cx="110" cy="126" r="91" fill="#ffffff" opacity=".38"/><circle cx="110" cy="126" r="78" fill="none" stroke="#ffffff" stroke-opacity=".5" stroke-width="1.5"/><ellipse cx="110" cy="273" rx="49" ry="8" fill="#cbbac5" opacity=".6"/>'+bottomDetails+shoeShape+ '<path d="M97 82 L123 82 L124 111 Q110 121 96 111Z" fill="url(#avatarSkin)"/>'+sleeves+'<path d="M77 177 Q72 176 67 181 Q61 190 65 195 Q71 199 77 192 L84 180Z M143 177 Q148 176 153 181 Q159 190 155 195 Q149 199 143 192 L136 180Z" fill="url(#avatarSkin)" stroke="#b67b66" stroke-opacity=".35" stroke-width="1"/><path d="M78 104 Q110 91 142 104 L151 183 Q110 194 69 183Z" fill="'+topColor+'" stroke="#493f4a" stroke-opacity=".38" stroke-width="2"/><path d="M82 111 Q88 106 94 105 L86 178" fill="none" stroke="#ffffff" stroke-opacity=".14" stroke-width="5"/><path d="M138 111 Q132 106 126 105 L134 178" fill="none" stroke="#000000" stroke-opacity=".07" stroke-width="5"/>'+topDetails+'<path d="M79 183 Q110 191 141 183" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="2"/><path d="M110 188 L110 198" stroke="#343946" stroke-opacity=".35" stroke-width="2"/><circle cx="79" cy="61" r="8" fill="url(#avatarSkin)"/><circle cx="141" cy="61" r="8" fill="url(#avatarSkin)"/><ellipse cx="110" cy="58" rx="31" ry="37" fill="url(#avatarSkin)" stroke="#ae7968" stroke-opacity=".35" stroke-width="1"/><path d="M80 55 Q77 21 110 20 Q145 20 142 57 Q132 46 125 36 Q106 49 83 48Z" fill="'+hair+'"/><path d="M81 49 Q82 34 92 27 M132 27 Q141 35 140 49" fill="none" stroke="#76515a" stroke-width="3" stroke-linecap="round" opacity=".7"/><path d="M91 61 Q96 57 101 61 M119 61 Q124 57 129 61" stroke="#4a3437" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="97" cy="68" rx="2.2" ry="2.8" fill="#47373b"/><ellipse cx="123" cy="68" rx="2.2" ry="2.8" fill="#47373b"/><path d="M108 68 L106 76 Q110 79 114 76" fill="none" stroke="#bf806c" stroke-width="1.5" stroke-linecap="round"/><path d="M103 83 Q110 88 117 83" fill="none" stroke="#9e5d5b" stroke-width="2" stroke-linecap="round"/><path d="M86 76 Q91 80 96 77 M124 77 Q130 80 135 76" stroke="#e58f8e" stroke-opacity=".35" stroke-width="3" stroke-linecap="round"/>'+headwear+accessoryShape+'</svg>';
-    }
-    function buildCommunityClothingArtSvg(item){
-      if(!item)return '';
-      var c=item.color||'#8b7a91';
-      var outline='#514958';
-      var detail='#ffffff';
-      var art='';
-      if(item.slot==='top'){
-        if(item.style==='hoodie'){
-          art='<path d="M43 22 Q60 3 77 22 L89 39 L99 79 Q60 91 21 79 L31 39Z" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M43 22 Q60 9 77 22 L73 39 Q60 33 47 39Z" fill="#303b45" fill-opacity=".22" stroke="'+detail+'" stroke-opacity=".65" stroke-width="1.8"/><path d="M31 39 L16 49 L9 74 Q18 81 28 76 L40 50 M89 39 L104 49 L111 74 Q102 81 92 76 L80 50" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M43 40 L47 58 M77 40 L73 58" stroke="'+detail+'" stroke-width="2" stroke-linecap="round"/><path d="M45 61 Q60 56 75 61 L73 75 Q60 80 47 75Z" fill="#26333a" fill-opacity=".12" stroke="'+detail+'" stroke-opacity=".55" stroke-width="1.5"/><path d="M31 76 Q60 85 89 76 M18 72 L28 74 M92 74 L102 72" fill="none" stroke="'+detail+'" stroke-opacity=".65" stroke-width="3"/>';
-        }else if(item.style==='jacket'){
-          art='<path d="M40 27 L60 17 L80 27 L93 37 L88 83 L32 83 L27 37Z" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M40 27 L60 17 L80 27 L73 42 L60 34 L47 42Z" fill="#ffffff" fill-opacity=".16" stroke="'+detail+'" stroke-opacity=".65" stroke-width="1.5"/><path d="M27 37 L13 47 L7 74 Q16 82 27 76 L40 48 M93 37 L107 47 L113 74 Q104 82 93 76 L80 48" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M14 69 L27 73 M93 73 L106 69" stroke="'+detail+'" stroke-width="4"/><path d="M14 75 L27 78 M93 78 L106 75" stroke="'+detail+'" stroke-width="2"/><path d="M60 34 L60 82" stroke="'+detail+'" stroke-width="2.5"/><circle cx="60" cy="46" r="2" fill="#f4e9e9"/><circle cx="60" cy="58" r="2" fill="#f4e9e9"/><circle cx="60" cy="70" r="2" fill="#f4e9e9"/><path d="M38 51 L50 54 L49 66 L37 63Z M70 54 L82 51 L83 63 L71 66Z" fill="#ffffff" fill-opacity=".12" stroke="'+detail+'" stroke-opacity=".55" stroke-width="1.3"/><path d="M54 25 L60 31 L66 25" fill="none" stroke="'+detail+'" stroke-width="2"/>';
-        }else if(item.style==='suit'){
-          art='<path d="M39 25 L60 17 L81 25 L92 39 L86 84 L34 84 L28 39Z" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M39 25 L52 32 L60 44 L48 63 L34 37Z M81 25 L68 32 L60 44 L72 63 L86 37Z" fill="#f7f2e9" stroke="#c4c0c4" stroke-width="1.5"/><path d="M57 39 L63 39 L69 69 L60 78 L51 69Z" fill="#b94f67" stroke="#883d58" stroke-width="1"/><path d="M60 45 L60 71" stroke="#f9ccd1" stroke-width="1.2"/><path d="M36 52 L48 57 L45 66 L34 62Z" fill="#263a57" stroke="#e2dce3" stroke-width="1"/><path d="M73 51 L84 51 L84 55 L73 55Z" fill="#f7f2e9"/><path d="M34 81 Q60 87 86 81" stroke="#ffffff" stroke-opacity=".45" stroke-width="2" fill="none"/>';
-        }else{
-          art='<path d="M40 25 L60 18 L80 25 L93 38 L88 82 L32 82 L27 38Z" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M40 25 L60 18 L80 25 L72 40 L60 34 L48 40Z" fill="#ffffff" fill-opacity=".15" stroke="'+detail+'" stroke-opacity=".65" stroke-width="1.5"/><path d="M27 38 L13 47 L7 73 Q16 81 27 76 L40 49 M93 38 L107 47 L113 73 Q104 81 93 76 L80 49" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M34 81 Q60 87 86 81" stroke="'+detail+'" stroke-opacity=".5" stroke-width="2" fill="none"/><path d="M46 42 Q60 51 74 42" fill="none" stroke="'+detail+'" stroke-width="2.5"/><path d="M46 53 L54 53 L54 62 L46 62Z" fill="#ffffff" fill-opacity=".12"/><path d="M66 52 L78 52 L78 54 L66 54Z" stroke="'+detail+'" stroke-opacity=".5" stroke-width="1" fill="none"/><text x="60" y="48" text-anchor="middle" font-size="6" font-weight="900" fill="#ffffff" letter-spacing=".7">EASY</text>';
-        }
-      }else if(item.slot==='bottom'){
-        if(item.style==='shorts'){
-          art='<path d="M25 23 Q60 30 95 23 L91 81 L63 84 L60 67 L57 84 L29 81Z" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M60 31 L60 76" stroke="'+detail+'" stroke-opacity=".55" stroke-width="2"/><path d="M32 40 L50 42 L48 57 L32 55Z M70 42 L88 40 L88 55 L72 57Z" fill="#ffffff" fill-opacity=".12" stroke="'+detail+'" stroke-opacity=".55" stroke-width="1.5"/><path d="M27 74 L56 77 M64 77 L89 74" stroke="'+detail+'" stroke-opacity=".55" stroke-width="2"/><path d="M36 25 L36 33 M84 25 L84 33" stroke="#e7d9c7" stroke-width="2"/>';
-        }else{
-          art='<path d="M25 20 Q60 27 95 20 L89 87 L63 87 L60 49 L56 87 L31 87Z" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M60 28 L60 80" stroke="'+detail+'" stroke-opacity=".45" stroke-width="1.8"/><path d="M31 32 L49 35 L47 49 L31 46Z M71 35 L89 32 L89 46 L73 49Z" fill="#ffffff" fill-opacity=".12" stroke="'+detail+'" stroke-opacity=".5" stroke-width="1.4"/><path d="M33 52 L31 82 M87 52 L89 82" stroke="'+detail+'" stroke-opacity=".25" stroke-width="1.5"/><path d="M34 83 L55 83 M65 83 L86 83" stroke="#303541" stroke-width="3"/><path d="M45 23 L45 31 M75 23 L75 31" stroke="#e7d9c7" stroke-width="2"/>';
-          if(item.style==='cargo')art+='<rect x="28" y="53" width="22" height="22" rx="2" fill="#626d4b" stroke="#d0cfac" stroke-width="1.5"/><rect x="70" y="53" width="22" height="22" rx="2" fill="#626d4b" stroke="#d0cfac" stroke-width="1.5"/><path d="M31 58 L47 58 M73 58 L89 58" stroke="#f0e8cc" stroke-opacity=".65" stroke-width="1.5"/><circle cx="39" cy="64" r="1.8" fill="#f0e8cc"/><circle cx="81" cy="64" r="1.8" fill="#f0e8cc"/>';
-          if(item.id==='joggers-graphite')art+='<path d="M35 36 L36 80 M85 36 L84 80" stroke="#d7d9de" stroke-opacity=".7" stroke-width="2.5"/>';
-        }
-      }else if(item.slot==='shoes'){
-        if(item.style==='boots'){
-          art='<path d="M30 15 L52 15 L55 61 L70 67 L100 73 Q106 78 101 84 L22 84 Q14 81 21 73 L31 63Z" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M31 19 L49 19 L50 57 L32 58Z" fill="#ffffff" fill-opacity=".12"/><path d="M33 28 L49 28 M33 38 L50 38 M33 48 L51 48" stroke="#d9d0c5" stroke-width="1.5"/><path d="M35 22 L47 30 M34 34 L48 42 M34 45 L50 53" stroke="#e4d9ce" stroke-width="2"/><path d="M20 76 Q60 82 102 76" fill="none" stroke="#aaa5a6" stroke-width="3"/><circle cx="36" cy="28" r="1.8" fill="#e8ddd0"/><circle cx="47" cy="36" r="1.8" fill="#e8ddd0"/>';
-        }else if(item.style==='high'){
-          art='<path d="M20 23 L49 23 L53 60 L72 68 L102 74 Q108 79 101 84 L17 84 Q12 80 19 73 L24 60Z" fill="'+c+'" stroke="#8e394a" stroke-width="2.5"/><path d="M26 28 L46 28 L48 57 L26 57Z" fill="#ffffff" fill-opacity=".14" stroke="#ffffff" stroke-opacity=".45" stroke-width="1.2"/><path d="M27 35 L47 35 M27 45 L48 45" stroke="#f7dce1" stroke-width="2"/><path d="M29 27 L44 36 M27 37 L46 47 M27 48 L47 56" stroke="#fff4f3" stroke-width="1.8"/><path d="M18 76 Q58 83 102 76" stroke="#f7dce1" stroke-width="3" fill="none"/>';
-        }else{
-          art='<path d="M21 35 L49 35 L55 61 L73 68 L101 74 Q108 79 101 84 L17 84 Q12 80 19 73 L27 61Z" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M26 40 L47 40 L51 59 L27 59Z" fill="#ffffff" fill-opacity=".18" stroke="#ffffff" stroke-opacity=".55" stroke-width="1.2"/><path d="M28 43 L46 55 M34 42 L51 53 M50 43 L34 56" stroke="#aeb2bc" stroke-width="1.8"/><path d="M18 76 Q58 83 102 76" stroke="#d6d4d5" stroke-width="3" fill="none"/><path d="M60 68 L73 71" stroke="#ffffff" stroke-opacity=".6" stroke-width="2"/>';
-        }
-      }else if(item.slot==='head'){
-        if(item.style==='beanie'){
-          art='<path d="M19 69 Q19 16 60 14 Q101 16 101 69 L97 80 Q60 70 23 80Z" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M22 59 Q60 47 99 59 L98 76 Q60 66 22 76Z" fill="#ffffff" fill-opacity=".23" stroke="#ffffff" stroke-opacity=".5" stroke-width="1.5"/><path d="M34 30 Q60 18 86 31" stroke="#ffffff" stroke-opacity=".28" stroke-width="3" fill="none"/><circle cx="60" cy="14" r="6" fill="'+c+'" stroke="'+outline+'" stroke-width="1.5"/>';
-        }else{
-          art='<path d="M17 63 Q21 18 60 17 Q98 18 103 63 L94 72 Q61 59 27 73Z" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M77 59 Q105 54 114 68 Q98 78 76 70Z" fill="'+c+'" stroke="'+outline+'" stroke-width="2.5"/><path d="M30 52 Q59 38 87 52" stroke="#ffffff" stroke-opacity=".35" stroke-width="2.5" fill="none"/><path d="M58 21 L60 43" stroke="#ffffff" stroke-opacity=".35" stroke-width="2"/><path d="M45 33 Q60 27 75 33" stroke="#ffffff" stroke-opacity=".24" stroke-width="1.5" fill="none"/>';
-        }
-      }else if(item.style==='glasses'){
-        art='<path d="M9 37 Q26 27 49 35 L47 63 Q29 74 15 60Z M71 35 Q94 27 111 37 L105 60 Q91 74 73 63Z" fill="'+c+'" fill-opacity=".92" stroke="'+outline+'" stroke-width="3"/><path d="M17 40 Q31 34 42 40 L39 57 Q29 63 20 55Z M78 40 Q91 34 103 40 L100 55 Q91 63 81 57Z" fill="#ffffff" fill-opacity=".2"/><path d="M48 43 Q60 36 72 43" stroke="'+outline+'" stroke-width="4" fill="none"/><path d="M10 41 L3 36 M110 41 L117 36" stroke="'+outline+'" stroke-width="3"/><path d="M22 43 L36 39" stroke="#ffffff" stroke-opacity=".65" stroke-width="2"/>';
-      }else if(item.style==='headphones'){
-        art='<path d="M19 65 L19 47 Q19 10 60 10 Q101 10 101 47 L101 65" fill="none" stroke="'+c+'" stroke-width="12"/><path d="M25 43 Q28 17 52 14 M68 14 Q92 17 95 43" fill="none" stroke="#ffffff" stroke-opacity=".4" stroke-width="3"/><rect x="10" y="48" width="24" height="39" rx="9" fill="'+c+'" stroke="'+outline+'" stroke-width="2"/><rect x="86" y="48" width="24" height="39" rx="9" fill="'+c+'" stroke="'+outline+'" stroke-width="2"/><rect x="16" y="55" width="12" height="25" rx="5" fill="#ffffff" fill-opacity=".2"/><rect x="92" y="55" width="12" height="25" rx="5" fill="#ffffff" fill-opacity=".2"/>';
-      }else if(item.style==='chain'){
-        art='<path d="M26 25 Q60 91 94 25" fill="none" stroke="#8b682b" stroke-width="8"/><path d="M26 25 Q60 91 94 25" fill="none" stroke="'+c+'" stroke-width="5" stroke-dasharray="5 3"/><path d="M60 62 L75 76 L60 94 L45 76Z" fill="'+c+'" stroke="#8b682b" stroke-width="2"/><path d="M60 67 L69 76 L60 87Z" fill="#fff1ad" fill-opacity=".8"/>';
-      }
-      return '<svg viewBox="0 0 120 100" role="img" aria-label="'+item.title+'" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="clothingArtBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffafc"/><stop offset="1" stop-color="#f0e8f1"/></linearGradient></defs><rect width="120" height="100" rx="12" fill="url(#clothingArtBg)"/><ellipse cx="60" cy="88" rx="39" ry="5" fill="#cfc4d0" opacity=".45"/>'+art+'</svg>';
-    }
-    function getCommunityEquippedClothes(state){
-      var avatar=state&&state.avatar&&typeof state.avatar==='object'?state.avatar:{};
-      return avatar.equipped&&typeof avatar.equipped==='object'?avatar.equipped:{};
-    }
-        function getCommunityUserGameState(userId){
+    function getCommunityUserGameState(userId){
       return communityGameStateByUser[String(userId||'')]||{};
     }
     function getCommunitySpent(state){
@@ -11854,7 +11685,7 @@ function communitySafeKey(value){return String(value==null?'':value).replace(/[.
       var card=document.createElement('article');card.className='community-profile-card';
       var back=document.createElement('button');back.type='button';back.className='community-back';back.textContent='← К списку сотрудников';back.addEventListener('click',function(){showCommunityTab('employees');});card.appendChild(back);
       var header=document.createElement('div');header.className='community-profile-header';
-      var avatar=document.createElement('div');avatar.className='community-profile-avatar community-profile-avatar-custom';avatar.innerHTML=buildCommunityAvatarScene(user.id,'','');
+      var avatar=document.createElement('div');avatar.className='community-profile-avatar';avatar.textContent=String(user.communityNickname||user.name||user.username||'Сотрудник').trim().charAt(0).toUpperCase()||'👤';
       var info=document.createElement('div');info.style.minWidth='0';
       var nameLine=document.createElement('div');nameLine.className='community-name-line';
       var title=document.createElement('h3');title.style.cssText='border:0;padding:0;margin:0;font-size:20px;';title.textContent=String(user.communityNickname||user.name||user.username||'Сотрудник');nameLine.appendChild(title);appendCommunityStatus(nameLine,user.id);
@@ -11874,20 +11705,17 @@ function communitySafeKey(value){return String(value==null?'':value).replace(/[.
       var collectionTitle=document.createElement('h4');collectionTitle.style.margin='0 0 7px';collectionTitle.textContent='Игровая коллекция';collection.appendChild(collectionTitle);
       var state=getCommunityUserGameState(user.id);
       var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
-      var equipped=getCommunityEquippedClothes(state);
       var owned=communityStatusCatalog.filter(function(item){return !!purchases[item.id];});
-      var ownedClothes=communityClothingCatalog.filter(function(item){return !!purchases[item.id];});
-      if(owned.length||ownedClothes.length){
+      if(owned.length){
         var chips=document.createElement('div');chips.className='community-owned-list';
         owned.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent=item.icon+' '+item.title+(String(state.activeStatusId||'')===item.id?' · надет':'');chips.appendChild(chip);});
-        ownedClothes.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent=item.icon+' '+item.title+(String(equipped[item.slot]||'')===item.id?' · надето':'');chips.appendChild(chip);});
         collection.appendChild(chips);
       }else{
-        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных предметов. Первые вещи и статусы уже ждут в магазине.';collection.appendChild(collectionNote);
+        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных статусов. Первый статус уже ждёт в магазине наград.';collection.appendChild(collectionNote);
       }
       card.appendChild(collection);
       var action=document.createElement('button');action.type='button';action.className='btn btn-primary';action.style.marginTop='14px';
-      if(own){action.textContent='Открыть игровой магазин';action.addEventListener('click',function(){showCommunityTab('shop');});}
+      if(own){action.textContent='Открыть магазин наград';action.addEventListener('click',function(){showCommunityTab('shop');});}
       else{action.textContent='Написать сообщение';action.addEventListener('click',function(){openCommunityDirect(user.id);});}
       card.appendChild(action);
       host.appendChild(card);
@@ -11906,50 +11734,7 @@ function communitySafeKey(value){return String(value==null?'':value).replace(/[.
       var earnedBlock=document.createElement('div');var earnedLabel=document.createElement('span');earnedLabel.textContent='Всего заработано';var earned=document.createElement('strong');earned.style.fontSize='18px';earned.textContent=formatCommunityCoins(wallet.earned);earnedBlock.appendChild(earnedLabel);earnedBlock.appendChild(earned);
       var spentBlock=document.createElement('div');var spentLabel=document.createElement('span');spentLabel.textContent='Потрачено';var spent=document.createElement('strong');spent.style.fontSize='18px';spent.textContent=formatCommunityCoins(wallet.spent);spentBlock.appendChild(spentLabel);spentBlock.appendChild(spent);
       walletCard.appendChild(balanceBlock);walletCard.appendChild(earnedBlock);walletCard.appendChild(spentBlock);host.appendChild(walletCard);
-      var note=document.createElement('p');note.style.cssText='font-size:12px;color:var(--text-light);margin:12px 0 14px;line-height:1.5;';note.textContent='За каждый 1 ₽ выручки начисляется 1 ⭐. Покупай одежду и статусы, примеряй вещи и собирай свой уникальный образ. Купленные предметы остаются в коллекции навсегда.';host.appendChild(note);
-
-      var editor=document.createElement('section');editor.className='community-avatar-editor';
-      var previewPanel=document.createElement('div');previewPanel.className='community-avatar-preview-panel';
-      var previewTitle=document.createElement('div');previewTitle.className='community-avatar-panel-title';previewTitle.textContent='Твой аватар';
-      var avatarStage=document.createElement('div');avatarStage.className='community-avatar-stage';avatarStage.innerHTML=buildCommunityAvatarScene(user.id,communityAvatarPreviewItemId);
-      var previewCaption=document.createElement('div');previewCaption.className='community-avatar-caption';previewCaption.textContent=communityAvatarPreviewItemId?'Примерка · предмет ещё не куплен':'Текущий образ · меняй вещи как захочешь';
-      var previewActions=document.createElement('div');previewActions.className='community-avatar-preview-actions';
-      if(communityAvatarPreviewItemId){
-        var resetPreview=document.createElement('button');resetPreview.type='button';resetPreview.className='btn btn-secondary';resetPreview.textContent='Сбросить примерку';resetPreview.addEventListener('click',function(){communityAvatarPreviewItemId='';renderCommunityShop();});previewActions.appendChild(resetPreview);
-      }
-      previewPanel.appendChild(previewTitle);previewPanel.appendChild(avatarStage);previewPanel.appendChild(previewCaption);previewPanel.appendChild(previewActions);
-      var wardrobe=document.createElement('div');wardrobe.className='community-avatar-wardrobe';
-      var wardrobeTitle=document.createElement('div');wardrobeTitle.className='community-avatar-panel-title';wardrobeTitle.textContent='Гардероб';
-      var categories=document.createElement('div');categories.className='community-clothing-categories';
-      communityClothingCategories.forEach(function(category){
-        var tab=document.createElement('button');tab.type='button';tab.className='community-clothing-category'+(communityClothingCategory===category.id?' active':'');tab.textContent=category.icon+' '+category.label;
-        tab.addEventListener('click',function(){communityClothingCategory=category.id;renderCommunityShop();});categories.appendChild(tab);
-      });
-      var clothingGrid=document.createElement('div');clothingGrid.className='community-clothing-grid';
-      var items=communityClothingCatalog.filter(function(item){return communityClothingCategory==='all'||item.category===communityClothingCategory;});
-      items.forEach(function(item){
-        var state=getCommunityUserGameState(user.id);
-        var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
-        var equipped=getCommunityEquippedClothes(state);
-        var owned=!!purchases[item.id];
-        var active=String(equipped[item.slot]||'')===item.id;
-        var previewing=String(communityAvatarPreviewItemId||'')===item.id;
-        var card=document.createElement('article');card.className='community-clothing-card'+(active?' equipped':'')+(previewing?' previewing':'');
-        var art=document.createElement('div');art.className='community-clothing-art';art.innerHTML=buildCommunityClothingArtSvg(item);
-        var title=document.createElement('h4');title.textContent=item.title;
-        var description=document.createElement('p');description.textContent=item.description;
-        var price=document.createElement('div');price.className='community-shop-price';price.textContent=formatCommunityCoins(item.price);
-        var previewButton=document.createElement('button');previewButton.type='button';previewButton.className='btn btn-secondary community-clothing-preview-button';previewButton.textContent=previewing?'Сейчас примеряю':'Примерить';
-        previewButton.addEventListener('click',function(){communityAvatarPreviewItemId=previewing?'':item.id;renderCommunityShop();});
-        var action=document.createElement('button');action.type='button';action.className='btn '+(active?'btn-secondary':'btn-primary');
-        if(active){action.textContent='Снять';action.addEventListener('click',function(){setCommunityEquippedClothing(item.id,false);});}
-        else if(owned){action.textContent='Надеть';action.addEventListener('click',function(){setCommunityEquippedClothing(item.id,true);});}
-        else{action.textContent='Купить и надеть';action.disabled=wallet.balance<item.price;action.addEventListener('click',function(){buyCommunityClothing(item.id);});}
-        card.appendChild(art);card.appendChild(title);card.appendChild(description);card.appendChild(price);card.appendChild(previewButton);card.appendChild(action);clothingGrid.appendChild(card);
-      });
-      if(!items.length){var emptyClothes=document.createElement('div');emptyClothes.className='community-empty';emptyClothes.textContent='В этой категории пока нет вещей.';clothingGrid.appendChild(emptyClothes);}
-      wardrobe.appendChild(wardrobeTitle);wardrobe.appendChild(categories);wardrobe.appendChild(clothingGrid);
-      editor.appendChild(previewPanel);editor.appendChild(wardrobe);host.appendChild(editor);
+      var note=document.createElement('p');note.style.cssText='font-size:12px;color:var(--text-light);margin:12px 0 14px;line-height:1.5;';note.textContent='За каждый 1 ₽ выручки начисляется 1 ⭐. Трать звёзды на статусы и игровые награды. Купленные награды остаются в твоей коллекции навсегда.';host.appendChild(note);
 
       var statusTitle=document.createElement('h3');statusTitle.className='community-shop-section-title';statusTitle.textContent='Статусы профиля';host.appendChild(statusTitle);
       var statusNote=document.createElement('p');statusNote.style.cssText='font-size:12px;color:var(--text-light);margin:0 0 8px;';statusNote.textContent='Статусы отображаются рядом с именем в сообществе и сообщениях.';host.appendChild(statusNote);
@@ -11972,48 +11757,7 @@ function communitySafeKey(value){return String(value==null?'':value).replace(/[.
       });
       host.appendChild(statusGrid);
     }
-    function setCommunityEquippedClothing(itemId,equip){
-      if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
-      var item=getCommunityClothingItem(itemId);if(!item)return;
-      var state=getCommunityUserGameState(window.currentUser.id);
-      var purchases=state.purchases&&typeof state.purchases==='object'?state.purchases:{};
-      if(equip&&!purchases[item.id]){alert('Сначала купи эту вещь.');return;}
-      var equipped=Object.assign({},getCommunityEquippedClothes(state));
-      if(equip)equipped[item.slot]=item.id;
-      else if(String(equipped[item.slot]||'')===item.id)delete equipped[item.slot];
-      var payload={};payload['avatar/equipped/'+item.slot]=equip?item.id:null;payload.updatedAt=Date.now();
-      db.ref('community_game_data/'+communitySafeKey(getCommunityOrgKey())+'/'+communitySafeKey(window.currentUser.id)).update(payload).then(function(){
-        communityAvatarPreviewItemId='';renderCommunityShop();
-        if(String(communitySelectedUserId||'')===String(window.currentUser.id)&&communityCurrentTab==='profile')renderCommunityProfile(String(window.currentUser.id));
-      }).catch(function(error){alert('Не удалось изменить образ: '+String(error&&error.message||error));});
-    }
-    function buyCommunityClothing(itemId){
-      if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
-      var item=getCommunityClothingItem(itemId);if(!item)return;
-      var userId=String(window.currentUser.id);
-      var earned=getCommunityRevenueForUser(window.currentUser);
-      var ref=db.ref('community_game_data/'+communitySafeKey(getCommunityOrgKey())+'/'+communitySafeKey(userId));
-      var failureReason='';
-      ref.transaction(function(current){
-        current=current&&typeof current==='object'?current:{};
-        var purchases=current.purchases&&typeof current.purchases==='object'?current.purchases:{};
-        if(purchases[item.id]){failureReason='owned';return;}
-        var spent=Object.keys(purchases).reduce(function(total,key){return total+(purchases[key]?Math.max(0,Number(purchases[key].price)||0):0);},0);
-        if(earned-spent<item.price){failureReason='funds';return;}
-        purchases[item.id]={id:item.id,title:item.title,price:item.price,purchasedAt:Date.now(),type:'clothing',slot:item.slot};
-        current.purchases=purchases;
-        current.avatar=current.avatar&&typeof current.avatar==='object'?current.avatar:{};
-        current.avatar.equipped=current.avatar.equipped&&typeof current.avatar.equipped==='object'?current.avatar.equipped:{};
-        current.avatar.equipped[item.slot]=item.id;
-        current.updatedAt=Date.now();
-        return current;
-      },function(error,committed){
-        if(error){alert('Не удалось купить вещь: '+String(error.message||error));return;}
-        if(!committed){alert(failureReason==='owned'?'Эта вещь уже есть в гардеробе.':failureReason==='funds'?'Недостаточно монет для покупки.':'Покупка не выполнена. Обновите страницу и повторите.');return;}
-        communityAvatarPreviewItemId='';renderCommunityShop();
-      },false);
-    }
-        function setCommunityActiveStatus(statusId){
+    function setCommunityActiveStatus(statusId){
       if(!window.currentUser)return;
       var userId=String(window.currentUser.id);
       var state=getCommunityUserGameState(userId);
