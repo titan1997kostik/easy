@@ -11299,7 +11299,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации'), communityPage=makePage('community','Сообщество EASY');
     communityPage.insertAdjacentHTML('beforeend', `
       <section class="community-intro">
-        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Сообщество EASY</h3><p>Общий чат организации, личные переписки, профили сотрудников и игровой магазин с гардеробом аватара. За выручку от продаж продавцы получают монеты и тратят их на одежду, аксессуары и статусы.</p></div>
+        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Сообщество EASY</h3><p>Общий чат организации, личные переписки, профили сотрудников и игровой магазин с гардеробом и автосалоном. За выручку от продаж продавцы получают монеты и тратят их на одежду, аксессуары, автомобили и статусы.</p></div>
         <span class="community-org-pill" id="communityOrgLabel">Организация</span>
       </section>
       <div class="community-subnav" role="tablist" aria-label="Разделы сообщества">
@@ -11916,7 +11916,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         ownedVehicles.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent='🚗 '+item.fullTitle+(activeVehicle&&activeVehicle.id===item.id?' · выбран':'');chips.appendChild(chip);});
         collection.appendChild(chips);
       }else{
-        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных предметов. Первые вещи и статусы уже ждут в магазине.';collection.appendChild(collectionNote);
+        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных предметов. Первые вещи, автомобили и статусы уже ждут в магазине.';collection.appendChild(collectionNote);
       }
       card.appendChild(collection);
       var action=document.createElement('button');action.type='button';action.className='btn btn-primary';action.style.marginTop='14px';
