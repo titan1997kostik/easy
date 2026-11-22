@@ -640,6 +640,40 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 @media(max-width:900px){.sale-cost-filters{grid-template-columns:repeat(2,minmax(0,1fr));}.sale-cost-search{grid-column:1/-1;}}
 @media(max-width:680px){.sale-cost-manager-card{padding:12px!important;}.sale-cost-filters{grid-template-columns:minmax(0,1fr);}.sale-cost-search{grid-column:auto;}.sale-cost-manager-summary{align-items:flex-start;flex-direction:column;}.sale-cost-table{min-width:1000px;}}
 </style>
+
+<style id="community-workspace-styles">
+.community-intro{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 18px;border:1px solid var(--border);border-radius:14px;background:linear-gradient(135deg,#fff,#fff5fa);margin-bottom:16px}
+.community-intro p{font-size:13px;line-height:1.55;color:var(--text-light);max-width:720px}
+.community-org-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:30px;background:#fbe7ef;color:#a83f70;font-size:11px;font-weight:750}
+.community-subnav{display:flex;gap:7px;overflow-x:auto;padding:2px 0 12px;margin-bottom:6px}
+.community-subtab{flex:0 0 auto;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text-light);padding:9px 13px;font-size:13px;font-weight:700;cursor:pointer}
+.community-subtab.active{border-color:#e9a9c2;background:#fbe4ed;color:#a83f70}
+.community-view{display:none}.community-view.active{display:block}
+.community-secure-note{padding:14px 15px;border:1px solid #ead7a1;border-radius:12px;background:#fff9e9;color:#755b20;font-size:13px;line-height:1.55;margin-bottom:14px}
+.community-secure-note strong{display:block;margin-bottom:4px;color:#684c12}
+.community-chat-placeholder{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.community-placeholder-card{background:#fff;border:1px solid var(--border);border-radius:13px;padding:16px;min-width:0}
+.community-placeholder-card p{font-size:12px;color:var(--text-light);line-height:1.5;margin:7px 0 12px}
+.community-placeholder-icon{font-size:25px;margin-bottom:8px}
+.community-directory-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.community-directory-toolbar input{flex:1;min-width:180px;max-width:420px}
+.community-directory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.community-person-card{width:100%;display:flex;align-items:center;gap:11px;padding:13px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--text);text-align:left;cursor:pointer;min-width:0}
+.community-person-card:hover{border-color:#e4a2bc;background:#fffafd}
+.community-person-avatar{width:44px;height:44px;flex:0 0 44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:#fbe4ed;color:#a83f70;font-size:17px;font-weight:800}
+.community-person-meta{min-width:0;flex:1}.community-person-meta strong{display:block;font-size:13px;overflow-wrap:anywhere}.community-person-meta span{display:block;font-size:11px;color:var(--text-light);margin-top:3px}
+.community-profile-card{background:#fff;border:1px solid var(--border);border-radius:15px;padding:18px}
+.community-profile-header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.community-profile-avatar{width:72px;height:72px;border-radius:22px;display:flex;align-items:center;justify-content:center;background:#fbe4ed;color:#a83f70;font-size:27px;font-weight:800}
+.community-profile-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin:14px 0}
+.community-profile-stat{padding:12px;border:1px solid var(--border);border-radius:11px;background:#fffafd}
+.community-profile-stat strong{display:block;font-size:14px}.community-profile-stat span{font-size:11px;color:var(--text-light)}
+.community-empty{padding:24px 16px;text-align:center;border:1px dashed var(--border);border-radius:12px;color:var(--text-light);font-size:13px;line-height:1.55;background:#fff}
+.community-back{border:0;background:transparent;color:#a83f70;font-weight:700;cursor:pointer;padding:0 0 12px;font-size:13px}
+.community-disabled-action{opacity:.58;cursor:not-allowed}
+@media(max-width:680px){.community-intro{padding:14px}.community-directory-grid{grid-template-columns:1fr}.community-profile-card{padding:14px}.community-subtab{padding:9px 11px;font-size:12px}}
+</style>
+
 </head>
 <body>
 
@@ -11140,6 +11174,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       {id:'cash',label:'Касса магазинов',icon:'▤'},
       {id:'analytics',label:'Аналитика',icon:'▥'},
       {id:'tasks',label:'Задания',icon:'✓'},
+      {id:'community',label:'Сообщество',icon:'💬',group:'ОБЩЕНИЕ'},
       {id:'breaks',label:'Перерывы',icon:'☕'},
       {id:'audit',label:'Журнал действий',icon:'◷'},
       {id:'staff',label:'Сотрудники',icon:'♙',group:'УПРАВЛЕНИЕ'},
@@ -11156,7 +11191,39 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var quick=document.createElement('div');quick.className='quick-actions';quick.innerHTML='<button class="quick-action" type="button" data-jump="purchaseJournal"><span>📦</span><span>Закупка товара</span></button><button class="quick-action" type="button" data-jump="sale"><span>＋</span><span>Записать продажу</span></button><button class="quick-action" type="button" data-jump="expense"><span>↘</span><span>Записать расход</span></button><button class="quick-action" type="button" data-jump="cash"><span>▤</span><span>Проверить кассу</span></button><button class="quick-action" type="button" data-jump="tasks" aria-label="Задания"><span>✓</span><span>Задания</span><span class="task-notice-count" hidden aria-hidden="true"></span></button><button class="quick-action" type="button" data-jump="costs" aria-label="Себестоимость товаров"><span>🧾</span><span>Без себестоимости</span><span class="cost-notice-count" hidden aria-hidden="true"></span></button>';dashboard.appendChild(quick);
     var sellerPlanWidget=document.createElement('section');sellerPlanWidget.id='sellerStoreSalesPlanWidget';sellerPlanWidget.className='card seller-plan-widget';sellerPlanWidget.innerHTML='<button id="sellerPlanToggle" class="seller-plan-toggle" type="button" onclick="toggleSellerSalesPlanDetails()" aria-expanded="false" aria-controls="sellerPlanProgress"><span class="seller-plan-toggle-row"><span><span class="seller-plan-toggle-title">План продаж</span><span id="sellerPlanStoreMonth" class="seller-plan-toggle-subtitle">Текущий месяц</span></span><span class="seller-plan-toggle-score"><span id="sellerPlanCompactPercent">—</span><span class="seller-plan-toggle-chevron" aria-hidden="true">⌄</span></span></span><span class="seller-plan-toggle-track" aria-hidden="true"><span id="sellerPlanCompactBar" class="seller-plan-toggle-fill" style="display:block;width:0%"></span></span></button><div id="sellerPlanProgress" class="seller-plan-details" hidden><div class="sales-plan-progress-list"><div class="sales-plan-empty">Загружаем план магазина…</div></div></div>';dashboard.appendChild(sellerPlanWidget);
     if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(true);
-    var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации');
+    var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации'), communityPage=makePage('community','Сообщество EASY');
+    communityPage.insertAdjacentHTML('beforeend', `
+      <section class="community-intro">
+        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Внутреннее сообщество сотрудников</h3><p>Общайтесь с коллегами, находите сотрудников и открывайте их персональные страницы. Общий чат и личные сообщения появятся после подключения защищённой авторизации.</p></div>
+        <span class="community-org-pill" id="communityOrgLabel">Организация</span>
+      </section>
+      <div class="community-subnav" role="tablist" aria-label="Разделы сообщества">
+        <button type="button" class="community-subtab active" data-community-tab="messages" role="tab" aria-selected="true">💬 Сообщения</button>
+        <button type="button" class="community-subtab" data-community-tab="employees" role="tab" aria-selected="false">👥 Сотрудники</button>
+        <button type="button" class="community-subtab" data-community-tab="profile" role="tab" aria-selected="false">🙋 Мой профиль</button>
+        <button type="button" class="community-subtab" data-community-tab="activity" role="tab" aria-selected="false">✨ Активность</button>
+      </div>
+      <section class="community-view active" id="communityView-messages" role="tabpanel">
+        <div class="community-secure-note"><strong>Чаты пока не подключены</strong>Сейчас вход в EASY выполняется через внутреннюю сессию приложения, без Firebase Authentication. До настройки серверной проверки и правил доступа личные переписки и отправку сообщений не включаем, чтобы не раскрыть их другим пользователям.</div>
+        <div class="community-chat-placeholder">
+          <article class="community-placeholder-card"><div class="community-placeholder-icon">🌐</div><h3 style="border:0;padding:0;margin:0 0 4px;">Общий чат EASY</h3><p>Один общий чат для сотрудников текущей организации. Сообщения будут обновляться в реальном времени.</p><button type="button" class="btn btn-secondary community-disabled-action" disabled>Скоро будет доступен</button></article>
+          <article class="community-placeholder-card"><div class="community-placeholder-icon">✉️</div><h3 style="border:0;padding:0;margin:0 0 4px;">Личные сообщения</h3><p>Можно будет открыть переписку с любым сотрудником своей организации прямо из его профиля.</p><button type="button" class="btn btn-secondary community-disabled-action" disabled>Скоро будет доступно</button></article>
+        </div>
+      </section>
+      <section class="community-view" id="communityView-employees" role="tabpanel" hidden>
+        <div class="community-directory-toolbar"><div><h3 style="border:0;padding:0;margin:0 0 4px;">Сотрудники организации</h3><span id="communityDirectoryCount" style="font-size:12px;color:var(--text-light);">Загрузка списка…</span></div><input type="search" id="communityDirectorySearch" placeholder="Поиск по имени сотрудника…" autocomplete="off" aria-label="Поиск сотрудника"></div>
+        <div class="community-directory-grid" id="communityDirectoryGrid"><div class="community-empty">Загружаем сотрудников…</div></div>
+      </section>
+      <section class="community-view" id="communityView-profile" role="tabpanel" hidden>
+        <div id="communityProfileContent"></div>
+      </section>
+      <section class="community-view" id="communityView-activity" role="tabpanel" hidden>
+        <div class="community-empty"><div style="font-size:28px;margin-bottom:8px;">✨</div><strong style="display:block;color:var(--text);margin-bottom:5px;">Лента активности появится позже</strong>Здесь будут отображаться игровые покупки, новые достижения и другие события профилей. Личные сообщения и служебные данные в ленту не попадут.</div>
+      </section>
+    `);
+    var communitySearchInput=document.getElementById('communityDirectorySearch');
+    if(communitySearchInput)communitySearchInput.addEventListener('input',renderCommunityDirectory);
+    communityPage.querySelectorAll('[data-community-tab]').forEach(function(button){button.addEventListener('click',function(){showCommunityTab(button.dataset.communityTab);});});
     purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все магазины</option></select></div><div class="form-group"><label for="purchaseCategorySelect">Категория товара</label><select id="purchaseCategorySelect" onchange="renderPurchaseRecommendations()"><option value="all">Все категории</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Магазин: <b id="purchaseQueueCityLabel">Все магазины</b></p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
     var purchaseQueueCardNode=document.getElementById('purchaseQueueCard');
     var purchaseRecommendationsNode=document.getElementById('purchaseRecommendationsCard');
@@ -11231,6 +11298,113 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var mobile=document.createElement('nav');mobile.className='mobile-nav';mobile.setAttribute('aria-label','Мобильная навигация');
     definitions.forEach(function(d){var id=d.id;var b=document.createElement('button');b.type='button';b.className='nav-link';b.dataset.page=id;b.innerHTML='<span class="nav-icon">'+d.icon+'</span><span>'+d.label+'</span>';b.addEventListener('click',function(){showPage(id);});mobile.appendChild(b);});
     app.appendChild(mobile);
+
+    var communityCurrentTab='messages';
+    var communitySelectedUserId='';
+    function getCommunityMembers(){
+      if(!window.currentUser||!Array.isArray(window.users))return [];
+      return window.users.filter(function(user){
+        if(!user||user.id==null)return false;
+        if(typeof window.isUserVisibleForUser==='function'&&!window.isUserVisibleForUser(user))return false;
+        return true;
+      }).sort(function(a,b){return String(a.name||a.username||'').localeCompare(String(b.name||b.username||''),'ru');});
+    }
+    function getCommunityStoreLabel(user){
+      if(!user)return 'Магазин не указан';
+      if(user.role==='admin')return 'Администратор';
+      var stores=window.STORES||{};
+      return stores[String(user.store||'')]||'Магазин не указан';
+    }
+    function getCommunityOrgLabel(){
+      var user=window.currentUser;
+      if(!user)return 'Организация';
+      var key=(typeof window.isSuperAdmin==='function'&&window.isSuperAdmin(user))?(window.currentOrgFilter||'mine'):(user.org||'mine');
+      var orgs=window.ORGS||{};
+      return String(orgs[key]||'Организация');
+    }
+    function showCommunityTab(tab){
+      var allowed=['messages','employees','profile','activity'];
+      if(allowed.indexOf(tab)===-1)tab='messages';
+      communityCurrentTab=tab;
+      communityPage.querySelectorAll('[data-community-tab]').forEach(function(button){
+        var active=button.dataset.communityTab===tab;
+        button.classList.toggle('active',active);
+        button.setAttribute('aria-selected',active?'true':'false');
+      });
+      communityPage.querySelectorAll('.community-view').forEach(function(view){
+        var active=view.id==='communityView-'+tab;
+        view.classList.toggle('active',active);
+        view.hidden=!active;
+      });
+      if(tab==='employees')renderCommunityDirectory();
+      if(tab==='profile')renderCommunityProfile(String(window.currentUser&&window.currentUser.id||''));
+    }
+    function renderCommunityDirectory(){
+      var grid=document.getElementById('communityDirectoryGrid');
+      var count=document.getElementById('communityDirectoryCount');
+      var search=document.getElementById('communityDirectorySearch');
+      if(!grid)return;
+      var query=String(search&&search.value||'').trim().toLocaleLowerCase('ru-RU');
+      var members=getCommunityMembers();
+      var filtered=members.filter(function(user){
+        var name=String(user.name||user.username||'').toLocaleLowerCase('ru-RU');
+        return !query||name.indexOf(query)!==-1;
+      });
+      if(count)count.textContent=filtered.length+' из '+members.length+' сотрудников';
+      grid.textContent='';
+      if(!filtered.length){
+        var empty=document.createElement('div');empty.className='community-empty';empty.textContent=query?'По вашему запросу сотрудники не найдены.':'В этой организации пока нет сотрудников.';grid.appendChild(empty);return;
+      }
+      filtered.forEach(function(user){
+        var button=document.createElement('button');button.type='button';button.className='community-person-card';
+        button.addEventListener('click',function(){renderCommunityProfile(String(user.id));showCommunityTab('profile');});
+        var avatar=document.createElement('span');avatar.className='community-person-avatar';avatar.textContent=String(user.name||user.username||'?').trim().charAt(0).toLocaleUpperCase('ru-RU')||'?';
+        var meta=document.createElement('span');meta.className='community-person-meta';
+        var name=document.createElement('strong');name.textContent=String(user.communityNickname||user.name||user.username||'Сотрудник');
+        var details=document.createElement('span');details.textContent=getCommunityStoreLabel(user)+(String(user.id)===String(window.currentUser&&window.currentUser.id)?' · Это вы':'');
+        meta.appendChild(name);meta.appendChild(details);button.appendChild(avatar);button.appendChild(meta);grid.appendChild(button);
+      });
+    }
+    function renderCommunityProfile(userId){
+      var host=document.getElementById('communityProfileContent');
+      if(!host)return;
+      var user=String(userId)===String(window.currentUser&&window.currentUser.id)?window.currentUser:getCommunityMembers().find(function(item){return String(item.id)===String(userId);});
+      host.textContent='';
+      if(!user){
+        var missing=document.createElement('div');missing.className='community-empty';missing.textContent='Профиль не найден или недоступен в вашей организации.';host.appendChild(missing);return;
+      }
+      communitySelectedUserId=String(user.id);
+      var card=document.createElement('article');card.className='community-profile-card';
+      var back=document.createElement('button');back.type='button';back.className='community-back';back.textContent='← К списку сотрудников';back.addEventListener('click',function(){showCommunityTab('employees');});card.appendChild(back);
+      var header=document.createElement('div');header.className='community-profile-header';
+      var avatar=document.createElement('div');avatar.className='community-profile-avatar';avatar.textContent=String(user.name||user.username||'?').trim().charAt(0).toLocaleUpperCase('ru-RU')||'?';
+      var info=document.createElement('div');info.style.minWidth='0';
+      var title=document.createElement('h3');title.style.cssText='border:0;padding:0;margin:0 0 4px;font-size:20px;';title.textContent=String(user.communityNickname||user.name||user.username||'Сотрудник');
+      var subtitle=document.createElement('p');subtitle.style.cssText='font-size:13px;color:var(--text-light);';subtitle.textContent=getCommunityStoreLabel(user);
+      info.appendChild(title);info.appendChild(subtitle);header.appendChild(avatar);header.appendChild(info);card.appendChild(header);
+      var stats=document.createElement('div');stats.className='community-profile-stats';
+      [{label:'Роль',value:user.role==='admin'?'Администратор':'Продавец'},{label:'Организация',value:getCommunityOrgLabel()}].forEach(function(entry){
+        var stat=document.createElement('div');stat.className='community-profile-stat';var strong=document.createElement('strong');strong.textContent=entry.value;var caption=document.createElement('span');caption.textContent=entry.label;stat.appendChild(strong);stat.appendChild(caption);stats.appendChild(stat);
+      });
+      card.appendChild(stats);
+      var collection=document.createElement('div');collection.style.cssText='margin-top:18px;padding-top:15px;border-top:1px solid var(--border);';
+      var collectionTitle=document.createElement('h4');collectionTitle.style.margin='0 0 7px';collectionTitle.textContent='Игровая коллекция';collection.appendChild(collectionTitle);
+      var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Здесь будут отображаться предметы, которые сотрудник приобрёл за игровую валюту и решил показать коллегам. Игровой магазин ещё не подключён.';collection.appendChild(collectionNote);
+      card.appendChild(collection);
+      if(String(user.id)!==String(window.currentUser&&window.currentUser.id)){
+        var action=document.createElement('button');action.type='button';action.className='btn btn-secondary community-disabled-action';action.disabled=true;action.textContent='Личные сообщения скоро будут доступны';action.style.marginTop='14px';card.appendChild(action);
+      }else{
+        var own=document.createElement('p');own.style.cssText='font-size:12px;color:var(--text-light);margin-top:12px;';own.textContent='Это ваша страница. Настройка ника, аватара и видимости коллекции появится вместе с игровым профилем.';card.appendChild(own);
+      }
+      host.appendChild(card);
+    }
+    function renderCommunityPage(){
+      var label=document.getElementById('communityOrgLabel');
+      if(label)label.textContent=getCommunityOrgLabel();
+      if(communityCurrentTab==='employees')renderCommunityDirectory();
+      if(communityCurrentTab==='profile')renderCommunityProfile(String(communitySelectedUserId||window.currentUser&&window.currentUser.id||''));
+    }
+
     quick.querySelectorAll('[data-jump]').forEach(function(b){b.addEventListener('click',function(){var target=b.dataset.jump;if(target==='sale'){showPage('sale');var el=document.getElementById('prodName');if(el){el.focus({preventScroll:true});el.scrollIntoView({behavior:'smooth',block:'center'});}}else if(target==='expense'){showPage('dashboard');var el2=document.getElementById('expenseAmount');if(el2){el2.focus();el2.scrollIntoView({behavior:'smooth',block:'center'});}}else if(target==='tasks'){showPage('tasks');}else if(target==='costs'){if(!window.isPurchaseCostOwner||!window.isPurchaseCostOwner())return;var costStatus=document.getElementById('saleCostStatusFilter');var costStart=document.getElementById('saleCostStartDate');var costEnd=document.getElementById('saleCostEndDate');var costSearch=document.getElementById('saleCostSearch');if(costStatus)costStatus.value='missing';if(costStart)costStart.value='';if(costEnd)costEnd.value='';if(costSearch)costSearch.value='';showPage('costs');if(typeof renderPurchaseCosts==='function')renderPurchaseCosts();}else if(target==='purchaseJournal'){if(!window.currentUser||window.currentUser.role!=='admin'||!window.isSuperAdmin||!window.isSuperAdmin(window.currentUser))return;showPage('dashboard');setTimeout(function(){var card=document.getElementById('purchaseJournalCard');var name=document.getElementById('purchaseJournalName');if(card)card.scrollIntoView({behavior:'smooth',block:'start'});if(name&&!name.disabled)name.focus({preventScroll:true});},60);}else showPage('cash');});});
     function showPage(id){
       if(!pages[id])id='dashboard';
@@ -11255,6 +11429,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(id==='expenses'){if(typeof renderExpensesTable==='function')renderExpensesTable();if(typeof renderRecurringExpenseManager==='function')renderRecurringExpenseManager();}
       if(id==='purchase'&&typeof renderPurchaseRecommendations==='function')renderPurchaseRecommendations();
       if(id==='costs'&&typeof renderPurchaseCosts==='function')renderPurchaseCosts();
+      if(id==='community')renderCommunityPage();
       try{sessionStorage.setItem('easyAppSync_activePage',id);}catch(e){}
     }
     window.easyAppSyncShowPage=showPage;
