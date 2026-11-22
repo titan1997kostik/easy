@@ -3296,12 +3296,19 @@ db.ref('return_events_data').on('value', function(snapshot) {
 
 db.ref('salary_ledger_data').on('value', function(snapshot) {
     var remote = snapshot.val() && typeof snapshot.val() === 'object' ? snapshot.val() : {};
-    salaryLedger = {};
+    var cachedLedger = salaryLedger && typeof salaryLedger === 'object' ? salaryLedger : {};
+    var nextLedger = {};
     Object.keys(remote).forEach(function(key) {
         var item = remote[key];
         if (!item || isStoreDeleted(item.storeId) || isRecordBeforeStoreReset(item)) return;
-        salaryLedger[key] = item;
+        nextLedger[key] = item;
     });
+    Object.keys(cachedLedger).forEach(function(key) {
+        var item = cachedLedger[key];
+        if (nextLedger[key] || !item || isStoreDeleted(item.storeId) || isRecordBeforeStoreReset(item)) return;
+        nextLedger[key] = item;
+    });
+    salaryLedger = nextLedger;
     salaryLedgerLoaded = true;
     saveAllToLocal();
     reconcileMissingSalaryLedgerEntries();
@@ -3470,13 +3477,24 @@ db.ref('store_shifts_data').on('value', function(snapshot) {
     isRemoteChange = true;
     var val = snapshot.val() || {};
 
-    // Синхронизируем историю, если она прилетела из базы
+    // Сохраняем кэшированные закрытые смены, если снимок Firebase пришёл без части истории.
+    // Маркеры сброса/удаления ниже всё равно удалят записи, относящиеся к очищенным магазинам.
     if (val && typeof val === 'object') {
-        if (storeShifts && storeShifts._shiftHistory && val._shiftHistory) {
-            Object.keys(storeShifts._shiftHistory).forEach(function(k) {
-                if (!val._shiftHistory[k]) val._shiftHistory[k] = storeShifts._shiftHistory[k];
-            });
-        }
+        var cachedShiftHistory = storeShifts && storeShifts._shiftHistory && typeof storeShifts._shiftHistory === 'object'
+            ? storeShifts._shiftHistory : {};
+        var remoteShiftHistory = val._shiftHistory && typeof val._shiftHistory === 'object' ? val._shiftHistory : {};
+        Object.keys(cachedShiftHistory).forEach(function(k) {
+            var cachedShift = cachedShiftHistory[k];
+            if (!remoteShiftHistory[k]) {
+                remoteShiftHistory[k] = cachedShift;
+            } else if (cachedShift && remoteShiftHistory[k]) {
+                var remoteShift = remoteShiftHistory[k];
+                if (!remoteShift.salaryAccrual && cachedShift.salaryAccrual) remoteShift.salaryAccrual = cachedShift.salaryAccrual;
+                if (!remoteShift.salaryRates && cachedShift.salaryRates) remoteShift.salaryRates = cachedShift.salaryRates;
+                if (!parseTimestampMs(remoteShift.endTime) && parseTimestampMs(cachedShift.endTime)) remoteShift.endTime = cachedShift.endTime;
+            }
+        });
+        if (Object.keys(remoteShiftHistory).length) val._shiftHistory = remoteShiftHistory;
     }
 
     storeShifts = val;
@@ -4552,6 +4570,29 @@ function renderProductCatalogSelect() {
     select.value = items.some(function(item){return String(item.id) === previous;}) ? previous : '';
     updateProductChooserButton();
 }
+function normalizeProductSearchTokens(value) {
+    return String(value == null ? '' : value).toLocaleLowerCase('ru-RU').replace(/ё/g, 'е')
+        .replace(/[^a-zа-я0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+}
+function productSearchTokenMatches(queryToken, candidateToken) {
+    if (!queryToken || !candidateToken) return false;
+    if (/^\d+$/.test(queryToken) || /^\d+$/.test(candidateToken)) return queryToken === candidateToken;
+    return candidateToken === queryToken || candidateToken.indexOf(queryToken) === 0 || queryToken.indexOf(candidateToken) === 0;
+}
+function productSearchMatches(query, values) {
+    var queryTokens = normalizeProductSearchTokens(query);
+    if (!queryTokens.length) return true;
+    var candidateTokens = [];
+    (Array.isArray(values) ? values : [values]).forEach(function(value) {
+        candidateTokens = candidateTokens.concat(normalizeProductSearchTokens(value));
+    });
+    return queryTokens.every(function(queryToken) {
+        return candidateTokens.some(function(candidateToken) {
+            return productSearchTokenMatches(queryToken, candidateToken);
+        });
+    });
+}
+
 function getProductSearchMatches() {
     var input = document.getElementById('productCatalogSearch');
     var query = input ? String(input.value || '').trim().toLocaleLowerCase('ru-RU') : '';
@@ -4559,7 +4600,7 @@ function getProductSearchMatches() {
         if (!item || item.active === false || !String(item.name || '').trim()) return false;
         if (!query) return true;
         var names = [item.name].concat(Array.isArray(item.aliases) ? item.aliases : []);
-        return names.some(function(name) { return String(name || '').toLocaleLowerCase('ru-RU').indexOf(query) !== -1; });
+        return productSearchMatches(query, names);
     }).sort(function(a,b) { return String(a.name).localeCompare(String(b.name), 'ru'); });
 }
 function openProductSearchModal() {
@@ -5564,7 +5605,7 @@ function refreshStockSaleProducts(){
 function renderStockSalePicker(){
     var grid=document.getElementById('stockSaleProductGrid'),search=document.getElementById('stockSaleSearch'),category=document.getElementById('stockSaleCategory');
     if(!grid)return;
-    var sid=getStockSaleStoreId(),q=String(search&&search.value||'').trim().toLowerCase(),tokens=q.split(/[\s,;]+/).filter(Boolean),cat=String(category&&category.value||'');
+    var sid=getStockSaleStoreId(),q=String(search&&search.value||'').trim(),tokens=normalizeProductSearchTokens(q),cat=String(category&&category.value||'');
     var items=stockSalePickerItems.map(function(item){
         var availableSizes=getAvailableStockSaleSizes(sid,item.id,item.sizes||{});
         var sizeKeys=Object.keys(availableSizes).map(function(value){return String(value).trim().toLowerCase();});
@@ -5572,8 +5613,8 @@ function renderStockSalePicker(){
             var value=item[key];
             return value==null?'':Array.isArray(value)?value.join(' '):typeof value==='object'?Object.keys(value).join(' '):String(value);
         }).join(' ').toLowerCase();
-        var matchedSizes=sizeKeys.filter(function(value){return tokens.some(function(token){return value===token;});});
-        var matches=tokens.every(function(token){return metadata.indexOf(token)>=0||sizeKeys.some(function(value){return value===token||value.indexOf(token)>=0;});});
+        var matchedSizes=sizeKeys.filter(function(value){return tokens.some(function(token){return productSearchTokenMatches(token,value);});});
+        var matches=productSearchMatches(q,[metadata].concat(sizeKeys));
         return {item:item,availableSizes:availableSizes,matchedSizes:matchedSizes,matches:matches,hasExactSize:matchedSizes.length>0};
     }).filter(function(row){
         return row.matches&&(!cat||String(row.item.category||'')===cat);
@@ -7032,13 +7073,28 @@ function salaryLedgerKey(shiftId) {
     return String(shiftId || '').replace(/[.#$\[\]\/]/g, '_');
 }
 function getClosedShiftRecordsForUser(user) {
-    if (!user || !storeShifts) return [];
-    var history = storeShifts._shiftHistory && typeof storeShifts._shiftHistory === 'object' ? storeShifts._shiftHistory : {};
+    if (!user) return [];
+    var history = storeShifts && storeShifts._shiftHistory && typeof storeShifts._shiftHistory === 'object' ? storeShifts._shiftHistory : {};
     var userId = String(user.id == null ? '' : user.id);
+    var userOrg = typeof getStoreOrg === 'function' ? getStoreOrg(String(user.store || '')) : String(user.org || '');
+    function belongsToUserAndOrg(shift) {
+        if (!shift || !shift.storeId) return false;
+        var shiftUserId = String(shift.userId == null ? '' : shift.userId);
+        if (shiftUserId) {
+            if (shiftUserId !== userId) return false;
+        } else {
+            if (String(shift.storeId) !== String(user.store || '')) return false;
+            var shiftName = String(shift.userName || '');
+            if (shiftName !== String(user.name || '') && shiftName !== String(user.username || '')) return false;
+        }
+        if (typeof getStoreOrg === 'function' && userOrg) {
+            var shiftOrg = getStoreOrg(String(shift.storeId));
+            if (shiftOrg && String(shiftOrg) !== String(userOrg)) return false;
+        }
+        return !isStoreDeleted(shift.storeId) && !isRecordBeforeStoreReset(shift);
+    }
     var normalized = Object.keys(history).map(function(key) { return history[key]; }).filter(function(shift) {
-        if (!shift || !parseTimestampMs(shift.endTime) || String(shift.storeId) !== String(user.store)) return false;
-        if (shift.userId != null && String(shift.userId)) return String(shift.userId) === userId;
-        return String(shift.userName || '') === String(user.name || '') || String(shift.userName || '') === String(user.username || '');
+        return !!(shift && parseTimestampMs(shift.endTime) && belongsToUserAndOrg(shift));
     }).map(function(shift) {
         var copy = Object.assign({}, shift);
         copy.shiftId = getShiftStableId(copy, copy.storeId);
@@ -7046,7 +7102,31 @@ function getClosedShiftRecordsForUser(user) {
         copy.endTime = parseTimestampMs(copy.endTime);
         return copy;
     }).filter(function(shift){return shift.startTime > 0 && shift.endTime >= shift.startTime;});
-    // A legacy migration may leave duplicate history keys for the same shift ID. Never pay twice.
+
+    Object.keys(salaryLedger || {}).forEach(function(key) {
+        var item = salaryLedger[key];
+        if (!item || ['pending','accrued'].indexOf(String(item.status || '').toLowerCase()) === -1 || !belongsToUserAndOrg(item)) return;
+        var startTime = parseTimestampMs(item.startTime);
+        var endTime = parseTimestampMs(item.endTime || item.timestamp || item.createdAt);
+        if (!startTime || !endTime || endTime < startTime) return;
+        var ledgerShiftId = String(item.shiftId || key);
+        var fallbackAccrual = item.salaryAccrual || (item.amount !== undefined && item.amount !== null ? {
+            amount:Number(item.amount), base:Number(item.base)||0, bonus:Number(item.bonus)||0, saleCount:Number(item.saleCount)||0
+        } : null);
+        var ledgerShift = {
+            shiftId:ledgerShiftId, storeId:String(item.storeId), userId:String(item.userId || userId),
+            userName:String(item.employee || user.name || ''), startTime:startTime, endTime:endTime,
+            salaryRates:item.salaryRates || null, salaryAccrual:fallbackAccrual,
+            closed:true, _fromSalaryLedger:true
+        };
+        var existing = normalized.find(function(shift){return String(shift.shiftId) === ledgerShiftId;});
+        if (!existing) normalized.push(ledgerShift);
+        else {
+            if (!existing.salaryAccrual && ledgerShift.salaryAccrual) existing.salaryAccrual = ledgerShift.salaryAccrual;
+            if (!existing.salaryRates && ledgerShift.salaryRates) existing.salaryRates = ledgerShift.salaryRates;
+        }
+    });
+
     var uniqueByShiftId = {};
     normalized.forEach(function(shift) {
         var key = String(shift.shiftId || '');
@@ -7088,9 +7168,10 @@ function getPendingSalaryShiftRecords(user) {
     var allShifts = getClosedShiftRecordsForUser(user);
     var userId = String(user && user.id != null ? user.id : '');
     var legacySalaryExpenses = (salaryExpenses || []).filter(function(item) {
-        if (!item || item.shiftId || String(item.storeId) !== String(user && user.store)) return false;
+        if (!item || item.shiftId) return false;
         var idMatch = item.userId != null && String(item.userId) === userId;
-        var nameMatch = String(item.employee || '') === String(user && user.name || '');
+        var sameCurrentStore = String(item.storeId) === String(user && user.store);
+        var nameMatch = sameCurrentStore && String(item.employee || '') === String(user && user.name || '');
         return idMatch || nameMatch;
     });
     var legacyAssignedShifts = {};
@@ -8193,7 +8274,7 @@ function renderSalesTable() {
         var saleDateKey = getRecordDateString(sale.timestamp);
         if (startDate && saleDateKey < startDate) return false;
         if (endDate && saleDateKey > endDate) return false;
-        if (searchQuery && getSaleHistoryDisplayName(sale).toLocaleLowerCase('ru-RU').indexOf(searchQuery) === -1) return false;
+        if (searchQuery && !productSearchMatches(searchQuery, [getSaleHistoryDisplayName(sale), sale.isPromotion === true ? 'Акция' : ''])) return false;
         return true;
     });
     // Сортировка пользователя убрана: история всегда идёт в привычном порядке, новые продажи сверху.
@@ -12470,7 +12551,7 @@ body.seller-mode #analyticsSellerPerformancePanel .seller-performance-table td:n
 </style>
 
 <script src="backup-tools.js"></script>
-<script src="stock.js?v=62"></script>
+<script src="stock.js?v=63"></script>
 <script src="business-advisor.js?v=8"></script>
 </body>
 </html>

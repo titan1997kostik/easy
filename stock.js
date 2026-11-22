@@ -52,7 +52,18 @@
   function org(){ var u=user(); if(u && typeof isSuperAdmin==='function' && isSuperAdmin(u)) return String(window.currentOrgFilter || 'mine'); if(u && u.role==='seller' && u.store && typeof getStoreOrg==='function') return String(getStoreOrg(u.store) || u.org || 'mine'); return String((u && u.org) || 'mine'); }
   function uid(prefix){ return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,9); }
   function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-  function norm(v){ return String(v || '').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,' ').trim().replace(/\\s+/g,' '); }
+  function norm(v){ return String(v || '').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,' ').trim().replace(/\s+/g,' '); }
+  function stockSearchMatches(query,values){
+    var queryTokens=norm(query).split(' ').filter(Boolean);
+    if(!queryTokens.length)return true;
+    var candidateTokens=norm((Array.isArray(values)?values:[values]).join(' ')).split(' ').filter(Boolean);
+    return queryTokens.every(function(q){
+      return candidateTokens.some(function(c){
+        if(/^\d+$/.test(q)||/^\d+$/.test(c))return q===c;
+        return c===q||c.indexOf(q)===0||q.indexOf(c)===0;
+      });
+    });
+  }
   function storeId(){ return isSeller() ? String(user().store || '') : ''; }
   function warehouseId(){ return 'warehouse__' + org(); }
   function stockLocationIds(){ return visibleStoreIds().concat([warehouseId()]); }
@@ -394,7 +405,7 @@
       return p.direction===activeFilter;
     });
     if(isAdmin() && adminTab==='shops' && selectedStoreId!=='all' && activeFilter!=='error') list=list.filter(function(p){return qty(p.id,selectedStoreId)>0;});
-    if(searchText) list=list.filter(function(p){return norm([p.name,p.article,p.category,p.color,p.size,p.brand,p.model].join(' ')).indexOf(norm(searchText))!==-1;});
+    if(searchText) list=list.filter(function(p){return stockSearchMatches(searchText,[p.name,p.article,p.category,p.color,p.size,p.brand,p.model]);});
     list.sort(function(a,b){return Number(b.updatedAt||b.createdAt||0)-Number(a.updatedAt||a.createdAt||0);});
     var html='';
     if(isAdmin()){
