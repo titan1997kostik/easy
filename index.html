@@ -710,7 +710,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-avatar-person svg{display:block;width:100%;height:100%;object-fit:contain}
 .community-avatar-scene.has-vehicle .community-avatar-person{left:-7%;width:77%}
 .community-avatar-vehicle{position:absolute;right:-2%;bottom:7%;width:64%;z-index:2;filter:drop-shadow(0 5px 4px rgba(65,49,62,.16))}
-.community-avatar-vehicle svg{display:block;width:100%;height:auto}
+.community-avatar-vehicle img{display:block;width:100%;height:100%;max-height:118px;object-fit:cover;border-radius:9px;border:2px solid rgba(255,255,255,.9);background:#fff}.community-vehicle-photo-link{display:flex;align-items:center;justify-content:center;width:100%;height:100%;text-decoration:none}.community-vehicle-photo{display:block;width:100%;height:126px;object-fit:contain;border-radius:8px;background:#fff}
 .community-profile-avatar-custom{width:158px!important;height:104px!important;flex:0 0 158px;border-radius:17px!important;display:block!important}
 .community-profile-avatar-custom .community-avatar-scene{min-height:0;height:100%;border-radius:17px}
 .community-vehicle-section{margin:8px 0 22px;padding:16px;border:1px solid var(--border);border-radius:15px;background:linear-gradient(145deg,#fff,#fff8fb)}
@@ -726,8 +726,8 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-vehicle-card{display:flex;flex-direction:column;gap:7px;min-width:0;padding:11px;border:1px solid var(--border);border-radius:13px;background:#fff}
 .community-vehicle-card.active{border-color:#80bba1;background:#f6fcf8}
 .community-vehicle-card.previewing{border-color:#d39abd;box-shadow:0 0 0 2px rgba(211,154,189,.13)}
-.community-vehicle-art{display:grid;place-items:center;min-height:100px;border-radius:10px;background:linear-gradient(145deg,#fff4f8,#f1edf4);overflow:hidden}
-.community-vehicle-art svg{display:block;width:100%;max-width:230px;height:auto}
+.community-vehicle-art{display:grid;place-items:center;min-height:126px;padding:4px;border-radius:10px;background:linear-gradient(145deg,#f4f5f6,#e9edf0);overflow:hidden}
+.community-vehicle-art .community-vehicle-photo-link{min-height:118px}.community-vehicle-art .community-vehicle-photo{max-width:100%;height:118px;object-fit:contain}
 .community-vehicle-brand{font-size:9px;letter-spacing:.08em;font-weight:850;color:#a17d90;text-transform:uppercase}
 .community-vehicle-card h4{font-size:13px;line-height:1.3;margin:0}
 .community-vehicle-card p{font-size:10px;line-height:1.45;color:var(--text-light);margin:0;min-height:29px;flex:1}
@@ -736,7 +736,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-vehicle-tag{font-size:9px;padding:4px 7px;border-radius:20px;background:#f6eff4;color:#76566a;font-weight:750}
 .community-vehicle-card button{width:100%;font-size:11px;padding:8px 9px}
 .community-vehicle-preview{background:#f8f1f7!important;color:#795a70!important;border:1px solid #ead8e4!important}
-@media(max-width:680px){.community-profile-avatar-custom{width:132px!important;height:92px!important;flex-basis:132px}.community-vehicle-section{padding:12px}.community-vehicle-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.community-vehicle-card{padding:8px}.community-vehicle-art{min-height:76px}.community-vehicle-card h4{font-size:11px}.community-vehicle-card p{font-size:9px}}
+@media(max-width:680px){.community-profile-avatar-custom{width:132px!important;height:92px!important;flex-basis:132px}.community-vehicle-section{padding:12px}.community-vehicle-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.community-vehicle-card{padding:8px}.community-vehicle-art{min-height:96px}.community-vehicle-art .community-vehicle-photo{height:94px}.community-vehicle-art .community-vehicle-photo-link{min-height:94px}.community-vehicle-card h4{font-size:11px}.community-vehicle-card p{font-size:9px}}
 .community-avatar-caption{text-align:center;color:var(--text-light);font-size:11px;margin:9px 0 10px;min-height:16px}
 .community-avatar-preview-actions{display:flex;justify-content:center}
 .community-clothing-categories{display:flex;gap:6px;overflow-x:auto;padding:2px 0 11px;margin-bottom:3px}
@@ -755,7 +755,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
 .community-shop-section-title{margin:22px 0 7px;border:0;padding:0;font-size:17px}
 .community-profile-avatar-custom{overflow:hidden;padding:0!important;background:#f7eff5!important}
 .community-profile-avatar-custom svg{display:block;width:100%;height:100%}
-.community-profile-avatar-custom .community-avatar-vehicle svg{display:block;width:100%;height:auto!important}
+.community-profile-avatar-custom .community-avatar-vehicle img{width:100%;height:100%;max-height:82px;object-fit:cover}
 @media(max-width:850px){.community-avatar-editor{grid-template-columns:minmax(0,1fr)}.community-avatar-stage{max-width:220px}.community-avatar-preview-panel{display:flex;flex-direction:column;align-items:center}.community-avatar-panel-title{align-self:flex-start;width:100%}}
 @media(max-width:520px){.community-clothing-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.community-clothing-card{padding:9px}.community-clothing-card h4{font-size:11px}.community-clothing-card p{font-size:10px}}
 .community-owned-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
@@ -11486,24 +11486,24 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       {id:'premium',label:'Премиум'}
     ];
     var communityVehicleCatalog=[
-      {id:'car-lada-granta',brand:'LADA',title:'Granta',fullTitle:'LADA Granta',type:'sedan',category:'sedan',price:8500,color:'#c7cbd1',description:'Знакомый городской седан на каждый день.',style:'classic'},
-      {id:'car-niva-legend',brand:'LADA',title:'Niva Legend',fullTitle:'LADA Niva Legend',type:'offroad',category:'offroad',price:15000,color:'#71835d',description:'Классическая российская Нива с узнаваемым силуэтом.',style:'boxy'},
-      {id:'car-zaz-968',brand:'ЗАЗ',title:'968М «Запорожец»',fullTitle:'ЗАЗ-968М «Запорожец»',type:'hatchback',category:'hatchback',price:3500,color:'#d5a45c',description:'Легендарный компактный автомобиль с округлым кузовом.',style:'zaporozhets'},
-      {id:'car-vaz-2101',brand:'ВАЗ',title:'2101 «Копейка»',fullTitle:'ВАЗ-2101 «Жигули»',type:'sedan',category:'sedan',price:4500,color:'#e2c99b',description:'Классические «Жигули» первого поколения.',style:'classic2101'},
-      {id:'car-bmw-e36',brand:'BMW',title:'E36',fullTitle:'BMW 3 Series E36',type:'sedan',category:'sedan',price:16000,color:'#6685a5',description:'Легендарная «тройка» девяностых.',style:'bmw-e36'},
-      {id:'car-bmw-e46',brand:'BMW',title:'E46',fullTitle:'BMW 3 Series E46',type:'sedan',category:'sedan',price:18000,color:'#496e91',description:'Одна из самых узнаваемых классических BMW.',style:'bmw-e46'},
-      {id:'car-bmw-e60',brand:'BMW',title:'E60',fullTitle:'BMW 5 Series E60',type:'sedan',category:'premium',price:24000,color:'#6b7585',description:'Выразительная «пятёрка» с динамичным дизайном.',style:'bmw-e60'},
-      {id:'car-bmw-e90',brand:'BMW',title:'E90',fullTitle:'BMW 3 Series E90',type:'sedan',category:'premium',price:26000,color:'#9a9fa5',description:'Спортивный седан третьей серии.',style:'bmw-e90'},
-      {id:'car-bmw-f30',brand:'BMW',title:'F30',fullTitle:'BMW 3 Series F30',type:'sedan',category:'premium',price:32000,color:'#3f668a',description:'Современная классика BMW с длинным капотом.',style:'bmw-f30'},
-      {id:'car-mercedes-w220',brand:'MERCEDES-BENZ',title:'S-Class W220',fullTitle:'Mercedes-Benz S-Class W220',type:'sedan',category:'premium',price:26000,color:'#b2b7bb',description:'Представительский S-класс начала 2000-х.',style:'mercedes-w220'},
-      {id:'car-mercedes-w221',brand:'MERCEDES-BENZ',title:'S-Class W221',fullTitle:'Mercedes-Benz S-Class W221',type:'sedan',category:'premium',price:32000,color:'#596c7b',description:'Солидный S-класс с узнаваемой линией кузова.',style:'mercedes-w221'},
-      {id:'car-mercedes-w222',brand:'MERCEDES-BENZ',title:'S-Class W222',fullTitle:'Mercedes-Benz S-Class W222',type:'sedan',category:'premium',price:42000,color:'#252d35',description:'Роскошный представительский седан.',style:'mercedes-w222'},
-      {id:'car-mercedes-w223',brand:'MERCEDES-BENZ',title:'S-Class W223',fullTitle:'Mercedes-Benz S-Class W223',type:'sedan',category:'premium',price:55000,color:'#7b8791',description:'Современный флагманский S-класс.',style:'mercedes-w223'},
-      {id:'car-mercedes-g-class',brand:'MERCEDES-BENZ',title:'G-Class',fullTitle:'Mercedes-Benz G-Class «Гелик»',type:'offroad',category:'offroad',price:65000,color:'#3b4641',description:'Легендарный угловатый внедорожник G-класса.',style:'gelik'},
-      {id:'car-kia-rio',brand:'KIA',title:'Rio',fullTitle:'Kia Rio',type:'sedan',category:'sedan',price:12000,color:'#bd5360',description:'Практичный городской седан.',style:'kia-rio'},
-      {id:'car-nissan-skyline-r34',brand:'NISSAN',title:'Skyline GT-R R34',fullTitle:'Nissan Skyline GT-R R34',type:'hatchback',category:'premium',price:70000,color:'#3977a7',description:'Культовое японское купе с гоночным характером.',style:'skyline-r34'},
-      {id:'car-bmw-e34',brand:'BMW',title:'E34',fullTitle:'BMW 5 Series E34',type:'sedan',category:'sedan',price:14000,color:'#6484a3',description:'Классическая «пятёрка» с угловатым силуэтом 90-х.',style:'bmw-e34'},
-      {id:'car-daewoo-matiz',brand:'DAEWOO',title:'Matiz',fullTitle:'Daewoo Matiz',type:'hatchback',category:'hatchback',price:5000,color:'#7eaaa0',description:'Маленький и узнаваемый городской автомобиль.',style:'matiz'}
+      {id:'car-lada-granta',brand:'LADA',title:'Granta',fullTitle:'LADA Granta',type:'sedan',category:'sedan',price:8500,color:'#c7cbd1',description:'Знакомый городской седан на каждый день.',style:'classic',photoFile:"2024 Lada Granta sedan white front.jpg",photoCredit:"Throwawayacc222 — CC0 1.0",photoPage:"https://commons.wikimedia.org/wiki/File:2024_Lada_Granta_sedan_white_front.jpg"},
+      {id:'car-niva-legend',brand:'LADA',title:'Niva Legend',fullTitle:'LADA Niva Legend',type:'offroad',category:'offroad',price:15000,color:'#71835d',description:'Классическая российская Нива с узнаваемым силуэтом.',style:'boxy',photoFile:"Auto Lada Niva Moscow Vosmaya ulitsa Sokolinoy Gory Е354ОО799 2025-08 1756480951.JPG",photoCredit:"Artem Svetlov — CC BY 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:Auto_Lada_Niva_Moscow_Vosmaya_ulitsa_Sokolinoy_Gory_Е354ОО799_2025-08_1756480951.JPG"},
+      {id:'car-zaz-968',brand:'ЗАЗ',title:'968М «Запорожец»',fullTitle:'ЗАЗ-968М «Запорожец»',type:'hatchback',category:'hatchback',price:3500,color:'#d5a45c',description:'Легендарный компактный автомобиль с округлым кузовом.',style:'zaporozhets',photoFile:"ZAZ-968M.JPG",photoCredit:"Kirill Borisenko — CC BY-SA 3.0",photoPage:"https://commons.wikimedia.org/wiki/File:ZAZ-968M.JPG"},
+      {id:'car-vaz-2101',brand:'ВАЗ',title:'2101 «Копейка»',fullTitle:'ВАЗ-2101 «Жигули»',type:'sedan',category:'sedan',price:4500,color:'#e2c99b',description:'Классические «Жигули» первого поколения.',style:'classic2101',photoFile:"VAZ-2101.jpg",photoCredit:"Midnight Runner — CC BY-SA 3.0",photoPage:"https://commons.wikimedia.org/wiki/File:VAZ-2101.jpg"},
+      {id:'car-bmw-e36',brand:'BMW',title:'E36',fullTitle:'BMW 3 Series E36',type:'sedan',category:'sedan',price:16000,color:'#6685a5',description:'Легендарная «тройка» девяностых.',style:'bmw-e36',photoFile:"BMW 318i (E36) Front.jpg",photoCredit:"M.rJirapat — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_318i_(E36)_Front.jpg"},
+      {id:'car-bmw-e46',brand:'BMW',title:'E46',fullTitle:'BMW 3 Series E46',type:'sedan',category:'sedan',price:18000,color:'#496e91',description:'Одна из самых узнаваемых классических BMW.',style:'bmw-e46',photoFile:"BMW E46 sedan.jpg",photoCredit:"MichalPL — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_E46_sedan.jpg"},
+      {id:'car-bmw-e60',brand:'BMW',title:'E60',fullTitle:'BMW 5 Series E60',type:'sedan',category:'premium',price:24000,color:'#6b7585',description:'Выразительная «пятёрка» с динамичным дизайном.',style:'bmw-e60',photoFile:"BMW 5er (E60) front 20100508.jpg",photoCredit:"M 93 — лицензия атрибуции (см. страницу файла)",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_5er_(E60)_front_20100508.jpg"},
+      {id:'car-bmw-e90',brand:'BMW',title:'E90',fullTitle:'BMW 3 Series E90',type:'sedan',category:'premium',price:26000,color:'#9a9fa5',description:'Спортивный седан третьей серии.',style:'bmw-e90',photoFile:"BMW E90 front 20090301.jpg",photoCredit:"Rudolf Stricker — лицензия атрибуции (см. страницу файла)",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_E90_front_20090301.jpg"},
+      {id:'car-bmw-f30',brand:'BMW',title:'F30',fullTitle:'BMW 3 Series F30',type:'sedan',category:'premium',price:32000,color:'#3f668a',description:'Современная классика BMW с длинным капотом.',style:'bmw-f30',photoFile:"BMW 320d M Sport (F30) front.jpg",photoCredit:"Tokumeigakarinoaoshima — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_320d_M_Sport_(F30)_front.jpg"},
+      {id:'car-mercedes-w220',brand:'MERCEDES-BENZ',title:'S-Class W220',fullTitle:'Mercedes-Benz S-Class W220',type:'sedan',category:'premium',price:26000,color:'#b2b7bb',description:'Представительский S-класс начала 2000-х.',style:'mercedes-w220',photoFile:"Mercedes-Benz S Class W220 (9940090793).jpg",photoCredit:"nakhon100 — CC BY 2.0",photoPage:"https://commons.wikimedia.org/wiki/File:Mercedes-Benz_S_Class_W220_(9940090793).jpg"},
+      {id:'car-mercedes-w221',brand:'MERCEDES-BENZ',title:'S-Class W221',fullTitle:'Mercedes-Benz S-Class W221',type:'sedan',category:'premium',price:32000,color:'#596c7b',description:'Солидный S-класс с узнаваемой линией кузова.',style:'mercedes-w221',photoFile:"Mercedes-Benz W221.jpg",photoCredit:"Ra-smit — CC BY-SA 3.0",photoPage:"https://commons.wikimedia.org/wiki/File:Mercedes-Benz_W221.jpg"},
+      {id:'car-mercedes-w222',brand:'MERCEDES-BENZ',title:'S-Class W222',fullTitle:'Mercedes-Benz S-Class W222',type:'sedan',category:'premium',price:42000,color:'#252d35',description:'Роскошный представительский седан.',style:'mercedes-w222',photoFile:"MERCEDES-BENZ S-CLASS (W222) HONG KONG.jpg",photoCredit:"Dinkun Chen — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:MERCEDES-BENZ_S-CLASS_(W222)_HONG_KONG.jpg"},
+      {id:'car-mercedes-w223',brand:'MERCEDES-BENZ',title:'S-Class W223',fullTitle:'Mercedes-Benz S-Class W223',type:'sedan',category:'premium',price:55000,color:'#7b8791',description:'Современный флагманский S-класс.',style:'mercedes-w223',photoFile:"0 Mercedes-Benz W223 3.jpg",photoCredit:"Benespit — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:0_Mercedes-Benz_W223_3.jpg"},
+      {id:'car-mercedes-g-class',brand:'MERCEDES-BENZ',title:'G-Class',fullTitle:'Mercedes-Benz G-Class «Гелик»',type:'offroad',category:'offroad',price:65000,color:'#3b4641',description:'Легендарный угловатый внедорожник G-класса.',style:'gelik',photoFile:"2019 Mercedes G 63 AMG 4Matic Auto.jpg",photoCredit:"Calreyn88 — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:2019_Mercedes_G_63_AMG_4Matic_Auto.jpg"},
+      {id:'car-kia-rio',brand:'KIA',title:'Rio',fullTitle:'Kia Rio',type:'sedan',category:'sedan',price:12000,color:'#bd5360',description:'Практичный городской седан.',style:'kia-rio',photoFile:"2012 Kia Rio (UB MY12) Si sedan (2016-01-04) 01.jpg",photoCredit:"OSX — CC0 1.0",photoPage:"https://commons.wikimedia.org/wiki/File:2012_Kia_Rio_(UB_MY12)_Si_sedan_(2016-01-04)_01.jpg"},
+      {id:'car-nissan-skyline-r34',brand:'NISSAN',title:'Skyline GT-R R34',fullTitle:'Nissan Skyline GT-R R34',type:'hatchback',category:'premium',price:70000,color:'#3977a7',description:'Культовое японское купе с гоночным характером.',style:'skyline-r34',photoFile:"1999 Nissan Skyline (R34) GT-R IMG 4990.jpg",photoCredit:"Alexander Migl — CC BY-SA 4.0",photoPage:"https://commons.wikimedia.org/wiki/File:1999_Nissan_Skyline_(R34)_GT-R_IMG_4990.jpg"},
+      {id:'car-bmw-e34',brand:'BMW',title:'E34',fullTitle:'BMW 5 Series E34',type:'sedan',category:'sedan',price:14000,color:'#6484a3',description:'Классическая «пятёрка» с угловатым силуэтом 90-х.',style:'bmw-e34',photoFile:"BMW E34.JPG",photoCredit:"Thomas doerfer — CC BY-SA 3.0",photoPage:"https://commons.wikimedia.org/wiki/File:BMW_E34.JPG"},
+      {id:'car-daewoo-matiz',brand:'DAEWOO',title:'Matiz',fullTitle:'Daewoo Matiz',type:'hatchback',category:'hatchback',price:5000,color:'#7eaaa0',description:'Маленький и узнаваемый городской автомобиль.',style:'matiz',photoFile:"Daewoo Matiz 20090815 front.JPG",photoCredit:"M 93 — лицензия атрибуции (см. страницу файла)",photoPage:"https://commons.wikimedia.org/wiki/File:Daewoo_Matiz_20090815_front.JPG"}
     ];    function communitySafeKey(value){return String(value==null?'':value).replace(/[.#$\[\]\/]/g,'_')||'empty';}
     function getCommunityOrgKey(){
       var user=window.currentUser;
@@ -11546,101 +11546,12 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     }
     function buildCommunityVehicleSvg(vehicleId){
       var item=getCommunityVehicleItem(vehicleId);
-      if(!item)return '';
-      var s=item.style||'classic', paint=item.color||'#87939b';
-      var P={
-        classic:{b:'M27 111 L36 94 Q43 86 70 83 L92 80 L117 52 Q131 41 159 41 H220 Q246 44 264 81 L307 89 Q329 93 334 109 L328 131 H31 Q23 127 27 111 Z',r:'M91 81 L116 51 Q131 39 159 39 H218 Q244 42 261 81 Z',g:'M103 76 L125 54 Q137 45 158 45 V79 Z M165 45 H213 Q233 47 250 79 H165 Z',x:91,y:267,rad:21},
-        boxy:{b:'M28 111 L35 91 Q40 84 66 81 L77 72 H280 L297 81 L326 88 Q337 92 339 110 L333 133 H31 Q25 128 28 111 Z',r:'M77 79 L83 28 Q85 21 95 20 H242 Q253 21 256 79 Z',g:'M92 69 L97 31 Q98 27 104 27 H157 V72 Z M165 27 H237 Q244 28 246 72 H165 Z',x:91,y:267,rad:23},
-        zaporozhets:{b:'M29 113 Q27 99 43 91 Q57 84 84 83 Q91 62 118 65 Q157 63 185 84 L268 88 Q307 91 330 106 L333 122 Q329 133 313 133 H44 Q29 130 29 113 Z',r:'M87 83 Q91 62 112 49 Q130 38 157 42 Q184 44 202 84 Z',g:'M100 77 Q106 57 121 53 Q136 47 153 50 V82 Z M160 50 Q181 51 194 81 H160 Z',x:84,y:271,rad:19},
-        classic2101:{b:'M27 112 L34 92 L58 85 L78 81 H275 L302 87 Q326 91 332 107 L328 131 H32 Q25 127 27 112 Z',r:'M78 82 L102 45 L119 36 H231 L253 81 Z',g:'M94 76 L116 44 H157 V77 Z M163 43 H222 Q238 46 247 77 H163 Z',x:91,y:267,rad:21},
-        'bmw-e34':{b:'M25 112 L33 92 L57 85 L79 81 H280 L307 88 Q328 92 333 109 L327 131 H31 Q23 127 25 112 Z',r:'M78 82 L103 45 L119 35 H231 L256 82 Z',g:'M94 76 L116 44 H158 V78 Z M164 43 H219 Q238 46 248 78 H164 Z',x:91,y:267,rad:21},
-        'bmw-e36':{b:'M26 112 L35 94 Q42 86 68 83 L91 80 L115 51 Q129 40 158 40 H220 Q244 43 263 81 L307 89 Q329 93 334 109 L328 131 H32 Q23 127 26 112 Z',r:'M90 81 L115 50 Q129 38 158 38 H218 Q242 41 261 81 Z',g:'M102 76 L123 53 Q135 44 157 44 V79 Z M164 44 H214 Q234 46 251 79 H164 Z',x:91,y:267,rad:21},
-        'bmw-e46':{b:'M26 112 L35 94 Q43 86 69 83 L92 80 L116 50 Q132 38 160 39 H220 Q246 43 264 81 L307 89 Q329 94 334 109 L328 131 H32 Q23 127 26 112 Z',r:'M91 81 L116 49 Q131 37 160 37 H219 Q246 41 262 81 Z',g:'M103 76 L124 52 Q136 43 159 43 V79 Z M165 43 H214 Q235 46 252 79 H165 Z',x:91,y:267,rad:21},
-        'bmw-e60':{b:'M24 112 L34 95 Q43 87 72 83 L94 80 L122 49 Q137 36 166 37 H225 Q251 41 268 81 L307 89 Q329 93 335 109 L329 131 H31 Q22 127 24 112 Z',r:'M93 81 L121 48 Q137 34 166 35 H223 Q250 39 266 81 Z',g:'M106 76 L129 51 Q143 41 165 41 V79 Z M171 41 H219 Q241 44 256 79 H171 Z',x:91,y:267,rad:21},
-        'bmw-e90':{b:'M25 112 L34 94 Q43 86 69 83 L92 80 L117 50 Q131 39 160 39 H222 Q247 42 264 81 L308 89 Q330 93 335 109 L328 131 H31 Q22 127 25 112 Z',r:'M91 81 L117 49 Q132 37 160 37 H220 Q245 40 262 81 Z',g:'M103 76 L125 52 Q137 43 159 43 V79 Z M165 43 H215 Q235 45 252 79 H165 Z',x:91,y:267,rad:21},
-        'bmw-f30':{b:'M22 112 L32 94 Q42 85 73 82 L97 79 L123 47 Q139 33 170 34 H232 Q258 38 274 80 L309 89 Q331 94 337 109 L330 131 H30 Q20 126 22 112 Z',r:'M96 80 L122 46 Q138 31 170 32 H230 Q257 36 272 80 Z',g:'M109 75 L132 49 Q146 38 169 38 V78 Z M175 38 H227 Q246 41 263 78 H175 Z',x:91,y:267,rad:21},
-        'mercedes-w220':{b:'M21 112 L30 94 Q38 86 67 83 L90 80 L117 51 Q134 39 161 39 H220 Q247 42 265 81 L309 89 Q332 93 338 109 L331 131 H28 Q18 127 21 112 Z',r:'M89 81 L116 49 Q133 36 161 36 H218 Q246 40 263 81 Z',g:'M101 76 L124 52 Q137 43 160 43 V79 Z M166 43 H213 Q234 45 252 79 H166 Z',x:91,y:267,rad:22},
-        'mercedes-w221':{b:'M20 112 L30 94 Q38 86 67 83 L91 80 L117 49 Q134 35 163 36 H222 Q249 40 267 81 L310 89 Q333 93 339 109 L331 131 H27 Q17 127 20 112 Z',r:'M90 81 L116 48 Q134 33 163 33 H220 Q248 37 265 81 Z',g:'M102 76 L124 51 Q138 40 162 40 V79 Z M168 40 H215 Q237 43 254 79 H168 Z',x:91,y:267,rad:22},
-        'mercedes-w222':{b:'M19 112 L29 94 Q38 85 68 82 L92 79 L120 46 Q138 33 169 34 H229 Q255 38 271 80 L311 89 Q334 94 340 109 L332 131 H27 Q16 127 19 112 Z',r:'M91 80 L119 45 Q138 30 168 31 H228 Q255 35 270 80 Z',g:'M104 75 L128 48 Q142 38 167 38 V78 Z M173 38 H222 Q244 41 259 78 H173 Z',x:91,y:267,rad:22},
-        'mercedes-w223':{b:'M18 112 L28 94 Q37 85 68 82 L94 79 L124 45 Q143 30 174 31 H235 Q260 34 276 79 L313 89 Q335 94 341 109 L333 131 H26 Q15 127 18 112 Z',r:'M93 79 L123 44 Q142 27 174 28 H234 Q260 31 275 79 Z',g:'M107 74 L132 47 Q148 35 173 35 V78 Z M179 35 H228 Q249 38 265 78 H179 Z',x:91,y:267,rad:22},
-        gelik:{b:'M27 111 L33 85 Q37 79 62 77 L72 69 H281 L296 78 L326 86 Q338 91 340 109 L333 133 H30 Q24 127 27 111 Z',r:'M73 76 L78 20 Q80 15 91 15 H246 Q256 16 257 76 Z',g:'M87 67 L91 24 H157 V69 Z M166 24 H240 Q247 24 248 69 H166 Z',x:91,y:267,rad:24},
-        'kia-rio':{b:'M27 112 L36 94 Q44 87 69 84 L91 81 L116 54 Q130 43 158 43 H217 Q242 46 262 82 L305 89 Q327 93 333 109 L327 130 H32 Q24 127 27 112 Z',r:'M90 82 L116 53 Q131 41 158 41 H216 Q241 44 259 82 Z',g:'M102 77 L123 55 Q135 47 157 47 V80 Z M164 47 H211 Q231 49 248 80 H164 Z',x:91,y:267,rad:21},
-        'skyline-r34':{b:'M24 112 L33 94 Q42 86 70 83 L92 80 L116 57 Q130 45 158 45 H224 Q249 48 268 81 L307 88 Q329 93 335 109 L329 130 H29 Q21 126 24 112 Z',r:'M91 82 L117 55 Q130 42 160 42 H216 Q241 45 259 82 Z',g:'M103 77 L124 56 Q135 48 157 48 V80 Z M164 48 H212 Q231 50 248 80 H164 Z',x:91,y:267,rad:21},
-        matiz:{b:'M36 112 Q31 97 47 89 L77 82 Q83 53 111 52 Q159 43 194 59 Q222 72 235 88 L304 94 Q327 98 331 113 L326 130 H43 Q34 126 36 112 Z',r:'M83 84 Q87 54 109 37 Q129 24 162 29 Q198 33 218 84 Z',g:'M96 78 Q101 49 118 40 Q137 31 158 36 L157 82 Z M164 36 Q196 40 210 81 H164 Z',x:84,y:271,rad:18}
-      };
-      var p=P[s]||P.classic, x=p.x||91, y=p.y||267, radius=p.rad||21;
-      var arch='<path d="M'+(x-31)+' 131 A31 31 0 0 1 '+(x+31)+' 131 M'+(y-31)+' 131 A31 31 0 0 1 '+(y+31)+' 131" fill="none" stroke="'+((s==='boxy'||s==='gelik')?'#252c2d':'#39464d')+'" stroke-width="'+((s==='boxy'||s==='gelik')?6:3.5)+'"/>';
-      var windows='<path d="'+p.g+'" fill="#bad3de" stroke="#465761" stroke-width="2.5" stroke-linejoin="round"/><path d="M160 40 V82" stroke="#3a4850" stroke-width="2.5" opacity=".8"/><path d="M110 49 L127 43 M171 43 H210" stroke="#eef5f5" stroke-width="1.2" opacity=".7"/>';
-      var side=p.s||'';
-      var front='<path d="M307 88 L333 96 L337 111 L330 131 L307 131 Z" fill="'+paint+'" stroke="#303b42" stroke-width="2.5"/>';
-      var grille='', lamps='', rearLamp='<path d="M29 98 Q36 95 42 98 L40 114 L30 115 Z" fill="#c84d45" stroke="#f2d7cd" stroke-width="1.2"/>';
-      if(item.brand==='BMW'){
-        grille='<path d="M319 100 Q323 96 327 100 L327 123 Q322 126 319 122 Z M330 100 Q334 97 337 102 L335 122 Q331 125 328 122 Z" fill="#1e2a31" stroke="#d5dfe3" stroke-width="1.2"/><path d="M321 104 V120 M332 104 V120" stroke="#83939b" stroke-width="1"/>';
-        if(s==='bmw-e34'||s==='bmw-e36')lamps='<path d="M298 94 Q305 90 314 95 L313 106 L298 105 Z" fill="#ecf0e6" stroke="#54636b" stroke-width="1.3"/><circle cx="303" cy="100" r="3.2" fill="#fff5d8"/><circle cx="309" cy="100" r="3.2" fill="#fff5d8"/>';
-        else if(s==='bmw-e46')lamps='<path d="M297 94 Q306 89 315 96 L313 106 L298 105 Z" fill="#edf0e6" stroke="#54636b" stroke-width="1.3"/><ellipse cx="303" cy="100" rx="3" ry="4" fill="#fff5d8"/><ellipse cx="310" cy="100" rx="3" ry="4" fill="#fff5d8"/>';
-        else if(s==='bmw-e60')lamps='<path d="M296 94 Q306 88 316 96 L313 106 L297 105 Z" fill="#edf0e6" stroke="#54636b" stroke-width="1.3"/><path d="M300 98 Q305 92 308 101 M309 96 L313 102" stroke="#fff3d7" stroke-width="2" fill="none"/>';
-        else if(s==='bmw-e90')lamps='<path d="M297 94 Q306 90 315 96 L314 105 L298 105 Z" fill="#edf0e6" stroke="#54636b" stroke-width="1.3"/><path d="M300 99 L311 100" stroke="#fff3d7" stroke-width="2.5"/>';
-        else lamps='<path d="M295 93 Q307 88 318 96 L316 106 L297 105 Z" fill="#edf0e6" stroke="#54636b" stroke-width="1.3"/><path d="M300 99 L314 100" stroke="#fff3d7" stroke-width="2.5"/>';
-      }else if(item.brand==='MERCEDES-BENZ'){
-        grille='<path d="M319 99 Q328 96 337 101 L335 122 Q326 125 318 121 Z" fill="#26343d" stroke="#d4dce0" stroke-width="1.3"/><path d="M322 104 H334 M321 109 H334 M320 114 H333" stroke="#bcc8ce" stroke-width="1.4"/><circle cx="328" cy="110" r="6" fill="none" stroke="#e1e7e9" stroke-width="1"/><path d="M328 104 L328 115 M323 113 L332 107 M323 107 L332 113" stroke="#e1e7e9" stroke-width="1"/>';
-        if(s==='mercedes-w220')lamps='<path d="M298 93 Q308 87 318 95 L315 107 Q305 110 297 104 Z" fill="#f2f0e6" stroke="#65727a" stroke-width="1.4"/><ellipse cx="306" cy="100" rx="4" ry="3" fill="#fff8df"/>';
-        else if(s==='mercedes-w221')lamps='<path d="M297 93 L315 94 L319 103 L313 108 L297 105 Z" fill="#f3f0e4" stroke="#65727a" stroke-width="1.4"/><path d="M301 99 H314" stroke="#fff8df" stroke-width="2.5"/>';
-        else lamps='<path d="M296 93 Q307 88 319 95 L316 106 L298 106 Z" fill="#f1f0e8" stroke="#65727a" stroke-width="1.4"/><path d="M300 98 Q307 94 314 100" stroke="#fff8df" stroke-width="2" fill="none"/>';
-      }else if(s==='gelik'||s==='boxy'){
-        grille='<rect x="319" y="99" width="14" height="24" rx="2" fill="#242d30" stroke="#b9c4c1" stroke-width="1.4"/><path d="M323 102 V120 M328 102 V120" stroke="#b5c0bb" stroke-width="1.3"/>';
-        lamps='<circle cx="307" cy="99" r="'+(s==='gelik'?8:7)+'" fill="#f6e9c8" stroke="#56635e" stroke-width="2"/>';
-      }else if(s==='classic2101'){
-        grille='<rect x="319" y="99" width="11" height="21" rx="1" fill="#454d50" stroke="#e8e2d5" stroke-width="1.5"/><path d="M322 101 V118 M326 101 V118" stroke="#c9c5bb" stroke-width="1.5"/>';
-        lamps='<circle cx="307" cy="98" r="6.5" fill="#f5eddb" stroke="#6b675f" stroke-width="2"/>';
-      }else if(s==='zaporozhets'){
-        grille='<rect x="319" y="106" width="11" height="11" rx="4" fill="#596269" stroke="#efe2c7" stroke-width="1.4"/>';
-        lamps='<circle cx="306" cy="103" r="6" fill="#f7e9c8" stroke="#6d6253" stroke-width="2"/>';
-        side+='<path d="M46 89 L56 84 M49 95 L62 88 M53 101 L67 92 M57 106 L72 97" stroke="#39464a" stroke-width="2.4"/>';
-      }else if(s==='skyline-r34'){
-        grille='<path d="M319 103 L333 106 L331 122 L318 122 Z" fill="#172b3b" stroke="#b7c7d1" stroke-width="1.4"/><path d="M321 108 H331 M320 114 H330" stroke="#a5bbc9" stroke-width="1.2"/>';
-        lamps='<path d="M299 96 L313 98 L312 106 L299 104 Z" fill="#eaf3ec" stroke="#5b7486" stroke-width="1.5"/>';
-        side+='<path d="M245 82 L268 65 H295 L291 78 L266 86 Z" fill="#253b4e" stroke="#1e3346" stroke-width="2"/><path d="M251 69 H286" stroke="#9eb5c5" stroke-width="2"/>';
-      }else if(s==='kia-rio'){
-        grille='<path d="M315 102 Q324 99 332 104 L331 119 Q322 124 313 118 Z" fill="#252d31" stroke="#d6dce0" stroke-width="1.3"/><path d="M318 108 Q325 106 330 108 M317 114 H329" stroke="#b8c2c8" stroke-width="1.4"/>';
-        lamps='<path d="M298 95 Q307 92 315 98 L313 106 L299 105 Z" fill="#f4efda" stroke="#657178" stroke-width="1.5"/>';
-      }else if(s==='classic2101'){
-        grille='<rect x="319" y="99" width="11" height="21" rx="1" fill="#454d50" stroke="#e8e2d5" stroke-width="1.5"/>';
-        lamps='<circle cx="307" cy="98" r="6.5" fill="#f5eddb" stroke="#6b675f" stroke-width="2"/>';
-      }else if(s==='matiz'){
-        grille='<path d="M317 108 Q324 105 330 110 L328 121 H316 Z" fill="#273538" stroke="#d0d8d4" stroke-width="1.2"/>';
-        lamps='<circle cx="308" cy="103" r="8" fill="#f8edcf" stroke="#64716d" stroke-width="2"/>';
-        rearLamp='<path d="M39 96 Q45 93 50 95 L47 109 H39Z" fill="#ca5147" stroke="#f4d7c8" stroke-width="1"/>';
-      }else{
-        grille='<path d="M319 101 Q327 97 333 102 L332 120 Q324 124 317 120 Z" fill="#27343b" stroke="#c7d0d5" stroke-width="1.3"/>';
-        lamps='<path d="M298 95 Q308 90 317 97 L314 106 L299 105 Z" fill="#f4f0df" stroke="#65727b" stroke-width="1.5"/>';
-      }
-      if(s==='skyline-r34')rearLamp='<circle cx="37" cy="104" r="4" fill="#d14b4b" stroke="#f1d8d7" stroke-width="1"/><circle cx="37" cy="115" r="4" fill="#d14b4b" stroke="#f1d8d7" stroke-width="1"/>';
-      var bumpers='<path d="M31 118 H331" stroke="#28333a" stroke-width="3" opacity=".8"/><path d="M43 129 H325" stroke="#d4dce0" stroke-width="1.4" opacity=".8"/>';
-      if(s==='classic2101')bumpers='<path d="M29 117 H330" stroke="#d8d3c7" stroke-width="4"/><path d="M40 128 H324" stroke="#5d5b55" stroke-width="2"/>';
-      if(s==='zaporozhets')bumpers='<path d="M38 119 H328" stroke="#f0dfbb" stroke-width="3"/><path d="M43 127 H319" stroke="#8f7754" stroke-width="2"/>';
-      if(s==='boxy'||s==='gelik')bumpers='<path d="M32 118 H334" stroke="#242c2f" stroke-width="5"/><path d="M35 131 H331" stroke="#d5dbd6" stroke-width="2"/>';
-      var mirror='<path d="M120 53 L114 46 L105 48 L108 53 L116 56" fill="#293943" stroke="#354550" stroke-width="1.4"/>';
-      function makeWheel(cx){
-        var spokes='';
-        var count=(s==='boxy'||s==='gelik')?6:8;
-        for(var i=0;i<count;i++){
-          var a=i*Math.PI*2/count;
-          spokes+='<path d="M'+(cx+Math.cos(a)*6).toFixed(1)+' '+(121+Math.sin(a)*6).toFixed(1)+' L'+(cx+Math.cos(a)*(radius-5)).toFixed(1)+' '+(121+Math.sin(a)*(radius-5)).toFixed(1)+'" stroke="#8d9aa2" stroke-width="2.2" stroke-linecap="round"/>';
-        }
-        return '<g><circle cx="'+cx+'" cy="121" r="'+radius+'" fill="#20272c" stroke="#10161a" stroke-width="3"/><circle cx="'+cx+'" cy="121" r="'+(radius-3)+'" fill="#39434a"/><circle cx="'+cx+'" cy="121" r="'+(radius-7)+'" fill="#aeb8be" stroke="#e0e5e8" stroke-width="1.5"/>'+spokes+'<circle cx="'+cx+'" cy="121" r="5" fill="#606c74" stroke="#d9e0e3" stroke-width="1.2"/></g>';
-      }
-      var wheels=makeWheel(x)+makeWheel(y);
-      var gloss='<path d="M40 94 Q115 85 185 88 Q252 88 305 99" fill="none" stroke="#ffffff" stroke-width="2" opacity=".28"/><path d="M44 126 H318" fill="none" stroke="#1d272d" stroke-width="2" opacity=".25"/>';
-      var badge=item.brand==='BMW'?'BMW':item.brand==='MERCEDES-BENZ'?'S-CLASS':item.brand==='NISSAN'?'GT-R':item.brand==='ЗАЗ'?'ЗАЗ':item.brand==='ВАЗ'?'ЖИГУЛИ':item.brand==='LADA'?'LADA':item.brand==='KIA'?'KIA':'MATIZ';
-      return '<svg viewBox="0 0 360 166" role="img" aria-label="'+item.fullTitle+'" xmlns="http://www.w3.org/2000/svg">'+
-        '<ellipse cx="180" cy="147" rx="151" ry="8" fill="#514b50" opacity=".16"/>'+
-        '<path d="'+p.b+'" fill="'+paint+'" stroke="#303b42" stroke-width="2.8" stroke-linejoin="round"/>'+
-        '<path d="'+p.b+'" fill="none" stroke="#ffffff" stroke-width="1.2" opacity=".19"/>'+
-        '<path d="'+p.r+'" fill="'+paint+'" stroke="#303b42" stroke-width="2.8" stroke-linejoin="round"/>'+
-        windows+arch+side+mirror+gloss+bumpers+rearLamp+front+lamps+grille+wheels+
-        '<path d="M'+(x-20)+' 111 Q'+x+' 91 '+(x+20)+' 111 M'+(y-20)+' 111 Q'+y+' 91 '+(y+20)+' 111" stroke="#202a2f" stroke-width="3" fill="none" opacity=".75"/>'+
-        '<path d="M43 137 H321" stroke="#2b363c" stroke-width="2" opacity=".45"/>'+
-        '<text x="180" y="160" text-anchor="middle" font-family="Arial,sans-serif" font-size="9" font-weight="800" letter-spacing="1.1" fill="#66747c">'+badge+'</text></svg>';
+      if(!item||!item.photoFile)return '';
+      var src='https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(item.photoFile)+'?width=900';
+      var alt=String(item.fullTitle||'Автомобиль').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+      var credit=String(item.photoCredit||'Фотография Wikimedia Commons').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+      var page=String(item.photoPage||'https://commons.wikimedia.org/').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+      return '<a class="community-vehicle-photo-link" href="'+page+'" target="_blank" rel="noopener noreferrer" aria-label="Источник фотографии: '+credit+'"><img class="community-vehicle-photo" src="'+src+'" alt="'+alt+'" title="'+credit+'" loading="lazy" decoding="async" referrerpolicy="no-referrer"></a>';
     }
         function buildCommunityAvatarScene(userId,previewClothingId,previewVehicleId){
       var state=getCommunityUserGameState(userId);
