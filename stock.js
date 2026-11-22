@@ -78,16 +78,16 @@
   function saleOptionIssue(product,locationId){
     var sid=String(locationId||'');
     if(visibleStoreIds().map(String).indexOf(sid)===-1)return '';
-    var units=stockBalanceUnits(product.id,sid);
+    var units=stockBalanceUnits(product&&product.id,sid);
     if(units<=0)return '';
     if(!product||product.org!==org())return '';
-    if(product.status!=='active')return product.status==='pending'?'Карточка ожидает проверки':'Карточка не опубликована';
+    var issues=[];
     var direction=storeDirection(sid);
-    if(direction&&direction!=='mixed'&&product.direction!==direction)return 'Направление карточки не совпадает с направлением магазина';
-    var balance=balances[sid]&&balances[sid][String(product.id)]||{};
-    var sizes=Array.isArray(balance.sizes)?balance.sizes:[];
-    if(!sizes.length)return 'Есть остаток ('+units+' шт.), но не добавлены размеры';
-    return '';
+    if(direction&&direction!=='mixed'&&String(product.direction||'')!==direction)issues.push('Направление карточки не совпадает с направлением магазина');
+    if(!String(product.category||'').trim())issues.push('Не указана категория товара');
+    var purchaseCost=product.purchaseCost;
+    if(purchaseCost===undefined||purchaseCost===null||String(purchaseCost).trim()===''||!isFinite(Number(purchaseCost))||Number(purchaseCost)<0)issues.push('Не указана закупочная стоимость');
+    return issues.join('; ');
   }
   function getSaleOptionIssues(product,locationFilter){
     var locations=visibleStoreIds().map(String);
@@ -418,7 +418,7 @@
       var selectedMain=products[mergeSelectingId];
       html+='<div class="card" style="margin-bottom:12px;border:1px solid var(--warning);"><b>Выбрана главная карточка:</b> '+esc(selectedMain&&selectedMain.name||'Товар')+'<div style="font-size:12px;color:var(--text-light);margin-top:4px;">'+(mergeSelectingStoreId==='all'?'Теперь выберите вторую карточку. Остатки и размеры объединятся отдельно во всех магазинах и на складе хранения.':'Теперь выберите вторую карточку. Если у обеих карточек есть остатки в одной локации, размеры и количество будут сложены без потери товара.')+'</div></div>';
     }
-    if(!list.length) html+='<div class="card" style="text-align:center;color:var(--text-light);">'+(activeFilter==='error'?'Карточек с остатком, которые не попадают в список продажи, не найдено.':'В выбранном магазине или на складе пока нет товаров с остатком.')+'</div>';
+    if(!list.length) html+='<div class="card" style="text-align:center;color:var(--text-light);">'+(activeFilter==='error'?'Карточек с остатками и ошибками направления, категории или закупочной стоимости не найдено.':'В выбранном магазине или на складе пока нет товаров с остатком.')+'</div>';
     list.forEach(function(p){
       var balanceStoreId=isAdmin()?String(selectedStoreId):String(storeId());
       var currentBalance=balances[balanceStoreId]&&balances[balanceStoreId][String(p.id)]||{};
@@ -428,8 +428,8 @@
       var state=p.status==='pending'?'Ожидает проверки':p.status==='active'?'Опубликован':'Архив';
       var costHtml=isAdmin()&&p.purchaseCost!=null?'<div style="font-size:13px;margin-top:5px;">Закупка: <b>'+esc(p.purchaseCost)+'</b></div>':'';
       var saleIssues=isAdmin()&&activeFilter==='error'?getSaleOptionIssues(p,selectedStoreId):[];
-      var saleIssueHtml=saleIssues.length?'<div style="font-size:12px;line-height:1.45;color:#b42336;margin-top:7px;padding:7px 9px;border:1px solid #efc1c8;border-radius:8px;background:#fff7f7;"><b>Не попадает в продажу:</b> '+esc(saleIssues.map(function(item){return stockLocationName(item.location)+': '+item.reason;}).join(' · '))+'</div>':'';
-      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div '+(isSeller()&&p.status==='active'?'data-stock-photo="'+esc(p.id)+'" title="Нажмите, чтобы заменить фото"':'')+' style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;'+(isSeller()&&p.status==='active'?'cursor:pointer;outline:1px dashed var(--primary);':'')+'">'+(p.photoUrl?'<img src="'+esc(cardPhotoUrl(p.photoUrl))+'" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b '+(isSeller()&&p.status==='active'?'data-stock-rename="'+esc(p.id)+'" title="Нажмите, чтобы изменить название" style="cursor:pointer;border-bottom:1px dashed var(--primary);"':'')+'>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color].filter(Boolean).join(' · '))+'</div>'+sizesHtml+'<div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div>'+costHtml+(isAdmin()&&selectedStoreId==='all'?'<div style="font-size:13px;margin-top:7px;"><span style="color:var(--text-light);">Остатки по локациям:</span><div style="font-weight:600;margin-top:3px;">'+esc(locations.map(function(location){return stockLocationName(location)+': '+stockBalanceUnits(p.id,location)+' шт.';}).join(' · '))+'</div></div>':'<div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. в этом магазине':' шт.')+'</div>')+saleIssueHtml+'</div><div class="stock-card-actions" style="display:flex;gap:5px;flex-wrap:wrap;">';
+      var saleIssueHtml=saleIssues.length?'<div style="font-size:12px;line-height:1.45;color:#b42336;margin-top:7px;padding:7px 9px;border:1px solid #efc1c8;border-radius:8px;background:#fff7f7;"><b>Ошибки карточки:</b> '+esc(saleIssues.map(function(item){return stockLocationName(item.location)+': '+item.reason;}).join(' · '))+'</div>':'';
+      html+='<div class="card" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;"><div '+(isSeller()&&p.status==='active'?'data-stock-photo="'+esc(p.id)+'" title="Нажмите, чтобы заменить фото"':'')+' style="width:76px;height:76px;border-radius:10px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;'+(isSeller()&&p.status==='active'?'cursor:pointer;outline:1px dashed var(--primary);':'')+'">'+(p.photoUrl?'<img src="'+esc(cardPhotoUrl(p.photoUrl))+'" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;">':'<span style="font-size:25px;">📦</span>')+'</div><div style="flex:1;min-width:160px;"><b '+(isSeller()&&p.status==='active'?'data-stock-rename="'+esc(p.id)+'" title="Нажмите, чтобы изменить название" style="cursor:pointer;border-bottom:1px dashed var(--primary);"':'')+'>'+esc(p.name||'Без названия')+'</b><div style="font-size:12px;color:var(--text-light);margin-top:3px;">'+esc([p.article,p.category,p.color].filter(Boolean).join(' · '))+'</div>'+sizesHtml+'<div style="font-size:12px;margin-top:5px;">'+(isAdmin()?esc(p.direction==='krossy'?'Кроссы':p.direction==='easy'?'Изи':'Не назначено')+' · ':'')+esc(state)+'</div>'+costHtml+(isAdmin()&&selectedStoreId==='all'?'<div style="font-size:13px;margin-top:7px;"><span style="color:var(--text-light);">Остатки по локациям:</span><div style="font-weight:600;margin-top:3px;">'+esc(locations.filter(function(location){return stockBalanceUnits(p.id,location)>0;}).map(function(location){return stockLocationName(location)+': '+stockBalanceUnits(p.id,location)+' шт.';}).join(' · ')||'Нет остатков')+'</div></div>':'<div style="font-size:13px;margin-top:5px;"><b>Остаток: '+q+'</b>'+(isAdmin()?' шт. в этом магазине':' шт.')+'</div>')+saleIssueHtml+'</div><div class="stock-card-actions" style="display:flex;gap:5px;flex-wrap:wrap;">';
       if(canEditCard(p)) html+='<button class="btn btn-secondary" type="button" onclick="stockOpenForm(\''+esc(p.id)+'\')">Изменить</button>';
       if(isAdmin() && selectedStoreId!=='all' && p.status==='active') html+='<button class="btn btn-primary" type="button" onclick="stockMove(\''+esc(p.id)+'\',\''+esc(balanceStoreId)+'\')">Переместить</button>';
       if(isAdmin() && p.status==='active'){
