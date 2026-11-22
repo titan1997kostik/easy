@@ -11747,7 +11747,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         owned.forEach(function(item){var chip=document.createElement('span');chip.className='community-owned-chip';chip.textContent=item.icon+' '+item.title+(String(state.activeStatusId||'')===item.id?' · активен':item.unlockRevenue?' · достижение':'');chips.appendChild(chip);});
         collection.appendChild(chips);
       }else{
-        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет купленных статусов. Первый статус уже ждёт в магазине наград.';collection.appendChild(collectionNote);
+        var collectionNote=document.createElement('p');collectionNote.style.cssText='font-size:12px;color:var(--text-light);line-height:1.5;';collectionNote.textContent='Пока нет статусов. Выбери первый в магазине или открой за личные достижения.';collection.appendChild(collectionNote);
       }
       card.appendChild(collection);
       var action=document.createElement('button');action.type='button';action.className='btn btn-primary';action.style.marginTop='14px';
@@ -11823,7 +11823,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         var button=document.createElement('button');button.type='button';button.className=active?'btn btn-secondary':'btn btn-primary';
         if(active){button.textContent='Снять статус';button.addEventListener('click',function(){setCommunityActiveStatus(null);});}
         else if(earnedOnly){
-          button.textContent=unlocked?'Выбрать статус':'Заслужить';
+          button.textContent=unlocked?'Выбрать статус':'Ещё '+Math.max(0,Number(item.unlockRevenue)-revenue).toLocaleString('ru-RU')+' ₽';
           button.disabled=!unlocked;
           if(unlocked)button.addEventListener('click',function(){setCommunityActiveStatus(item.id);});
         }else if(unlocked){button.textContent='Выбрать статус';button.addEventListener('click',function(){setCommunityActiveStatus(item.id);});}
