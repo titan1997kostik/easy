@@ -11357,7 +11357,6 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     definitions.forEach(function(d){var id=d.id;var b=document.createElement('button');b.type='button';b.className='nav-link';b.dataset.page=id;b.innerHTML='<span class="nav-icon">'+d.icon+'</span><span>'+d.label+'</span>';b.addEventListener('click',function(){showPage(id);});mobile.appendChild(b);});
     app.appendChild(mobile);
 
-    var communityCurrentTab='achievements';
     var communitySelectedUserId='';
     var communityActivePeerId='';
     var communityCurrentOrgKey='';
@@ -11708,35 +11707,6 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       }).catch(function(error){
         if(status)status.textContent='Не удалось отправить сообщение: '+String(error&&error.message||'ошибка Firebase');
       }).then(function(){if(button)button.disabled=false;});
-    }
-    function openCommunityDirect(userId){
-      var target=getCommunityMembers().find(function(user){return String(user.id)===String(userId);});
-      if(!target||String(target.id)===String(window.currentUser&&window.currentUser.id))return;
-      communityActivePeerId=String(target.id);
-      showCommunityTab('messages');
-    }
-    function showCommunityTab(tab){
-      var allowed=['messages','employees','profile','shop','activity'];
-      if(allowed.indexOf(tab)===-1)tab='messages';
-      communityCurrentTab=tab;
-      communityPage.querySelectorAll('[data-community-tab]').forEach(function(button){
-        var active=button.dataset.communityTab===tab;
-        button.classList.toggle('active',active);
-        button.setAttribute('aria-selected',active?'true':'false');
-      });
-      communityPage.querySelectorAll('.community-view').forEach(function(view){
-        var active=view.id==='communityView-'+tab;
-        view.classList.toggle('active',active);
-        view.hidden=!active;
-      });
-      renderCommunityCurrentView();
-    }
-    function renderCommunityCurrentView(){
-      if(communityCurrentTab==='messages')renderCommunityMessagesView();
-      if(communityCurrentTab==='employees')renderCommunityDirectory();
-      if(communityCurrentTab==='profile')renderCommunityProfile(String(communitySelectedUserId||window.currentUser&&window.currentUser.id||''));
-      if(communityCurrentTab==='shop')renderCommunityShop();
-      if(communityCurrentTab==='activity')renderCommunityLeaderboard();
     }
     function renderCommunityDirectory(){
       var grid=document.getElementById('communityDirectoryGrid');
