@@ -11260,7 +11260,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       {id:'cash',label:'Касса магазинов',icon:'▤'},
       {id:'analytics',label:'Аналитика',icon:'▥'},
       {id:'tasks',label:'Задания',icon:'✓'},
-      {id:'community',label:'Сообщество',icon:'💬',group:'ОБЩЕНИЕ'},
+      {id:'achievements',label:'Достижения',icon:'🏆',group:'МОИ РЕЗУЛЬТАТЫ'},
       {id:'breaks',label:'Перерывы',icon:'☕'},
       {id:'audit',label:'Журнал действий',icon:'◷'},
       {id:'staff',label:'Сотрудники',icon:'♙',group:'УПРАВЛЕНИЕ'},
@@ -11277,62 +11277,11 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var quick=document.createElement('div');quick.className='quick-actions';quick.innerHTML='<button class="quick-action" type="button" data-jump="purchaseJournal"><span>📦</span><span>Закупка товара</span></button><button class="quick-action" type="button" data-jump="sale"><span>＋</span><span>Записать продажу</span></button><button class="quick-action" type="button" data-jump="expense"><span>↘</span><span>Записать расход</span></button><button class="quick-action" type="button" data-jump="cash"><span>▤</span><span>Проверить кассу</span></button><button class="quick-action" type="button" data-jump="tasks" aria-label="Задания"><span>✓</span><span>Задания</span><span class="task-notice-count" hidden aria-hidden="true"></span></button><button class="quick-action" type="button" data-jump="costs" aria-label="Себестоимость товаров"><span>🧾</span><span>Без себестоимости</span><span class="cost-notice-count" hidden aria-hidden="true"></span></button>';dashboard.appendChild(quick);
     var sellerPlanWidget=document.createElement('section');sellerPlanWidget.id='sellerStoreSalesPlanWidget';sellerPlanWidget.className='card seller-plan-widget';sellerPlanWidget.innerHTML='<button id="sellerPlanToggle" class="seller-plan-toggle" type="button" onclick="toggleSellerSalesPlanDetails()" aria-expanded="false" aria-controls="sellerPlanProgress"><span class="seller-plan-toggle-row"><span><span class="seller-plan-toggle-title">План продаж</span><span id="sellerPlanStoreMonth" class="seller-plan-toggle-subtitle">Текущий месяц</span></span><span class="seller-plan-toggle-score"><span id="sellerPlanCompactPercent">—</span><span class="seller-plan-toggle-chevron" aria-hidden="true">⌄</span></span></span><span class="seller-plan-toggle-track" aria-hidden="true"><span id="sellerPlanCompactBar" class="seller-plan-toggle-fill" style="display:block;width:0%"></span></span></button><div id="sellerPlanProgress" class="seller-plan-details" hidden><div class="sales-plan-progress-list"><div class="sales-plan-empty">Загружаем план магазина…</div></div></div>';dashboard.appendChild(sellerPlanWidget);
     if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(true);
-    var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации'), communityPage=makePage('community','Сообщество EASY');
-    communityPage.insertAdjacentHTML('beforeend', `
-      <section class="community-intro">
-        <div><h3 style="margin:0 0 6px;border:0;padding:0;">Сообщество EASY</h3><p>Общий чат организации, личные переписки, профили сотрудников и магазин игровых наград. Зарабатывай звёзды за продажи, открывай статусы и собирай достижения.</p></div>
-        <span class="community-org-pill" id="communityOrgLabel">Организация</span>
-      </section>
-      <div class="community-subnav" role="tablist" aria-label="Разделы сообщества">
-        <button type="button" class="community-subtab active" data-community-tab="messages" role="tab" aria-selected="true">💬 Сообщения</button>
-        <button type="button" class="community-subtab" data-community-tab="employees" role="tab" aria-selected="false">👥 Сотрудники</button>
-        <button type="button" class="community-subtab" data-community-tab="profile" role="tab" aria-selected="false">🙋 Мой профиль</button>
-        <button type="button" class="community-subtab" data-community-tab="shop" role="tab" aria-selected="false">🎁 Магазин наград</button>
-        <button type="button" class="community-subtab" data-community-tab="activity" role="tab" aria-selected="false">🏆 Рейтинг</button>
-      </div>
-      <section class="community-view active" id="communityView-messages" role="tabpanel">
-        <div class="community-messenger">
-          <aside class="community-chat-sidebar">
-            <div style="width:100%;">
-              <div class="community-chat-section-label">Общение</div>
-              <button type="button" class="community-chat-nav-button active" id="communityGeneralChatButton"><span class="community-chat-nav-avatar">🌐</span><span>Общий чат</span></button>
-              <div class="community-chat-section-label">Личные сообщения</div>
-              <div id="communityDirectList"><div style="padding:10px;color:var(--text-light);font-size:12px;">Загрузка сотрудников…</div></div>
-            </div>
-          </aside>
-          <div class="community-chat-main">
-            <div class="community-chat-header"><div><strong id="communityChatTitle">Общий чат организации</strong><span id="communityChatSubtitle">Все сотрудники вашей организации</span></div><span id="communityChatCount"></span></div>
-            <div class="community-chat-messages" id="communityMessagesList" role="log" aria-live="polite"><div class="community-chat-empty">Загружаем сообщения…</div></div>
-            <div class="community-chat-status" id="communityMessagesStatus"></div>
-            <form class="community-message-form" id="communityMessageForm">
-              <textarea id="communityMessageInput" rows="1" maxlength="1500" placeholder="Напишите сообщение…" aria-label="Текст сообщения"></textarea>
-              <button type="submit" class="btn btn-primary" id="communitySendButton">Отправить</button>
-            </form>
-          </div>
-        </div>
-      </section>
-      <section class="community-view" id="communityView-employees" role="tabpanel" hidden>
-        <div class="community-directory-toolbar"><div><h3 style="border:0;padding:0;margin:0 0 4px;">Сотрудники организации</h3><span id="communityDirectoryCount" style="font-size:12px;color:var(--text-light);">Загрузка списка…</span></div><input type="search" id="communityDirectorySearch" placeholder="Поиск по имени сотрудника…" autocomplete="off" aria-label="Поиск сотрудника"></div>
-        <div class="community-directory-grid" id="communityDirectoryGrid"><div class="community-empty">Загружаем сотрудников…</div></div>
-      </section>
-      <section class="community-view" id="communityView-profile" role="tabpanel" hidden>
-        <div id="communityProfileContent"></div>
-      </section>
-      <section class="community-view" id="communityView-shop" role="tabpanel" hidden>
-        <div id="communityShopContent"><div class="community-empty">Загружаем игровой баланс…</div></div>
-      </section>
-      <section class="community-view" id="communityView-activity" role="tabpanel" hidden>
-        <div style="margin-bottom:12px;"><h3 style="margin:0 0 4px;border:0;padding:0;">Рейтинг продавцов</h3><p style="font-size:12px;color:var(--text-light);margin:0;">По общей выручке. 1 ⭐ начисляется за каждый 1 ₽ выручки по продажам, которые не были возвращены.</p></div>
-        <div id="communityLeaderboardContent" class="community-leaderboard"><div class="community-empty">Считаем рейтинг…</div></div>
-      </section>
+    var salePage=makePage('sale','Запись продажи'), salesPage=makePage('sales','История продаж'), expensePage=makePage('expenses','Расходы'), cashPage=makePage('cash','Касса магазинов'), analyticsPage=makePage('analytics','Аналитика'), tasksPage=makePage('tasks','Задания'), breaksPage=makePage('breaks','Журнал перерывов'), auditPage=makePage('audit','Журнал действий'), staffPage=makePage('staff','Сотрудники'), storesPage=makePage('stores','Магазины'), salaryPage=makePage('salary','Зарплата и ставки'), purchasePage=makePage('purchase','План закупки'), costsPage=makePage('costs','Себестоимость товаров'), orgsPage=makePage('orgs','Организации'), achievementsPage=makePage('achievements','Достижения');
+    achievementsPage.insertAdjacentHTML('beforeend', `
+      <section class="card" style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><div style="font-size:34px;">🏆</div><div><h3 style="border:0;padding:0;margin:0 0 4px;">Личные достижения</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Выполняй цели, повышай уровни и собирай награды за результаты работы.</p></div></div></section>
+      <div id="achievementsContent"><div class="community-empty">Загружаем достижения…</div></div>
     `);
-    var communitySearchInput=document.getElementById('communityDirectorySearch');
-    if(communitySearchInput)communitySearchInput.addEventListener('input',renderCommunityDirectory);
-    var communityMessageForm=document.getElementById('communityMessageForm');
-    if(communityMessageForm)communityMessageForm.addEventListener('submit',function(event){event.preventDefault();sendCommunityMessage();});
-    var communityGeneralChatButton=document.getElementById('communityGeneralChatButton');
-    if(communityGeneralChatButton)communityGeneralChatButton.addEventListener('click',function(){communityActivePeerId='';renderCommunityMessagesView();});
-    communityPage.querySelectorAll('[data-community-tab]').forEach(function(button){button.addEventListener('click',function(){showCommunityTab(button.dataset.communityTab);});});
     purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все магазины</option></select></div><div class="form-group"><label for="purchaseCategorySelect">Категория товара</label><select id="purchaseCategorySelect" onchange="renderPurchaseRecommendations()"><option value="all">Все категории</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Магазин: <b id="purchaseQueueCityLabel">Все магазины</b></p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
     var purchaseQueueCardNode=document.getElementById('purchaseQueueCard');
     var purchaseRecommendationsNode=document.getElementById('purchaseRecommendationsCard');
@@ -11408,7 +11357,6 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     definitions.forEach(function(d){var id=d.id;var b=document.createElement('button');b.type='button';b.className='nav-link';b.dataset.page=id;b.innerHTML='<span class="nav-icon">'+d.icon+'</span><span>'+d.label+'</span>';b.addEventListener('click',function(){showPage(id);});mobile.appendChild(b);});
     app.appendChild(mobile);
 
-    var communityCurrentTab='messages';
     var communitySelectedUserId='';
     var communityActivePeerId='';
     var communityCurrentOrgKey='';
@@ -11635,16 +11583,16 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         communityGameStateByUser=snapshot.val()||{};
         communityGameLoadError=false;
         if(window.currentUser)syncCommunityAchievementAwards(window.currentUser,getCommunityAchievementStats(window.currentUser),getCommunityUserGameState(window.currentUser.id));
-        if(isCommunityPageActive())renderCommunityCurrentView();
+        if(isCommunityPageActive())renderAchievementsPage();
       };
       communityGameRef.on('value',communityGameListener,function(error){
         communityGameLoadError=true;
         console.warn('Не удалось загрузить игровую коллекцию:',error);
-        if(isCommunityPageActive())renderCommunityCurrentView();
+        if(isCommunityPageActive())renderAchievementsPage();
       });
     }
     function isCommunityPageActive(){
-      var page=document.getElementById('workspacePage-community');
+      var page=document.getElementById('workspacePage-achievements');
       return !!(page&&page.classList.contains('active'));
     }
     function communityBuildChatId(peerId){
@@ -11760,35 +11708,6 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         if(status)status.textContent='Не удалось отправить сообщение: '+String(error&&error.message||'ошибка Firebase');
       }).then(function(){if(button)button.disabled=false;});
     }
-    function openCommunityDirect(userId){
-      var target=getCommunityMembers().find(function(user){return String(user.id)===String(userId);});
-      if(!target||String(target.id)===String(window.currentUser&&window.currentUser.id))return;
-      communityActivePeerId=String(target.id);
-      showCommunityTab('messages');
-    }
-    function showCommunityTab(tab){
-      var allowed=['messages','employees','profile','shop','activity'];
-      if(allowed.indexOf(tab)===-1)tab='messages';
-      communityCurrentTab=tab;
-      communityPage.querySelectorAll('[data-community-tab]').forEach(function(button){
-        var active=button.dataset.communityTab===tab;
-        button.classList.toggle('active',active);
-        button.setAttribute('aria-selected',active?'true':'false');
-      });
-      communityPage.querySelectorAll('.community-view').forEach(function(view){
-        var active=view.id==='communityView-'+tab;
-        view.classList.toggle('active',active);
-        view.hidden=!active;
-      });
-      renderCommunityCurrentView();
-    }
-    function renderCommunityCurrentView(){
-      if(communityCurrentTab==='messages')renderCommunityMessagesView();
-      if(communityCurrentTab==='employees')renderCommunityDirectory();
-      if(communityCurrentTab==='profile')renderCommunityProfile(String(communitySelectedUserId||window.currentUser&&window.currentUser.id||''));
-      if(communityCurrentTab==='shop')renderCommunityShop();
-      if(communityCurrentTab==='activity')renderCommunityLeaderboard();
-    }
     function renderCommunityDirectory(){
       var grid=document.getElementById('communityDirectoryGrid');
       var count=document.getElementById('communityDirectoryCount');
@@ -11886,7 +11805,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         if(error){console.warn('Не удалось сохранить достижения сотрудника:',error);return;}
         if(committed&&snapshot&&snapshot.val()){
           communityGameStateByUser[userId]=snapshot.val();
-          if(isCommunityPageActive())renderCommunityCurrentView();
+          if(isCommunityPageActive())renderAchievementsPage();
         }
       },false);
     }
@@ -12034,25 +11953,44 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         row.appendChild(rank);row.appendChild(person);row.appendChild(value);host.appendChild(row);
       });
     }
-    function renderCommunityPage(){
+    function renderAchievementsPage(){
       var nextOrgKey=communitySafeKey(getCommunityOrgKey());
-      if(communityCurrentOrgKey&&communityCurrentOrgKey!==nextOrgKey){
-        stopCommunityMessagesListener();
-        stopCommunityGameListener();
-        communityActivePeerId='';
-      }
+      if(communityCurrentOrgKey&&communityCurrentOrgKey!==nextOrgKey)stopCommunityGameListener();
       communityCurrentOrgKey=nextOrgKey;
       startCommunityGameListener();
-      var label=document.getElementById('communityOrgLabel');
-      if(label)label.textContent=getCommunityOrgLabel();
-      renderCommunityCurrentView();
+      var host=document.getElementById('achievementsContent');
+      if(!host||!window.currentUser)return;
+      host.textContent='';
+      if(communityGameLoadError){var error=document.createElement('div');error.className='card';error.textContent='Не удалось загрузить достижения. Проверьте подключение и обновите страницу.';host.appendChild(error);return;}
+      var isAdmin=window.currentUser.role==='admin';
+      var members=isAdmin?getCommunityMembers().filter(function(user){return user.role!=='admin';}):[window.currentUser];
+      if(!members.length){var empty=document.createElement('div');empty.className='card';empty.textContent='Пока нет сотрудников для отображения достижений.';host.appendChild(empty);return;}
+      members.forEach(function(user){
+        var stats=getCommunityAchievementStats(user),card=document.createElement('section');card.className='card';card.style.marginBottom='16px';
+        if(isAdmin){var person=document.createElement('div');person.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;';var name=document.createElement('h3');name.style.cssText='border:0;padding:0;margin:0;';name.textContent=String(user.name||user.username||'Сотрудник');var store=document.createElement('span');store.style.cssText='font-size:12px;color:var(--text-light);';store.textContent=getCommunityStoreLabel(user);person.appendChild(name);person.appendChild(store);card.appendChild(person);}
+        else{var heading=document.createElement('h3');heading.style.cssText='border:0;padding:0;margin:0 0 14px;';heading.textContent='Твой прогресс';card.appendChild(heading);}
+        [{id:'revenue',title:'Выручка за всё время'},{id:'count',title:'Проданные позиции за всё время'},{id:'daily',title:'Рекорд продаж за день'},{id:'tenure',title:'Стаж работы'}].forEach(function(metric){
+          var section=document.createElement('div');section.style.cssText='margin:14px 0 18px;';var title=document.createElement('h4');title.style.cssText='font-size:14px;margin:0 0 9px;';title.textContent=metric.title;section.appendChild(title);
+          var items=communityStatusCatalog.filter(function(item){return item.achievementMetric===metric.id&&(!item.achievementStoreGroup||item.achievementStoreGroup===stats.storeGroup);});
+          if(!items.length){var unavailable=document.createElement('p');unavailable.style.cssText='font-size:12px;color:var(--text-light);';unavailable.textContent=metric.id==='tenure'?'Укажи дату начала работы в профиле сотрудника.':'Для этого магазина не настроены пороги достижений.';section.appendChild(unavailable);}
+          items.forEach(function(item){
+            var progress=getCommunityAchievementProgress(user,item,stats),row=document.createElement('div');row.style.cssText='display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);';
+            var info=document.createElement('div');info.style.cssText='min-width:0;';var label=document.createElement('div');label.style.cssText='font-size:13px;font-weight:600;';label.textContent=item.icon+' '+item.title;
+            var numbers=document.createElement('div');numbers.style.cssText='font-size:11px;color:var(--text-light);margin-top:3px;';numbers.textContent=progress.current.toLocaleString('ru-RU')+' / '+progress.goal.toLocaleString('ru-RU')+' '+progress.unit;
+            var track=document.createElement('div');track.style.cssText='height:6px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:6px;';var fill=document.createElement('div');fill.style.cssText='height:100%;width:'+progress.percent+'%;background:var(--primary);border-radius:99px;';track.appendChild(fill);info.appendChild(label);info.appendChild(numbers);info.appendChild(track);
+            var status=document.createElement('span');status.style.cssText='font-size:11px;font-weight:700;white-space:nowrap;color:'+(progress.unlocked?'var(--success)':'var(--text-light)')+';';status.textContent=progress.unlocked?'Открыто':'В процессе';row.appendChild(info);row.appendChild(status);section.appendChild(row);
+          });
+          card.appendChild(section);
+        });
+        host.appendChild(card);
+      });
     }
-    window.easyAppSyncRenderCommunity=renderCommunityPage;
+    window.easyAppSyncRenderAchievements=renderAchievementsPage;
     window.easyAppSyncRefreshGame=function(){
       if(window.currentUser&&!communityGameRef)startCommunityGameListener();
       if(window.currentUser&&communityGameRef&&!communityGameLoadError)syncCommunityAchievementAwards(window.currentUser,getCommunityAchievementStats(window.currentUser),getCommunityUserGameState(window.currentUser.id));
       if(!isCommunityPageActive())return;
-      renderCommunityCurrentView();
+      renderAchievementsPage();
     };
 
     quick.querySelectorAll('[data-jump]').forEach(function(b){b.addEventListener('click',function(){var target=b.dataset.jump;if(target==='sale'){showPage('sale');var el=document.getElementById('prodName');if(el){el.focus({preventScroll:true});el.scrollIntoView({behavior:'smooth',block:'center'});}}else if(target==='expense'){showPage('dashboard');var el2=document.getElementById('expenseAmount');if(el2){el2.focus();el2.scrollIntoView({behavior:'smooth',block:'center'});}}else if(target==='tasks'){showPage('tasks');}else if(target==='costs'){if(!window.isPurchaseCostOwner||!window.isPurchaseCostOwner())return;var costStatus=document.getElementById('saleCostStatusFilter');var costStart=document.getElementById('saleCostStartDate');var costEnd=document.getElementById('saleCostEndDate');var costSearch=document.getElementById('saleCostSearch');if(costStatus)costStatus.value='missing';if(costStart)costStart.value='';if(costEnd)costEnd.value='';if(costSearch)costSearch.value='';showPage('costs');if(typeof renderPurchaseCosts==='function')renderPurchaseCosts();}else if(target==='purchaseJournal'){if(!window.currentUser||window.currentUser.role!=='admin'||!window.isSuperAdmin||!window.isSuperAdmin(window.currentUser))return;showPage('dashboard');setTimeout(function(){var card=document.getElementById('purchaseJournalCard');var name=document.getElementById('purchaseJournalName');if(card)card.scrollIntoView({behavior:'smooth',block:'start'});if(name&&!name.disabled)name.focus({preventScroll:true});},60);}else showPage('cash');});});
@@ -12060,7 +11998,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(!pages[id])id='dashboard';
       if(id==='purchase'&&(!window.currentUser||window.currentUser.role!=='admin'))id='dashboard';
       if(id==='costs'&&(!window.isPurchaseCostOwner||!window.isPurchaseCostOwner()))id='dashboard';
-      if(window.currentUser&&window.currentUser.role==='seller'&&(id==='audit'||id==='orgs'||id==='community'))id='dashboard';
+      if(window.currentUser&&window.currentUser.role==='seller'&&(id==='audit'||id==='orgs'))id='dashboard';
       document.querySelectorAll('#workspaceShell .workspace-page').forEach(function(page){page.classList.toggle('active',page.id==='workspacePage-'+id);});
       document.querySelectorAll('#workspaceShell .nav-link, .mobile-nav .nav-link').forEach(function(b){b.classList.toggle('active',b.dataset.page===id);});
       if(id==='dashboard'){if(window.currentUser&&window.currentUser.role==='admin'&&typeof startAdminPersonalTasksListener==='function')startAdminPersonalTasksListener();if(typeof renderCashWidget==='function')renderCashWidget();if(typeof renderSalaryBlock==='function')renderSalaryBlock();if(typeof renderCashMetrics==='function')renderCashMetrics();if(typeof renderShiftBtn==='function')renderShiftBtn();if(typeof renderCalendar==='function')renderCalendar();if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(false);if(typeof updatePurchaseCostDashboardNotice==='function')updatePurchaseCostDashboardNotice();if(typeof updateTaskAttentionIndicator==='function')updateTaskAttentionIndicator();}
@@ -12071,7 +12009,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(id==='analytics'&&typeof drawChart==='function')drawChart();
       if(id==='analytics'&&typeof window.renderBusinessAdvisor==='function')window.renderBusinessAdvisor();
       if(id==='tasks'&&typeof renderTasks==='function')renderTasks();
-      if(id==='community'&&typeof renderCommunityPage==='function')renderCommunityPage();
+      if(id==='achievements'&&typeof renderAchievementsPage==='function')renderAchievementsPage();
       if(id==='staff'){if(typeof renderUserManageTable==='function')renderUserManageTable();if(typeof renderEmployeePerformance==='function')renderEmployeePerformance();}
       if(id==='stores'&&typeof renderStoresManagement==='function')renderStoresManagement();
       if(id==='salary'){if(typeof renderSalaryManagement==='function')renderSalaryManagement();if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(false);}
@@ -12080,7 +12018,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(id==='expenses'){if(typeof renderExpensesTable==='function')renderExpensesTable();if(typeof renderRecurringExpenseManager==='function')renderRecurringExpenseManager();}
       if(id==='purchase'&&typeof renderPurchaseRecommendations==='function')renderPurchaseRecommendations();
       if(id==='costs'&&typeof renderPurchaseCosts==='function')renderPurchaseCosts();
-      if(id==='community')renderCommunityPage();
+      if(id==='achievements')renderAchievementsPage();
       try{sessionStorage.setItem('easyAppSync_activePage',id);}catch(e){}
     }
     window.easyAppSyncShowPage=showPage;
@@ -12095,12 +12033,12 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         if (costsPageEl && costsPageEl.classList.contains('active')) showPage('dashboard');
       }
       document.querySelectorAll('[data-page="audit"]').forEach(function(link){link.style.display=sellerMode?'none':'';});
-      document.querySelectorAll('[data-page="community"]').forEach(function(link){link.style.display=sellerMode?'none':'';});
+      document.querySelectorAll('[data-page="achievements"]').forEach(function(link){link.style.display='';});
       document.querySelectorAll('[data-page="orgs"]').forEach(function(link){
         if (sellerMode) link.style.display='none';
         else { var orgPanel = document.getElementById('orgsManagePanel'); link.style.display=(!orgPanel || orgPanel.classList.contains('hidden') || orgPanel.style.display==='none')?'none':''; }
       });
-      if (sellerMode && ((pages.audit && pages.audit.classList.contains('active')) || (pages.orgs && pages.orgs.classList.contains('active')) || (pages.community && pages.community.classList.contains('active')))) showPage('dashboard');
+      if (sellerMode && ((pages.audit && pages.audit.classList.contains('active')) || (pages.orgs && pages.orgs.classList.contains('active')))) showPage('dashboard');
     }
     var observer=new MutationObserver(syncAdminNav);['adminPanel','storesManagePanel','salaryManagePanel','orgsManagePanel'].forEach(function(id){var el=document.getElementById(id);if(el)observer.observe(el,{attributes:true,attributeFilter:['class','style']});});
     syncAdminNav();
