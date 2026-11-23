@@ -451,6 +451,12 @@ body.seller-mode #analyticsAdminSummary,body.seller-mode #analyticsProductInsigh
 #tasksRoot .task-admin-table-wrap{max-width:100%;overflow-x:auto;}
 #tasksRoot .task-admin-table{min-width:720px;}
 @media(max-width:680px){#tasksRoot .task-card{padding:12px;}#tasksRoot .task-admin-table{min-width:720px;}}
+/* Achievement navigation attention indicator */
+.nav-link[data-page="achievements"]{position:relative;}
+.nav-link[data-page="achievements"].has-new-achievements{background:#fff0f0;color:#b42336;border:1px solid #ef9a9a;box-shadow:0 0 0 2px rgba(217,79,104,.10);animation:taskAttentionPulse 2.4s ease-in-out infinite;}
+.nav-link[data-page="achievements"].has-new-achievements .nav-icon{color:#b42336;}
+.achievement-notice-count{position:absolute;top:4px;right:5px;display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#d94f68;color:#fff;font-size:11px;font-weight:850;line-height:1;box-shadow:0 1px 4px rgba(100,20,30,.22);}
+.achievement-notice-count[hidden]{display:none!important;}
 /* Task shortcut and navigation attention indicator */
 .nav-link[data-page="tasks"], .quick-action[data-jump="tasks"]{position:relative;}
 .nav-link[data-page="tasks"].has-open-tasks{background:#fff0f0;color:#b42336;border:1px solid #ef9a9a;box-shadow:0 0 0 2px rgba(217,79,104,.10);}
@@ -9016,6 +9022,43 @@ function taskDateLabel(value) {
     return d.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
 }
 
+var achievementNoticeStoragePrefix='easyAppSync_unseenAchievements_';
+function getAchievementNoticeStorageKey(){
+    var user=currentUser||window.currentUser;
+    if(!user||user.id==null)return '';
+    var org=(typeof getCommunityOrgKey==='function'?getCommunityOrgKey():(user.org||'mine'));
+    return achievementNoticeStoragePrefix+String(org)+'_'+String(user.id);
+}
+function getUnseenAchievementIds(){
+    var key=getAchievementNoticeStorageKey();
+    if(!key)return [];
+    try{var value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value.map(String):[];}catch(e){return [];}
+}
+function addUnseenAchievement(achievementId){
+    if(!achievementId)return;
+    var ids=getUnseenAchievementIds(),id=String(achievementId);
+    if(ids.indexOf(id)===-1)ids.push(id);
+    var key=getAchievementNoticeStorageKey();
+    try{if(key)localStorage.setItem(key,JSON.stringify(ids));}catch(e){}
+    updateAchievementAttentionIndicator();
+}
+function clearUnseenAchievements(){
+    var key=getAchievementNoticeStorageKey();
+    try{if(key)localStorage.removeItem(key);}catch(e){}
+    updateAchievementAttentionIndicator();
+}
+function updateAchievementAttentionIndicator(){
+    var ids=getUnseenAchievementIds(),count=ids.length;
+    document.querySelectorAll('[data-page="achievements"]').forEach(function(link){
+        link.classList.toggle('has-new-achievements',count>0);
+        link.setAttribute('aria-label',count>0?'Достижения: '+count+' новых':'Достижения');
+        link.setAttribute('title',count>0?'Есть новые достижения: '+count:'Достижения');
+        var badge=link.querySelector('.achievement-notice-count');
+        if(!badge){badge=document.createElement('span');badge.className='achievement-notice-count';badge.setAttribute('aria-hidden','true');link.appendChild(badge);}
+        badge.textContent=count>0?String(count):'';
+        badge.hidden=count<=0;
+    });
+}
 function updateTaskAttentionIndicator() {
     var count = 0;
     if (currentUser && currentUser.role === 'seller' && tasksDataLoaded) {
@@ -9066,6 +9109,7 @@ function stopAdminPersonalTasksListener() {
     adminPersonalTasksLoaded = false;
     adminPersonalTasks = [];
     if (typeof updateTaskAttentionIndicator === 'function') updateTaskAttentionIndicator();
+    if (typeof updateAchievementAttentionIndicator === 'function') updateAchievementAttentionIndicator();
 }
 
 function startAdminPersonalTasksListener() {
@@ -11820,6 +11864,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
           var item=getCommunityStatusItem(achievementId);
           var achievementTitle=item?communityAchievementNotificationText(item):String(after[achievementId].title||achievementId);
           var storeName=getCommunityStoreLabel(member);
+          addUnseenAchievement(userId+'_'+achievementId);
           notifyCommunityAchievement('🏆 Новое достижение у продавца',String(member.name||member.username||'Продавец')+' · '+storeName+'\\n'+achievementTitle,'easy-achievement-admin-'+userId+'-'+achievementId);
         });
       });
@@ -11847,6 +11892,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         if(committed&&snapshot&&snapshot.val()){
           communityGameStateByUser[userId]=snapshot.val();
           pending.forEach(function(item){
+            addUnseenAchievement(item.id);
             notifyCommunityAchievement('🏆 Новое достижение!',communityAchievementNotificationText(item),'easy-achievement-seller-'+userId+'-'+item.id);
           });
           if(isCommunityPageActive())renderAchievementsPage();
@@ -12137,7 +12183,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(id==='analytics'&&typeof drawChart==='function')drawChart();
       if(id==='analytics'&&typeof window.renderBusinessAdvisor==='function')window.renderBusinessAdvisor();
       if(id==='tasks'&&typeof renderTasks==='function')renderTasks();
-      if(id==='achievements'&&typeof renderAchievementsPage==='function')renderAchievementsPage();
+      if(id==='achievements'){if(typeof clearUnseenAchievements==='function')clearUnseenAchievements();if(typeof renderAchievementsPage==='function')renderAchievementsPage();}
       if(id==='staff'){if(typeof renderUserManageTable==='function')renderUserManageTable();if(typeof renderEmployeePerformance==='function')renderEmployeePerformance();}
       if(id==='stores'&&typeof renderStoresManagement==='function')renderStoresManagement();
       if(id==='salary'){if(typeof renderSalaryManagement==='function')renderSalaryManagement();if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(false);}
