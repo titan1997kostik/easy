@@ -3439,9 +3439,6 @@ db.ref('users_data').on('value', function(snapshot) {
     isRemoteChange = true;
     var data = snapshot.val() || {};
     var arr = [];
-    var currentUserIdExistsOnServer = false;
-    var hasUsersInSnapshot = false;
-
     Object.keys(data).forEach(function(key) {
         if (data[key]) {
             var u = data[key];
@@ -3450,10 +3447,8 @@ db.ref('users_data').on('value', function(snapshot) {
             
             u.id = String(key);
             arr.push(u);
-            hasUsersInSnapshot = true;
             
             if (currentUser && String(u.id) === String(currentUser.id)) {
-                currentUserIdExistsOnServer = true;
                 currentUser = u;
                 localStorage.setItem('easyAppSync_session', JSON.stringify(u));
             }
@@ -3472,14 +3467,8 @@ db.ref('users_data').on('value', function(snapshot) {
     window.users = arr;
     invalidateAnalyticsCache();
 
-    // Выкидываем пользователя ТОЛЬКО если snapshot не пустой и юзера реально удалили на сервере
-    if (currentUser && hasUsersInSnapshot && !currentUserIdExistsOnServer) {
-        if (currentUser.username !== 'Костя' && currentUser.username !== 'Оля' && currentUser.username !== 'Вова') {
-            isRemoteChange = false;
-            executeForceLogout();
-            return;
-        }
-    }
+    // Missing users in this snapshot are not proof of deletion: local/server
+    // snapshots may be incomplete during reconnect. Deletion ledgers are authoritative.
 
     if (currentUser) {
         renderAll();
@@ -3675,14 +3664,36 @@ db.ref('cash_collections_data').on('value', function(snapshot) {
     }
 });
 
+function verifyCurrentSessionAgainstServerDeletionLedgers() {
+    if (!currentUser || !syncConnected || typeof db === 'undefined' || !db || typeof db.ref !== 'function') return;
+    var checkedUserId = String(currentUser.id);
+    var checkedUsername = currentUser.username;
+    Promise.all([
+        db.ref('deleted_user_ids_data').once('value'),
+        db.ref('deleted_super_admins_data').once('value')
+    ]).then(function(snaps) {
+        // Do not apply a delayed check to a different account signed in meanwhile.
+        if (!currentUser || String(currentUser.id) !== checkedUserId || currentUser.username !== checkedUsername) return;
+        var deletedIdsValue = snaps[0].val();
+        var deletedAdminsValue = snaps[1].val();
+        deletedUserIds = deletedIdsValue ? Object.keys(deletedIdsValue).map(function(k){ return deletedIdsValue[k]; }) : [];
+        deletedSuperAdmins = deletedAdminsValue ? Object.keys(deletedAdminsValue).map(function(k){ return deletedAdminsValue[k]; }) : [];
+        saveAllToLocal();
+        if (isDeletedUserId(currentUser.id) || deletedSuperAdmins.includes(currentUser.username)) {
+            executeForceLogout();
+            return;
+        }
+        if (currentUser) { renderUserManageTable(); renderSalaryManagement(); }
+    }).catch(function(error) {
+        console.warn('Не удалось проверить статус учётной записи; текущая сессия сохранена:', error);
+    });
+}
+
 db.ref('deleted_user_ids_data').on('value', function(snapshot) {
     var val = snapshot.val();
     deletedUserIds = val ? Object.keys(val).map(function(k){ return val[k]; }) : [];
     saveAllToLocal();
-    if (currentUser && isDeletedUserId(currentUser.id)) {
-        executeForceLogout();
-        return;
-    }
+    if (syncConnected) verifyCurrentSessionAgainstServerDeletionLedgers();
     if (currentUser) { renderUserManageTable(); renderSalaryManagement(); }
 });
 
@@ -3690,10 +3701,7 @@ db.ref('deleted_super_admins_data').on('value', function(snapshot) {
     var val = snapshot.val();
     deletedSuperAdmins = val ? Object.keys(val).map(function(k){ return val[k]; }) : [];
     saveAllToLocal();
-    if (currentUser && deletedSuperAdmins.includes(currentUser.username)) {
-        executeForceLogout();
-        return;
-    }
+    if (syncConnected) verifyCurrentSessionAgainstServerDeletionLedgers();
     if (currentUser) { renderUserManageTable(); renderSalaryManagement(); }
 });
 
@@ -3706,6 +3714,7 @@ db.ref('.info/connected').on('value', function(snapshot) {
     if (syncConnected) {
         if (st) st.textContent = 'Облако подключено';
         deletionLedgersFresh = false;
+        verifyCurrentSessionAgainstServerDeletionLedgers();
         refreshDeletionLedgersFromServerAndFlush();
         // Re-read the authoritative queue snapshot after reconnect so a deferred legacy migration can run.
         if (currentUser && typeof stopPurchaseQueueSync === 'function' && typeof startPurchaseQueueSync === 'function') {
@@ -4045,23 +4054,20 @@ function loadFromLocal() {
     if (session) {
         try {
             var sessUser = JSON.parse(session);
-            if (isDeletedUserId(sessUser.id) || deletedSuperAdmins.includes(sessUser.username)) {
-                localStorage.removeItem('easyAppSync_session');
+            // A local cache can be incomplete or older than the server after a refresh.
+            // Keep a structurally valid session and let the server deletion ledgers
+            // make the authoritative decision once Firebase is connected.
+            if (sessUser && sessUser.id != null && sessUser.username && sessUser.password) {
+                var validUser = users.find(function(u) {
+                    return String(u.id) === String(sessUser.id) || u.username === sessUser.username;
+                });
+                currentUser = validUser || sessUser;
             } else {
-                var validUser = users.find(function(u){ return u.username === sessUser.username && u.password === sessUser.password; });
-                if (validUser) {
-                    currentUser = validUser;
-                } else {
-                    var sa = SUPER_ADMINS.find(function(s){ return s.username === sessUser.username && s.password === sessUser.password; });
-                    if (sa && !deletedSuperAdmins.includes(sa.username)) {
-                        var u = users.find(function(u){ return u.username === sa.username; });
-                        if (u) currentUser = u;
-                    } else {
-                        localStorage.removeItem('easyAppSync_session');
-                    }
-                }
+                localStorage.removeItem('easyAppSync_session');
             }
-        } catch(e) {}
+        } catch(e) {
+            localStorage.removeItem('easyAppSync_session');
+        }
     }
     var savedShiftStart = localStorage.getItem('easyAppSync_shiftStart');
     if (savedShiftStart) { try { shiftStartTime = savedShiftStart; } catch(e){} }
@@ -4124,10 +4130,11 @@ function doAddUser() {
 
 // ========== FORCE LOGOUT & SESSION SECURITY ==========
 function executeForceLogout() {
+    // This function is called only after a server-confirmed deletion ledger match.
+    // Preserve the application cache: it contains business data unrelated to the account.
     try { localStorage.removeItem('easyAppSync_session'); } catch(e) {}
-    try { localStorage.removeItem('easyAppSync_v2'); } catch(e) {}
     currentUser = null;
-    alert("Ваша учётная запись была удалена на другом устройстве. Доступ заблокирован.");
+    alert("Учётная запись подтверждённо удалена. Доступ закрыт.");
     try {
         if (typeof doLogout === 'function') {
             doLogout();
@@ -4148,30 +4155,9 @@ function requireOnlineForMutation(actionLabel) {
 }
 
 function checkSessionBeforeAction() {
-    if (!currentUser) return false;
-    
-    // Безопасное исключение для администраторов
-    if (currentUser.role === 'admin' || currentUser.username === 'Костя' || currentUser.username === 'Оля' || currentUser.username === 'Вова') {
-        return true; 
-    }
-    
-    var usersList = users || window.users || [];
-    // Если база данных еще не прогрузилась — не выкидываем пользователя, даем приложению запуститься
-    if (!usersList || usersList.length === 0) return true; 
-    
-    var exists = false;
-    for (var i = 0; i < usersList.length; i++) {
-        if (usersList[i] && String(usersList[i].id) === String(currentUser.id)) {
-            exists = true;
-            break;
-        }
-    }
-    
-    if (!exists) {
-        executeForceLogout();
-        return false;
-    }
-    return true;
+    // Do not infer account deletion from a missing entry in a possibly stale local
+    // users array. Confirmed deletions are handled by the Firebase deletion ledgers.
+    return !!currentUser;
 }
 
 function doLogin() {
