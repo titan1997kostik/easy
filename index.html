@@ -4272,11 +4272,11 @@ function enterApp() {
     // Show break button only for sellers
     if (currentUser.role === 'seller') {
         document.getElementById('breakBtnContainer').classList.remove('hidden');
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
-        }
     } else {
         document.getElementById('breakBtnContainer').classList.add('hidden');
+    }
+    if ('Notification' in window && Notification.permission === 'default') {
+        try { Notification.requestPermission(); } catch (e) {}
     }
     var productAdminControls = document.getElementById('productCatalogAdminControls');
     if (productAdminControls) productAdminControls.classList.toggle('hidden', currentUser.role !== 'admin');
@@ -11368,6 +11368,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var communityGameStateByUser=Object.create(null);
     var communityGameLoadError=false;
     var communityAchievementSyncInProgress=Object.create(null);
+    var communityAchievementNotificationBaseline=null;
     var communityMessagesRef=null;
     var communityMessagesListener=null;
     var communityMessagesPath='';
@@ -11572,7 +11573,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     }
     function stopCommunityGameListener(){
       if(communityGameRef&&communityGameListener)communityGameRef.off('value',communityGameListener);
-      communityGameRef=null;communityGameListener=null;communityGameStateByUser=Object.create(null);
+      communityGameRef=null;communityGameListener=null;communityGameStateByUser=Object.create(null);communityAchievementNotificationBaseline=null;
     }
     function startCommunityGameListener(){
       if(!window.currentUser||typeof db==='undefined'||!db.ref)return;
@@ -11583,7 +11584,10 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       communityGameLoadError=false;
       communityGameRef=db.ref('community_game_data/'+key);
       communityGameListener=function(snapshot){
-        communityGameStateByUser=snapshot.val()||{};
+        var nextState=snapshot.val()||{};
+        if(communityAchievementNotificationBaseline!==null)notifyAdminAboutNewAchievements(communityAchievementNotificationBaseline,nextState);
+        communityAchievementNotificationBaseline=nextState;
+        communityGameStateByUser=nextState;
         communityGameLoadError=false;
         if(window.currentUser)syncCommunityAchievementAwards(window.currentUser,getCommunityAchievementStats(window.currentUser),getCommunityUserGameState(window.currentUser.id));
         if(isCommunityPageActive())renderAchievementsPage();
@@ -11788,6 +11792,38 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       card.appendChild(action);
       host.appendChild(card);
     }
+    function notifyCommunityAchievement(title,body,tag){
+      if(!window.currentUser||typeof Notification==='undefined'||Notification.permission!=='granted')return;
+      try{
+        var notice=new Notification(title,{body:body,tag:tag||'easy-achievement-'+Date.now(),icon:'icon-192.png',badge:'icon-192.png'});
+        notice.onclick=function(){try{window.focus();if(typeof window.easyAppSyncShowPage==='function')window.easyAppSyncShowPage('achievements');}catch(e){};notice.close();};
+      }catch(error){console.warn('Не удалось показать уведомление о достижении:',error);}
+    }
+    function communityAchievementNotificationText(item){
+      if(!item)return 'Новое достижение открыто!';
+      var metric=item.achievementMetric;
+      var threshold=Number(item.achievementThreshold)||0;
+      var value=metric==='revenue'?threshold.toLocaleString('ru-RU')+' ₽':metric==='tenure'?communityTenureText(threshold):threshold+' поз.';
+      var label=metric==='revenue'?'Выручка за всё время':metric==='count'?'Проданные позиции':metric==='daily'?'Рекорд продаж за день':'Стаж работы';
+      return item.icon+' '+item.title+' · '+label+': '+value;
+    }
+    function notifyAdminAboutNewAchievements(previousState,nextState){
+      if(!window.currentUser||window.currentUser.role!=='admin'||!previousState||!nextState)return;
+      Object.keys(nextState).forEach(function(userId){
+        if(String(userId)===String(window.currentUser.id))return;
+        var member=(window.users||[]).find(function(user){return user&&String(user.id)===String(userId)&&user.role==='seller';});
+        if(!member)return;
+        var before=previousState[userId]&&previousState[userId].achievements||{};
+        var after=nextState[userId]&&nextState[userId].achievements||{};
+        Object.keys(after).forEach(function(achievementId){
+          if(before[achievementId]||!after[achievementId])return;
+          var item=getCommunityStatusItem(achievementId);
+          var achievementTitle=item?communityAchievementNotificationText(item):String(after[achievementId].title||achievementId);
+          var storeName=getCommunityStoreLabel(member);
+          notifyCommunityAchievement('🏆 Новое достижение у продавца',String(member.name||member.username||'Продавец')+' · '+storeName+'\\n'+achievementTitle,'easy-achievement-admin-'+userId+'-'+achievementId);
+        });
+      });
+    }
     function syncCommunityAchievementAwards(user,stats,state){
       if(!user||!window.currentUser||String(user.id)!==String(window.currentUser.id)||typeof db==='undefined'||!db.ref||communityGameLoadError)return;
       var userId=String(user.id),existing=state&&state.achievements&&typeof state.achievements==='object'?state.achievements:{};
@@ -11810,6 +11846,9 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         if(error){console.warn('Не удалось сохранить достижения сотрудника:',error);return;}
         if(committed&&snapshot&&snapshot.val()){
           communityGameStateByUser[userId]=snapshot.val();
+          pending.forEach(function(item){
+            notifyCommunityAchievement('🏆 Новое достижение!',communityAchievementNotificationText(item),'easy-achievement-seller-'+userId+'-'+item.id);
+          });
           if(isCommunityPageActive())renderAchievementsPage();
         }
       },false);
