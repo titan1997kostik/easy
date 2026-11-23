@@ -12004,6 +12004,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       });
     }
     function renderDashboardAchievementMedals(){
+      if(window.currentUser&&window.currentUser.role==='admin')startCommunityGameListener();
       var panel=document.getElementById('dashboardAchievementMedals'),host=document.getElementById('dashboardAchievementMedalsList');
       if(!panel||!host)return;
       var isAdmin=!!(window.currentUser&&window.currentUser.role==='admin');
