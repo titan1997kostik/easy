@@ -13497,3 +13497,34 @@ body.seller-mode #analyticsSellerPerformancePanel .seller-performance-table td:n
 <script src="business-advisor.js?v=8"></script>
 </body>
 </html>
+
+
+/* Keep the global app header in the normal document flow on the mobile sale screen.
+   Some mobile browsers can preserve a transformed/contained ancestor's visual layer;
+   explicitly restore document scrolling for this screen without changing other pages. */
+@media (max-width:680px){
+  html:has(#workspacePage-sale.active),
+  body:has(#workspacePage-sale.active){
+    height:auto!important;
+    min-height:100%!important;
+    overflow-y:auto!important;
+    overscroll-behavior-y:auto;
+  }
+  body:has(#workspacePage-sale.active) #mainApp,
+  body:has(#workspacePage-sale.active) #mainApp.container,
+  body:has(#workspacePage-sale.active) #workspaceShell,
+  body:has(#workspacePage-sale.active) .workspace,
+  body:has(#workspacePage-sale.active) .workspace-content,
+  body:has(#workspacePage-sale.active) #workspacePage-sale{
+    height:auto!important;
+    max-height:none!important;
+    overflow-y:visible!important;
+  }
+  body:has(#workspacePage-sale.active) #mainApp>header{
+    position:static!important;
+    top:auto!important;
+    bottom:auto!important;
+    transform:none!important;
+    contain:none!important;
+  }
+}
