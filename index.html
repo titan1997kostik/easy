@@ -11282,6 +11282,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       <section class="card" style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><div style="font-size:34px;">🏆</div><div><h3 style="border:0;padding:0;margin:0 0 4px;">Личные достижения</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Выполняй цели, повышай уровни и собирай награды за результаты работы.</p></div></div></section>
       <div id="achievementsContent"><div class="community-empty">Загружаем достижения…</div></div>
     `);
+    dashboard.insertAdjacentHTML('beforeend','<section class="card" id="dashboardAchievementMedals" style="display:none;"><h3 style="margin-bottom:5px;">Медали сотрудников</h3><p style="font-size:12px;color:var(--text-light);margin:0 0 12px;">Открытые достижения команды</p><div id="dashboardAchievementMedalsList" style="display:flex;flex-direction:column;gap:9px;"></div></section>');
     purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все магазины</option></select></div><div class="form-group"><label for="purchaseCategorySelect">Категория товара</label><select id="purchaseCategorySelect" onchange="renderPurchaseRecommendations()"><option value="all">Все категории</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Магазин: <b id="purchaseQueueCityLabel">Все магазины</b></p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
     var purchaseQueueCardNode=document.getElementById('purchaseQueueCard');
     var purchaseRecommendationsNode=document.getElementById('purchaseRecommendationsCard');
@@ -11370,9 +11371,9 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var communityMessagesPath='';
     var communityMessagesData=[];
     var communityAchievementThresholds={
-      equal:{label:'Изи Клин · Изи Солнечногорск · Кроссы Клин',revenue:[300000,900000,1800000,2700000,3600000,5400000,7200000],count:[100,300,600,900,1200,1800,2400],daily:[5,8,12,15,18,20,25]},
-      tver:{label:'Изи Тверь',revenue:[350000,1050000,2100000,3150000,4200000,6300000,8400000],count:[120,360,720,1080,1440,2160,2880],daily:[5,10,15,20,25,30,40]},
-      dubna:{label:'Кроссы Дубна',revenue:[50000,150000,300000,450000,600000,900000,1200000],count:[15,45,90,135,180,270,360],daily:[3,5,8,10,15,18,20]}
+      equal:{label:'Изи Клин · Изи Солнечногорск · Кроссы Клин',revenue:[300000,900000,1800000,2700000,3600000,5400000,7200000],count:[100,300,600,900,1200,1800,2400],daily:[10,15,20,25,30,35,40]},
+      tver:{label:'Изи Тверь',revenue:[350000,1050000,2100000,3150000,4200000,6300000,8400000],count:[120,360,720,1080,1440,2160,2880],daily:[15,20,25,30,35,40,45]},
+      dubna:{label:'Кроссы Дубна',revenue:[50000,150000,300000,450000,600000,900000,1200000],count:[15,45,90,135,180,270,360],daily:[5,8,12,15,18,20,25]}
     };
     var communityAchievementIcons=['🥉','🥈','🥇','🏅','🏆','💎','👑'];
     function communityTenureText(months){
@@ -11584,6 +11585,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         communityGameLoadError=false;
         if(window.currentUser)syncCommunityAchievementAwards(window.currentUser,getCommunityAchievementStats(window.currentUser),getCommunityUserGameState(window.currentUser.id));
         if(isCommunityPageActive())renderAchievementsPage();
+        renderDashboardAchievementMedals();
       };
       communityGameRef.on('value',communityGameListener,function(error){
         communityGameLoadError=true;
@@ -12001,6 +12003,34 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         host.appendChild(card);
       });
     }
+    function renderDashboardAchievementMedals(){
+      var panel=document.getElementById('dashboardAchievementMedals'),host=document.getElementById('dashboardAchievementMedalsList');
+      if(!panel||!host)return;
+      var isAdmin=!!(window.currentUser&&window.currentUser.role==='admin');
+      panel.style.display=isAdmin?'':'none';
+      if(!isAdmin)return;
+      host.textContent='';
+      var members=getCommunityMembers().filter(function(user){return user.role!=='admin';});
+      if(!members.length){var empty=document.createElement('p');empty.style.cssText='font-size:12px;color:var(--text-light);';empty.textContent='Нет сотрудников для отображения.';host.appendChild(empty);return;}
+      members.forEach(function(user){
+        var stats=getCommunityAchievementStats(user),state=getCommunityUserGameState(user.id),row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px;border:1px solid var(--border);border-radius:10px;background:#fff;';
+        var person=document.createElement('div');person.style.cssText='min-width:0;flex:1;';
+        var name=document.createElement('strong');name.style.cssText='display:block;font-size:13px;overflow-wrap:anywhere;';name.textContent=String(user.name||user.username||'Сотрудник');
+        var store=document.createElement('span');store.style.cssText='display:block;font-size:11px;color:var(--text-light);margin-top:2px;';store.textContent=getCommunityStoreLabel(user);
+        person.appendChild(name);person.appendChild(store);
+        var medals=document.createElement('div');medals.style.cssText='display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap;font-size:20px;flex:0 0 auto;';
+        var earned=0;
+        communityStatusCatalog.forEach(function(item){
+          if(!item.achievementMetric|| (item.achievementStoreGroup&&item.achievementStoreGroup!==stats.storeGroup))return;
+          var result=getCommunityAchievementProgress(user,item,stats);
+          if(!result.unlocked)return;
+          var medal=document.createElement('span');medal.textContent=item.icon;medal.title=item.title;medal.setAttribute('aria-label',item.title);medals.appendChild(medal);earned++;
+        });
+        if(!earned){var none=document.createElement('span');none.style.cssText='font-size:11px;color:var(--text-light);';none.textContent='Пока нет медалей';medals.appendChild(none);}
+        row.appendChild(person);row.appendChild(medals);host.appendChild(row);
+      });
+    }
     window.easyAppSyncRenderAchievements=renderAchievementsPage;
     window.easyAppSyncRefreshGame=function(){
       if(window.currentUser&&!communityGameRef)startCommunityGameListener();
@@ -12017,7 +12047,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(window.currentUser&&window.currentUser.role==='seller'&&(id==='audit'||id==='orgs'))id='dashboard';
       document.querySelectorAll('#workspaceShell .workspace-page').forEach(function(page){page.classList.toggle('active',page.id==='workspacePage-'+id);});
       document.querySelectorAll('#workspaceShell .nav-link, .mobile-nav .nav-link').forEach(function(b){b.classList.toggle('active',b.dataset.page===id);});
-      if(id==='dashboard'){if(window.currentUser&&window.currentUser.role==='admin'&&typeof startAdminPersonalTasksListener==='function')startAdminPersonalTasksListener();if(typeof renderCashWidget==='function')renderCashWidget();if(typeof renderSalaryBlock==='function')renderSalaryBlock();if(typeof renderCashMetrics==='function')renderCashMetrics();if(typeof renderShiftBtn==='function')renderShiftBtn();if(typeof renderCalendar==='function')renderCalendar();if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(false);if(typeof updatePurchaseCostDashboardNotice==='function')updatePurchaseCostDashboardNotice();if(typeof updateTaskAttentionIndicator==='function')updateTaskAttentionIndicator();}
+      if(id==='dashboard'){if(window.currentUser&&window.currentUser.role==='admin'&&typeof startAdminPersonalTasksListener==='function')startAdminPersonalTasksListener();if(typeof renderDashboardAchievementMedals==='function')renderDashboardAchievementMedals();if(typeof renderCashWidget==='function')renderCashWidget();if(typeof renderSalaryBlock==='function')renderSalaryBlock();if(typeof renderCashMetrics==='function')renderCashMetrics();if(typeof renderShiftBtn==='function')renderShiftBtn();if(typeof renderCalendar==='function')renderCalendar();if(typeof renderStoreSalesPlans==='function')renderStoreSalesPlans(false);if(typeof updatePurchaseCostDashboardNotice==='function')updatePurchaseCostDashboardNotice();if(typeof updateTaskAttentionIndicator==='function')updateTaskAttentionIndicator();}
       if(id==='sale'){if(typeof renderProductCatalogSelect==='function')renderProductCatalogSelect();if(window.currentUser&&window.currentUser.role==='admin'&&typeof renderProductCatalogManager==='function')renderProductCatalogManager();var stockSaleToggle=document.getElementById('stockSaleEnabled');if(stockSaleToggle){stockSaleToggle.checked=true;toggleStockSaleFields();}}
       if(id==='cash'&&typeof renderStoreCashTable==='function')renderStoreCashTable();
       if(id==='breaks'&&typeof renderBreaksTable==='function')renderBreaksTable();
