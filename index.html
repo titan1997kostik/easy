@@ -11416,6 +11416,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     var communityGameListener=null;
     var communityGameStateByUser=Object.create(null);
     var communityGameLoadError=false;
+    var communityAchievementSyncInProgress=Object.create(null);
     var communityMessagesRef=null;
     var communityMessagesListener=null;
     var communityMessagesPath='';
@@ -11537,6 +11538,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     function getCommunityAchievementProgress(user,item,stats){
       stats=stats||getCommunityAchievementStats(user);
       var metric=String(item&&item.achievementMetric||''),goal=Number(item&&item.achievementThreshold)||0;
+      var gameState=getCommunityUserGameState(user&&user.id);
+      if(gameState.achievements&&gameState.achievements[item.id])return {current:goal,goal:goal,unit:metric==='revenue'?'₽':metric==='tenure'?'мес.':'поз.',unlocked:true,percent:100,remaining:0};
       if(item&&item.achievementStoreGroup&&stats.storeGroup!==item.achievementStoreGroup)return {current:0,goal:goal,unit:metric==='revenue'?'₽':metric==='tenure'?'мес.':'поз.',unlocked:false,percent:0,remaining:goal};
       var current=metric&&stats?Number(stats[metric])||0:0;
       var unit=metric==='revenue'?'₽':metric==='count'||metric==='daily'?'поз.':metric==='tenure'?'мес.':'';
@@ -11545,7 +11548,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     function isCommunityStatusUnlocked(user,statusId,state){
       var item=getCommunityStatusItem(statusId);if(!item)return false;
       var purchases=state&&state.purchases&&typeof state.purchases==='object'?state.purchases:{};
-      if(purchases[item.id])return true;
+      var achievements=state&&state.achievements&&typeof state.achievements==='object'?state.achievements:{};
+      if(purchases[item.id]||achievements[item.id])return true;
       if(item.achievementMetric)return getCommunityAchievementProgress(user,item).unlocked;
       var goal=Number(item.unlockRevenue)||0;
       return goal>0&&getCommunityRevenueForUser(user)>=goal;
@@ -11855,6 +11859,32 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       card.appendChild(action);
       host.appendChild(card);
     }
+    function syncCommunityAchievementAwards(user,stats,state){
+      if(!user||!window.currentUser||String(user.id)!==String(window.currentUser.id)||typeof db==='undefined'||!db.ref||communityGameLoadError)return;
+      var userId=String(user.id),existing=state&&state.achievements&&typeof state.achievements==='object'?state.achievements:{};
+      var pending=[];
+      communityStatusCatalog.forEach(function(item){
+        if(!item.achievementMetric||(item.achievementStoreGroup&&item.achievementStoreGroup!==stats.storeGroup)||existing[item.id])return;
+        if(getCommunityAchievementProgress(user,item,stats).unlocked)pending.push(item);
+      });
+      if(!pending.length||communityAchievementSyncInProgress[userId])return;
+      communityAchievementSyncInProgress[userId]=true;
+      db.ref('community_game_data/'+communitySafeKey(getCommunityOrgKey())+'/'+communitySafeKey(userId)).transaction(function(current){
+        current=current&&typeof current==='object'?current:{};
+        var achievements=current.achievements&&typeof current.achievements==='object'?current.achievements:{};
+        pending.forEach(function(item){
+          if(!achievements[item.id])achievements[item.id]={id:item.id,title:item.title,metric:item.achievementMetric,threshold:item.achievementThreshold,unlockedAt:Date.now()};
+        });
+        current.achievements=achievements;current.updatedAt=Date.now();return current;
+      },function(error,committed,snapshot){
+        delete communityAchievementSyncInProgress[userId];
+        if(error){console.warn('Не удалось сохранить достижения сотрудника:',error);return;}
+        if(committed&&snapshot&&snapshot.val()){
+          communityGameStateByUser[userId]=snapshot.val();
+          if(isCommunityPageActive())renderCommunityCurrentView();
+        }
+      },false);
+    }
     function renderCommunityShop(){
       var host=document.getElementById('communityShopContent');
       if(!host||!window.currentUser)return;
@@ -11879,6 +11909,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       var statusGrid=document.createElement('div');statusGrid.className='community-shop-grid';
       var revenue=getCommunityRevenueForUser(user);
       var achievementStats=getCommunityAchievementStats(user);
+      syncCommunityAchievementAwards(user,achievementStats,getCommunityUserGameState(user.id));
       function applyCommunityStatusFilters(){
         var query=String(statusSearch.value||'').trim().toLowerCase();
         Array.prototype.forEach.call(statusGrid.children,function(card){
