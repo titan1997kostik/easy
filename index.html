@@ -828,6 +828,7 @@ body{width:100%;max-width:100%;min-width:320px;overflow-x:clip;}
                 <div class="name"><span id="userName"></span><span id="userRoleBadge" class="role-badge"></span></div>
                 <div class="store" id="userStore"></div>
             </div>
+            <div id="headerAchievementMedals" aria-label="Полученные медали" style="display:none;align-items:center;gap:4px;flex-wrap:wrap;max-width:150px;font-size:19px;line-height:1.2;"></div>
             <div class="user-avatar" id="userAvatar"></div>
             <button class="btn btn-secondary" onclick="doLogout()">Выйти</button>
         </div>
@@ -4290,6 +4291,7 @@ function enterApp() {
     if (isPurchaseCostOwner()) startSalePurchaseCostsSync();
     else stopSalePurchaseCostsSync();
     drawChart();
+    if (typeof window.easyAppSyncRenderHeaderMedals === 'function') window.easyAppSyncRenderHeaderMedals();
 }
 
 // ========== ADMIN ==========
@@ -11585,6 +11587,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         communityGameLoadError=false;
         if(window.currentUser)syncCommunityAchievementAwards(window.currentUser,getCommunityAchievementStats(window.currentUser),getCommunityUserGameState(window.currentUser.id));
         if(isCommunityPageActive())renderAchievementsPage();
+        renderHeaderAchievementMedals();
         renderDashboardAchievementMedals();
       };
       communityGameRef.on('value',communityGameListener,function(error){
@@ -12003,8 +12006,40 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
         host.appendChild(card);
       });
     }
+    function renderHeaderAchievementMedals(){
+      var host=document.getElementById('headerAchievementMedals');
+      var user=window.currentUser;
+      if(!host)return;
+      host.textContent='';
+      if(!user||user.role!=='seller'){host.style.display='none';return;}
+      host.style.display='flex';
+      var stats=getCommunityAchievementStats(user),earned=0;
+      communityStatusCatalog.forEach(function(item){
+        if(!item.achievementMetric||(item.achievementStoreGroup&&item.achievementStoreGroup!==stats.storeGroup))return;
+        var result=getCommunityAchievementProgress(user,item,stats);
+        if(!result.unlocked)return;
+        var medal=document.createElement('span');
+        medal.textContent=item.icon;
+        medal.title=item.title;
+        medal.setAttribute('aria-label',item.title);
+        medal.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:50%;background:#fff7df;border:1px solid #f0d48a;font-size:15px;';
+        host.appendChild(medal);earned++;
+      });
+      if(!earned){
+        var empty=document.createElement('span');
+        empty.textContent='Медалей пока нет';
+        empty.title='Открытые достижения появятся здесь';
+        empty.style.cssText='font-size:10px;color:var(--text-light);white-space:nowrap;';
+        host.appendChild(empty);
+      }
+    }
+    window.easyAppSyncRenderHeaderMedals= function(){
+      if(!window.currentUser)return;
+      startCommunityGameListener();
+      renderHeaderAchievementMedals();
+    };
     function renderDashboardAchievementMedals(){
-      if(window.currentUser&&window.currentUser.role==='admin')startCommunityGameListener();
+      if(window.currentUser)startCommunityGameListener();
       var panel=document.getElementById('dashboardAchievementMedals'),host=document.getElementById('dashboardAchievementMedalsList');
       if(!panel||!host)return;
       var isAdmin=!!(window.currentUser&&window.currentUser.role==='admin');
