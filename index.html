@@ -11630,6 +11630,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       communityGameListener=function(snapshot){
         communityGameStateByUser=snapshot.val()||{};
         communityGameLoadError=false;
+        if(window.currentUser)syncCommunityAchievementAwards(window.currentUser,getCommunityAchievementStats(window.currentUser),getCommunityUserGameState(window.currentUser.id));
         if(isCommunityPageActive())renderCommunityCurrentView();
       };
       communityGameRef.on('value',communityGameListener,function(error){
@@ -12044,6 +12045,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     }
     window.easyAppSyncRenderCommunity=renderCommunityPage;
     window.easyAppSyncRefreshGame=function(){
+      if(window.currentUser&&!communityGameRef)startCommunityGameListener();
+      if(window.currentUser&&communityGameRef&&!communityGameLoadError)syncCommunityAchievementAwards(window.currentUser,getCommunityAchievementStats(window.currentUser),getCommunityUserGameState(window.currentUser.id));
       if(!isCommunityPageActive())return;
       renderCommunityCurrentView();
     };
