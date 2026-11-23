@@ -11502,9 +11502,17 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       var group=getCommunityAchievementStoreGroup(user.store,(window.STORES||{})[String(user.store||'')]);
       result.storeGroup=group;result.storeLabel=group&&communityAchievementThresholds[group]?communityAchievementThresholds[group].label:'';
       if(group){
-        var byDay=Object.create(null);
+        var byDay=Object.create(null),returnStateBySale=Object.create(null);
+        (returnEvents||[]).forEach(function(event){
+          if(!event||event.saleId==null)return;
+          var saleKey=String(event.saleId),eventTime=parseTimestampMs(event.timestamp||event.createdAt);
+          var previous=returnStateBySale[saleKey];
+          if(!previous||eventTime>=previous.timestamp)returnStateBySale[saleKey]={type:String(event.eventType||''),timestamp:eventTime};
+        });
         (sales||[]).forEach(function(sale){
-          if(!sale||sale.returned===true||String(sale.returned)==='true')return;
+          if(!sale)return;
+          var returnState=returnStateBySale[String(sale.id||'')];
+          if(returnState?returnState.type==='return':(sale.returned===true||String(sale.returned)==='true'))return;
           if(typeof window.isSaleRecordDeleted==='function'&&window.isSaleRecordDeleted(sale.id))return;
           if(typeof window.isStoreDeleted==='function'&&window.isStoreDeleted(sale.storeId))return;
           if(typeof window.isRecordBeforeStoreReset==='function'&&window.isRecordBeforeStoreReset(sale))return;
@@ -11891,6 +11899,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       statusSearch.addEventListener('input',applyCommunityStatusFilters);
       statusToolbar.appendChild(statusSearch);statusToolbar.appendChild(statusFilters);host.appendChild(statusToolbar);
       communityStatusCatalog.forEach(function(item){
+        if(item.achievementStoreGroup&&item.achievementStoreGroup!==achievementStats.storeGroup)return;
         var state=getCommunityUserGameState(user.id);
         var earnedOnly=!!item.achievementMetric||Number(item.unlockRevenue)>0;
         var unlocked=isCommunityStatusUnlocked(user,item.id,state);
