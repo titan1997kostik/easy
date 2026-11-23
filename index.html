@@ -11328,7 +11328,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       <section class="card" style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><div style="font-size:34px;">🏆</div><div><h3 style="border:0;padding:0;margin:0 0 4px;">Личные достижения</h3><p style="font-size:13px;color:var(--text-light);margin:0;">Выполняй цели, повышай уровни и собирай награды за результаты работы.</p></div></div></section>
       <div id="achievementsContent"><div class="community-empty">Загружаем достижения…</div></div>
     `);
-    dashboard.insertAdjacentHTML('beforeend','<section class="card" id="dashboardAchievementMedals" style="display:none;"><h3 style="margin-bottom:5px;">Медали сотрудников</h3><p style="font-size:12px;color:var(--text-light);margin:0 0 12px;">Открытые достижения команды</p><div id="dashboardAchievementMedalsList" style="display:flex;flex-direction:column;gap:9px;"></div></section>');
+
     purchasePage.insertAdjacentHTML('beforeend', '<section class="card purchase-plan-card" id="purchaseRecommendationsCard"><div><h3 style="margin-bottom:4px;">Рекомендации к пополнению склада</h3></div><div class="purchase-plan-filters" style="margin-top:14px;"><div class="form-group"><label for="purchaseStoreSelect">Магазин</label><select id="purchaseStoreSelect" onchange="renderPurchaseRecommendations()"><option value="all">Все магазины</option></select></div><div class="form-group"><label for="purchaseCategorySelect">Категория товара</label><select id="purchaseCategorySelect" onchange="renderPurchaseRecommendations()"><option value="all">Все категории</option></select></div></div><div id="purchaseRecommendationStatus" style="font-size:13px;color:var(--text-light);margin:12px 0 8px;">Загрузка остатков…</div><div id="purchaseRecommendationTable" style="display:flex;flex-direction:column;gap:10px;"><div style="padding:16px;color:var(--text-light);">Загрузка…</div></div><div id="purchaseRecommendationMore" style="margin-top:10px;"></div></section><section class="card purchase-plan-card" id="purchaseQueueCard" style="margin-top:14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h3 style="margin-bottom:4px;">К закупке <span id="purchaseQueueCount" style="font-size:13px;color:var(--text-light);font-weight:400;">· 0</span></h3><p style="font-size:12px;color:var(--text-light);margin:0;">Магазин: <b id="purchaseQueueCityLabel">Все магазины</b></p></div></div><div id="purchaseQueueList" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"><div style="font-size:13px;color:var(--text-light);">Пока ничего не добавлено.</div></div><div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-secondary" id="purchaseQueueReset" onclick="resetPurchaseQueue()">Сбросить</button></div></section>');
     var purchaseQueueCardNode=document.getElementById('purchaseQueueCard');
     var purchaseRecommendationsNode=document.getElementById('purchaseRecommendationsCard');
@@ -11629,8 +11629,13 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       communityGameRef=db.ref('community_game_data/'+key);
       communityGameListener=function(snapshot){
         var nextState=snapshot.val()||{};
-        if(communityAchievementNotificationBaseline!==null)notifyAdminAboutNewAchievements(communityAchievementNotificationBaseline,nextState);
+        var noticeStateKey='easyAppSync_adminAchievementBaseline_'+key+'_'+String(window.currentUser&&window.currentUser.id||'');
+        if(communityAchievementNotificationBaseline===null){
+          try{var savedBaseline=localStorage.getItem(noticeStateKey);communityAchievementNotificationBaseline=savedBaseline?JSON.parse(savedBaseline):nextState;}catch(e){communityAchievementNotificationBaseline=nextState;}
+        }
+        notifyAdminAboutNewAchievements(communityAchievementNotificationBaseline,nextState);
         communityAchievementNotificationBaseline=nextState;
+        try{localStorage.setItem(noticeStateKey,JSON.stringify(nextState));}catch(e){}
         communityGameStateByUser=nextState;
         communityGameLoadError=false;
         if(window.currentUser)syncCommunityAchievementAwards(window.currentUser,getCommunityAchievementStats(window.currentUser),getCommunityUserGameState(window.currentUser.id));
@@ -11855,7 +11860,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       if(!window.currentUser||window.currentUser.role!=='admin'||!previousState||!nextState)return;
       Object.keys(nextState).forEach(function(userId){
         if(String(userId)===String(window.currentUser.id))return;
-        var member=(window.users||[]).find(function(user){return user&&String(user.id)===String(userId)&&user.role==='seller';});
+        var members=typeof getCommunityMembers==='function'?getCommunityMembers():(window.users||[]);
+        var member=members.find(function(user){return user&&String(user.id)===String(userId)&&user.role==='seller';});
         if(!member)return;
         var before=previousState[userId]&&previousState[userId].achievements||{};
         var after=nextState[userId]&&nextState[userId].achievements||{};
@@ -12132,6 +12138,9 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     };
     function renderDashboardAchievementMedals(){
       if(window.currentUser)startCommunityGameListener();
+      // The dashboard medal panel is intentionally removed; keep the listener
+      // active here so administrators still receive achievement attention counts.
+      return;
       var panel=document.getElementById('dashboardAchievementMedals'),host=document.getElementById('dashboardAchievementMedalsList');
       if(!panel||!host)return;
       var isAdmin=!!(window.currentUser&&window.currentUser.role==='admin');
