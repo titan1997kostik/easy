@@ -11965,21 +11965,37 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       var isAdmin=window.currentUser.role==='admin';
       var members=isAdmin?getCommunityMembers().filter(function(user){return user.role!=='admin';}):[window.currentUser];
       if(!members.length){var empty=document.createElement('div');empty.className='card';empty.textContent='Пока нет сотрудников для отображения достижений.';host.appendChild(empty);return;}
+      var metrics=[{id:'revenue',title:'Выручка за всё время'},{id:'count',title:'Проданные позиции за всё время'},{id:'daily',title:'Рекорд продаж за день'},{id:'tenure',title:'Стаж работы'}];
       members.forEach(function(user){
         var stats=getCommunityAchievementStats(user),card=document.createElement('section');card.className='card';card.style.marginBottom='16px';
-        if(isAdmin){var person=document.createElement('div');person.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;';var name=document.createElement('h3');name.style.cssText='border:0;padding:0;margin:0;';name.textContent=String(user.name||user.username||'Сотрудник');var store=document.createElement('span');store.style.cssText='font-size:12px;color:var(--text-light);';store.textContent=getCommunityStoreLabel(user);person.appendChild(name);person.appendChild(store);card.appendChild(person);}
-        else{var heading=document.createElement('h3');heading.style.cssText='border:0;padding:0;margin:0 0 14px;';heading.textContent='Твой прогресс';card.appendChild(heading);}
-        [{id:'revenue',title:'Выручка за всё время'},{id:'count',title:'Проданные позиции за всё время'},{id:'daily',title:'Рекорд продаж за день'},{id:'tenure',title:'Стаж работы'}].forEach(function(metric){
-          var section=document.createElement('div');section.style.cssText='margin:14px 0 18px;';var title=document.createElement('h4');title.style.cssText='font-size:14px;margin:0 0 9px;';title.textContent=metric.title;section.appendChild(title);
+        if(isAdmin){var person=document.createElement('div');person.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;';var name=document.createElement('h3');name.style.cssText='border:0;padding:0;margin:0;';name.textContent=String(user.name||user.username||'Сотрудник');var store=document.createElement('span');store.style.cssText='font-size:12px;color:var(--text-light);';store.textContent=getCommunityStoreLabel(user);person.appendChild(name);person.appendChild(store);card.appendChild(person);}
+        else{var heading=document.createElement('h3');heading.style.cssText='border:0;padding:0;margin:0 0 16px;';heading.textContent='Мои достижения';card.appendChild(heading);}
+        metrics.forEach(function(metric){
           var items=communityStatusCatalog.filter(function(item){return item.achievementMetric===metric.id&&(!item.achievementStoreGroup||item.achievementStoreGroup===stats.storeGroup);});
-          if(!items.length){var unavailable=document.createElement('p');unavailable.style.cssText='font-size:12px;color:var(--text-light);';unavailable.textContent=metric.id==='tenure'?'Укажи дату начала работы в профиле сотрудника.':'Для этого магазина не настроены пороги достижений.';section.appendChild(unavailable);}
-          items.forEach(function(item){
-            var progress=getCommunityAchievementProgress(user,item,stats),row=document.createElement('div');row.style.cssText='display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);';
-            var info=document.createElement('div');info.style.cssText='min-width:0;';var label=document.createElement('div');label.style.cssText='font-size:13px;font-weight:600;';label.textContent=item.icon+' '+item.title;
-            var numbers=document.createElement('div');numbers.style.cssText='font-size:11px;color:var(--text-light);margin-top:3px;';numbers.textContent=progress.current.toLocaleString('ru-RU')+' / '+progress.goal.toLocaleString('ru-RU')+' '+progress.unit;
-            var track=document.createElement('div');track.style.cssText='height:6px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:6px;';var fill=document.createElement('div');fill.style.cssText='height:100%;width:'+progress.percent+'%;background:var(--primary);border-radius:99px;';track.appendChild(fill);info.appendChild(label);info.appendChild(numbers);info.appendChild(track);
-            var status=document.createElement('span');status.style.cssText='font-size:11px;font-weight:700;white-space:nowrap;color:'+(progress.unlocked?'var(--success)':'var(--text-light)')+';';status.textContent=progress.unlocked?'Открыто':'В процессе';row.appendChild(info);row.appendChild(status);section.appendChild(row);
-          });
+          if(!items.length){var unavailable=document.createElement('p');unavailable.style.cssText='font-size:12px;color:var(--text-light);margin:8px 0 16px;';unavailable.textContent=metric.id==='tenure'?'Укажи дату начала работы в профиле сотрудника.':'Для этого магазина не настроены достижения.';card.appendChild(unavailable);return;}
+          var opened=[],locked=[];
+          items.forEach(function(item){var result=getCommunityAchievementProgress(user,item,stats);(result.unlocked?opened:locked).push({item:item,result:result});});
+          var section=document.createElement('div');section.style.cssText='margin:16px 0 20px;';
+          var title=document.createElement('h4');title.style.cssText='font-size:14px;margin:0 0 10px;';title.textContent=metric.title;section.appendChild(title);
+          function appendCards(list,isUnlocked){
+            if(!list.length)return;
+            var grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;';
+            list.forEach(function(entry){
+              var item=entry.item,achievement=document.createElement('div');
+              achievement.style.cssText='position:relative;display:flex;gap:11px;align-items:flex-start;min-width:0;padding:13px;border:1px solid '+(isUnlocked?'rgba(34,197,94,.38)':'var(--border)')+';border-radius:13px;background:'+(isUnlocked?'rgba(34,197,94,.07)':'var(--bg-secondary, rgba(127,127,127,.06))')+';'+(isUnlocked?'':'opacity:.68;');
+              var emblem=document.createElement('div');emblem.style.cssText='flex:0 0 38px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:11px;background:'+(isUnlocked?'rgba(34,197,94,.14)':'var(--border)')+';font-size:21px;';emblem.textContent=isUnlocked?item.icon:'🔒';
+              var details=document.createElement('div');details.style.cssText='min-width:0;';
+              var label=document.createElement('div');label.style.cssText='font-size:13px;font-weight:700;line-height:1.35;';label.textContent=item.title;
+              var description=document.createElement('div');description.style.cssText='font-size:11px;line-height:1.45;color:var(--text-light);margin-top:5px;';description.textContent=item.description||'';
+              var status=document.createElement('div');status.style.cssText='font-size:10px;font-weight:700;margin-top:8px;color:'+(isUnlocked?'var(--success)':'var(--text-light)')+';';status.textContent=isUnlocked?'✓ Получено':'Не открыто';
+              details.appendChild(label);details.appendChild(description);details.appendChild(status);achievement.appendChild(emblem);achievement.appendChild(details);grid.appendChild(achievement);
+            });
+            section.appendChild(grid);
+          }
+          if(opened.length||locked.length){
+            var summary=document.createElement('div');summary.style.cssText='font-size:11px;color:var(--text-light);margin:-4px 0 9px;';summary.textContent='Открыто: '+opened.length+' из '+items.length;section.appendChild(summary);
+            appendCards(opened,true);appendCards(locked,false);
+          }
           card.appendChild(section);
         });
         host.appendChild(card);
