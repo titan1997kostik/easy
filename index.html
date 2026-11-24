@@ -2983,13 +2983,28 @@ function refreshDeletionLedgersFromServerAndFlush() {
         }
         mergeDeletionLedgerSnapshots(snapshots);
         clearFirebaseSyncError();
-        if (queuedStoresSnapshot) { var ss = queuedStoresSnapshot; queuedStoresSnapshot = null; applyStoresSnapshot(ss); }
-        if (queuedSalesSnapshot) { var sl = queuedSalesSnapshot; queuedSalesSnapshot = null; applySalesSnapshot(sl); }
-        if (queuedExpensesSnapshot) { var ex = queuedExpensesSnapshot; queuedExpensesSnapshot = null; applyExpensesSnapshot(ex); }
-        flushPendingLocalRecords();
-        refreshStoreDropdowns();
-        if (currentUser) renderAll();
-        startIncrementalSalesExpensesListeners();
+        // Re-read authoritative data only after the deletion/reset ledgers are fresh.
+        // This avoids leaving the UI on empty/queued snapshots after a slow mobile reconnect.
+        return Promise.all([
+            readFirebaseLedger('stores_data'),
+            readFirebaseLedger('sales_data'),
+            readFirebaseLedger('expenses_data')
+        ]).then(function(dataSnapshots) {
+            if (!syncConnected) {
+                deletionLedgersFresh = false;
+                return;
+            }
+            queuedStoresSnapshot = queuedSalesSnapshot = queuedExpensesSnapshot = null;
+            isRemoteChange = true;
+            applyStoresSnapshot(dataSnapshots[0]);
+            applySalesSnapshot(dataSnapshots[1]);
+            applyExpensesSnapshot(dataSnapshots[2]);
+            isRemoteChange = false;
+            flushPendingLocalRecords();
+            refreshStoreDropdowns();
+            if (currentUser) renderAll();
+            startIncrementalSalesExpensesListeners();
+        });
     }).catch(function(err) {
         deletionLedgersFresh = false;
         setFirebaseSyncError(err && err.firebasePath ? err.firebasePath : 'журналы удалений/сбросов', err);
@@ -3041,10 +3056,10 @@ function getUserOrg(user) {
 }
 
 function getVisibleStoreKeys() {
-    // Online: do not expose cached store records until fresh deletion ledgers have arrived.
-    // Offline: show the last locally cached list for read-only inspection; mutation handlers still
-    // enforce their own synchronization and online requirements.
-    if (currentUser && syncConnected && !canUseStoreData()) return [];
+    // Keep the last known store list visible while a mobile connection is warming up.
+    // Write/mutation handlers still require canUseStoreData(), so stale cached rows remain read-only
+    // until the server deletion/reset ledgers have been refreshed.
+
     var org = isSuperAdmin(currentUser) ? currentOrgFilter : (currentUser ? (currentUser.org || 'mine') : 'mine');
     return Object.keys(STORES).filter(function(k) { return !isStoreDeleted(k) && getStoreOrg(k) === org; });
 }
