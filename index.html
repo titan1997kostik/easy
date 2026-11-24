@@ -2884,12 +2884,13 @@ function updateInternetConnectionIndicator() {
 function updateCloudSyncIndicator() {
     var browserOnline = !window.navigator || window.navigator.onLine !== false;
     var connected = browserOnline && syncConnectionKnown && syncConnected === true;
-    var checking = browserOnline && (!syncConnectionKnown || (syncConnected && !deletionLedgersFresh));
     var hasErrors = !!firebaseSyncError || Object.keys(firebaseCoreDataErrors || {}).length > 0;
+    var checking = browserOnline && (!syncConnectionKnown || (syncConnected && !deletionLedgersFresh && !hasErrors));
     var active = connected && deletionLedgersFresh && !hasErrors;
     var status = active ? 'online' : (checking ? 'connecting' : 'offline');
     var message = active ? 'Синхронизация активна' :
-        (checking ? 'Синхронизация: проверка...' : (hasErrors && connected ? 'Синхронизация с ошибкой' : 'Синхронизация не активна'));
+        (hasErrors && connected ? 'Ошибка синхронизации — ' + firebaseSyncError.slice(0, 100) :
+        (checking ? 'Синхронизация: проверка...' : 'Синхронизация не активна'));
     var indicator = document.getElementById('cloudSyncIndicator');
     var dot = indicator && indicator.querySelector('.sync-dot');
     var label = document.getElementById('cloudSyncText');
@@ -2956,13 +2957,32 @@ function clearFirebaseCoreDataError(path) {
 }
 
 function readFirebaseLedger(path) {
-    return db.ref(path).once('value').then(function(snapshot) {
+    // A mobile RTDB session can report .info/connected=true while a value read stalls.
+    // Bound every read so the UI can show a useful error and reconnect logic can retry.
+    var timeoutMs = 15000;
+    var timeoutId;
+    var readPromise = db.ref(path).once('value').then(function(snapshot) {
         return snapshot;
     }, function(error) {
         var wrapped = new Error(error && error.message ? error.message : 'Не удалось прочитать данные Firebase');
         wrapped.code = error && error.code ? error.code : '';
         wrapped.firebasePath = path;
         throw wrapped;
+    });
+    var timeoutPromise = new Promise(function(resolve, reject) {
+        timeoutId = setTimeout(function() {
+            var error = new Error('Тайм-аут чтения Firebase (' + timeoutMs + ' мс). Проверьте доступность соединения с базой данных.');
+            error.code = 'timeout';
+            error.firebasePath = path;
+            reject(error);
+        }, timeoutMs);
+    });
+    return Promise.race([readPromise, timeoutPromise]).then(function(result) {
+        clearTimeout(timeoutId);
+        return result;
+    }, function(error) {
+        clearTimeout(timeoutId);
+        throw error;
     });
 }
 
@@ -3191,15 +3211,8 @@ var firebaseConfig = {
     measurementId: "G-WCHYM4YBW9"
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-// Mobile operators and some mobile browsers can interrupt WebSockets while ordinary
-// HTTPS traffic still works. Force RTDB's long-polling transport before creating refs.
-try {
-    if (firebase.database.INTERNAL && typeof firebase.database.INTERNAL.forceLongPolling === 'function') {
-        firebase.database.INTERNAL.forceLongPolling();
-    }
-} catch (transportError) {
-    console.warn('Firebase long-polling setup:', transportError);
-}
+// Let the Firebase SDK choose its native transport (WebSocket with automatic
+// long-polling fallback). Forcing long-polling can leave mobile sessions half-connected.
 var db = firebase.database();
 try { if (typeof db.enablePersistence === 'function') db.enablePersistence().catch(function(err) { console.warn('Firebase persistence:', err.code); }); } catch(e) { console.warn('Persistence not available:', e); }
 
