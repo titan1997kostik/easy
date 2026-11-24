@@ -2834,6 +2834,9 @@ function updateDeletionLedgerReady(name) {
     saveAllToLocal();
     refreshStoreDropdowns();
     if (currentUser) renderAll();
+    // The persistent ledger listeners already supplied all four current snapshots.
+    // Avoid duplicate one-off reads of the same paths during mobile reconnects.
+    if (syncConnected && !deletionLedgersFresh) refreshDeletionLedgersFromServerAndFlush();
 }
 
 function mergeDeletionLedgerSnapshots(snapshots) {
@@ -2987,49 +2990,42 @@ function readFirebaseLedger(path) {
 }
 
 function refreshDeletionLedgersFromServerAndFlush() {
-    if (!syncConnected || ledgerRefreshInProgress || typeof db === 'undefined' || !db.ref) return;
+    if (!syncConnected || !deletionLedgersLoaded || ledgerRefreshInProgress || typeof db === 'undefined' || !db.ref) return;
     deletionLedgersFresh = false;
     updateCloudSyncIndicator();
     ledgerRefreshInProgress = true;
+    // Deletion/reset ledgers are maintained by the four persistent value listeners above.
+    // Re-reading them with .once() duplicated requests and could stall a single path on mobile.
     Promise.all([
-        readFirebaseLedger('deleted_stores_data'),
-        readFirebaseLedger('store_reset_data'),
-        readFirebaseLedger('deleted_sales_data'),
-        readFirebaseLedger('deleted_expenses_data')
-    ]).then(function(snapshots) {
-        if (!syncConnected) {
+        readFirebaseLedger('stores_data'),
+        readFirebaseLedger('sales_data'),
+        readFirebaseLedger('expenses_data')
+    ]).then(function(dataSnapshots) {
+        if (!syncConnected || !deletionLedgersLoaded) {
             deletionLedgersFresh = false;
             return;
         }
-        mergeDeletionLedgerSnapshots(snapshots);
-        clearFirebaseSyncError();
-        // Re-read authoritative data only after the deletion/reset ledgers are fresh.
-        // This avoids leaving the UI on empty/queued snapshots after a slow mobile reconnect.
-        return Promise.all([
-            readFirebaseLedger('stores_data'),
-            readFirebaseLedger('sales_data'),
-            readFirebaseLedger('expenses_data')
-        ]).then(function(dataSnapshots) {
-            if (!syncConnected) {
-                deletionLedgersFresh = false;
-                return;
-            }
-            queuedStoresSnapshot = queuedSalesSnapshot = queuedExpensesSnapshot = null;
-            isRemoteChange = true;
+        queuedStoresSnapshot = queuedSalesSnapshot = queuedExpensesSnapshot = null;
+        isRemoteChange = true;
+        try {
             applyStoresSnapshot(dataSnapshots[0]);
             applySalesSnapshot(dataSnapshots[1]);
             applyExpensesSnapshot(dataSnapshots[2]);
+        } finally {
             isRemoteChange = false;
-            flushPendingLocalRecords();
-            refreshStoreDropdowns();
-            if (currentUser) renderAll();
-            startIncrementalSalesExpensesListeners();
-        });
+        }
+        deletionLedgersFresh = true;
+        deletionLedgersVerifiedOnce = true;
+        clearFirebaseSyncError();
+        flushPendingLocalRecords();
+        refreshStoreDropdowns();
+        if (currentUser) renderAll();
+        startIncrementalSalesExpensesListeners();
     }).catch(function(err) {
         deletionLedgersFresh = false;
-        setFirebaseSyncError(err && err.firebasePath ? err.firebasePath : 'журналы удалений/сбросов', err);
+        setFirebaseSyncError(err && err.firebasePath ? err.firebasePath : 'основные данные', err);
         updateCloudSyncIndicator();
-        console.warn('Не удалось обновить журнал удалений перед синхронизацией:', err);
+        console.warn('Не удалось обновить данные перед синхронизацией:', err);
     }).finally(function() { ledgerRefreshInProgress = false; });
 }
 
@@ -3773,6 +3769,8 @@ db.ref('.info/connected').on('value', function(snapshot) {
         }
     } else {
         deletionLedgersFresh = false;
+        deletionLedgerReady = { stores: false, resets: false, sales: false, expenses: false };
+        deletionLedgersLoaded = false;
         if (st) st.textContent = 'Нет соединения с облаком';
     }
     updateInternetConnectionIndicator();
