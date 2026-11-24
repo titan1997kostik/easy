@@ -1,0 +1,9 @@
+# Local migration exports and converted data
+migration-data/
+*.ndjson
+*.env
+.env
+.env.*
+!.env.example
+# Firebase exports must never be committed
+*-default-rtdb-export.json
