@@ -2399,25 +2399,27 @@ function attachIncrementalCollectionListener(ref, collectionName) {
 function startIncrementalSalesExpensesListeners() {
     if (incrementalSalesExpensesActive || incrementalSalesExpensesStarting || !syncConnected || !deletionLedgersLoaded || !deletionLedgersFresh || !salesDataRef || !expensesDataRef) return;
     incrementalSalesExpensesStarting = true;
-    // One authoritative initial read; after it, only changed records are processed.
-    Promise.all([salesDataRef.once('value'), expensesDataRef.once('value')]).then(function(snapshots) {
-        if (!syncConnected || !deletionLedgersLoaded || !deletionLedgersFresh || incrementalSalesExpensesActive) return;
-        queuedSalesSnapshot = null;
-        queuedExpensesSnapshot = null;
-        applySalesSnapshot(snapshots[0]);
-        applyExpensesSnapshot(snapshots[1]);
+    // refreshDeletionLedgersFromServerAndFlush has just loaded and applied the authoritative
+    // sales/expenses snapshots. Reuse those in-memory arrays instead of downloading both roots
+    // a second time before attaching child-level listeners.
+    try {
         if (salesRootValueListener) salesDataRef.off('value', salesRootValueListener);
         if (expensesRootValueListener) expensesDataRef.off('value', expensesRootValueListener);
+        queuedSalesSnapshot = null;
+        queuedExpensesSnapshot = null;
         attachIncrementalCollectionListener(salesDataRef, 'sales');
         attachIncrementalCollectionListener(expensesDataRef, 'expenses');
         incrementalSalesExpensesActive = true;
         flushPendingLocalRecords();
         scheduleWorkspaceRender();
-    }).catch(function(error) {
-        // Keep the already attached value listeners alive; report the incremental optimization failure
-        // without treating the underlying analytics sources as unavailable.
+    } catch (error) {
+        // If child listeners cannot be attached, restore the full listeners so sync remains available.
+        if (salesRootValueListener) salesDataRef.on('value', salesRootValueListener, function(err) { setFirebaseCoreDataError('sales_data', err); });
+        if (expensesRootValueListener) expensesDataRef.on('value', expensesRootValueListener, function(err) { setFirebaseCoreDataError('expenses_data', err); });
         console.warn('Не удалось переключить продажи и расходы на потоковую синхронизацию; оставляем полный слушатель:', error);
-    }).finally(function() { incrementalSalesExpensesStarting = false; });
+    } finally {
+        incrementalSalesExpensesStarting = false;
+    }
 }
 
 
@@ -3589,7 +3591,7 @@ db.ref('store_orgs_data').on('value', function(snapshot) {
     isRemoteChange = false;
 }, function(error) { setFirebaseCoreDataError('store_orgs_data', error); });
 
-db.ref('audit_log_data').on('value', function(snapshot) {
+db.ref('audit_log_data').limitToLast(500).on('value', function(snapshot) {
     isRemoteChange = true;
     var arr = [];
     var serverIds = {};
