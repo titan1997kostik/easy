@@ -2903,8 +2903,21 @@ function updateCloudSyncIndicator() {
             (hasErrors ? 'Есть ошибки синхронизации отдельных данных. Подробности доступны в консоли браузера.' : 'Firebase Realtime Database подключена; облачные данные синхронизируются.')));
     }
 }
-window.addEventListener('online', function() { updateInternetConnectionIndicator(); updateCloudSyncIndicator(); });
-window.addEventListener('offline', function() { updateInternetConnectionIndicator(); updateCloudSyncIndicator(); });
+window.addEventListener('online', function() {
+    // Explicitly wake RTDB after mobile-data/Wi-Fi handovers (iOS Safari and Android).
+    try { if (db && typeof db.goOnline === 'function') db.goOnline(); } catch(e) { console.warn('Firebase reconnect:', e); }
+    updateInternetConnectionIndicator();
+    updateCloudSyncIndicator();
+});
+window.addEventListener('offline', function() {
+    updateInternetConnectionIndicator();
+    updateCloudSyncIndicator();
+});
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && (!navigator || navigator.onLine !== false)) {
+        try { if (db && typeof db.goOnline === 'function') db.goOnline(); } catch(e) { console.warn('Firebase foreground reconnect:', e); }
+    }
+});
 updateInternetConnectionIndicator();
 updateCloudSyncIndicator();
 
@@ -3163,6 +3176,15 @@ var firebaseConfig = {
     measurementId: "G-WCHYM4YBW9"
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+// Mobile operators and some mobile browsers can interrupt WebSockets while ordinary
+// HTTPS traffic still works. Force RTDB's long-polling transport before creating refs.
+try {
+    if (firebase.database.INTERNAL && typeof firebase.database.INTERNAL.forceLongPolling === 'function') {
+        firebase.database.INTERNAL.forceLongPolling();
+    }
+} catch (transportError) {
+    console.warn('Firebase long-polling setup:', transportError);
+}
 var db = firebase.database();
 try { if (typeof db.enablePersistence === 'function') db.enablePersistence().catch(function(err) { console.warn('Firebase persistence:', err.code); }); } catch(e) { console.warn('Persistence not available:', e); }
 
@@ -3809,7 +3831,7 @@ function connectMQTT() {
     // Wait for MQTT library to load
     if (typeof mqtt === 'undefined') {
         if (window.mqttLoadFailed) {
-            setSyncStatus('offline', 'Библиотека не загрузилась');
+            setSyncStatus('offline', 'Канал уведомлений: библиотека не загрузилась');
             setTimeout(connectMQTT, 10000);
             return;
         }
@@ -3832,7 +3854,7 @@ function connectMQTT() {
         mqttClient = mqtt.connect(url, opts);
         mqttClient.on('connect', function() {
             connecting = false; mqttConnected = true; brokerIdx = 0;
-            setSyncStatus('online', 'Синхронизация активна');
+            setSyncStatus('online', 'Канал уведомлений подключён');
             mqttClient.subscribe(MQTT_TOPIC, { qos: 0 });
             broadcastData();
             broadcastPresence();
@@ -3878,7 +3900,7 @@ function onDisconnect() {
     mqttConnected = false;
     if (presenceInterval) { clearInterval(presenceInterval); presenceInterval = null; }
     if (periodicSyncInterval) { clearInterval(periodicSyncInterval); periodicSyncInterval = null; }
-    setSyncStatus('offline', 'Оффлайн (данные сохранятся)');
+    setSyncStatus('offline', 'Канал уведомлений недоступен');
     if (reconnectTimer) clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(function() {
         brokerIdx++;
