@@ -1213,7 +1213,7 @@
     document.body.appendChild(input);
     input.addEventListener('change',function(){
       var file=input.files&&input.files[0];input.remove();if(!file)return;
-      if(!/^image\\//i.test(file.type)){alert('Выберите файл изображения.');return;}
+      if(!/^image\//i.test(file.type)){alert('Выберите файл изображения.');return;}
       if(file.size>8*1024*1024){alert('Фото должно быть не больше 8 МБ.');return;}
       setStatus('Подготавливаем фотографию…');
       prepareStockPhoto(file).then(function(preparedFile){
