@@ -2460,7 +2460,7 @@ function attachFinancialHistoryQueries(rootRef, collectionName, cursor) {
 }
 
 function startSalesExpensesSync() {
-    if (!syncConnected || !deletionLedgersLoaded || !deletionLedgersFresh || !salesDataRef || !expensesDataRef) return;
+    if (!currentUser || !syncConnected || !deletionLedgersLoaded || !deletionLedgersFresh || !salesDataRef || !expensesDataRef) return;
     if (financialHistoryCacheReady) {
         // The full history is already stored locally. Keep it and request only the deltas.
         salesRootSnapshotReady = true;
@@ -2478,6 +2478,21 @@ function startSalesExpensesSync() {
         expensesDataRef.on('value', expensesRootValueListener, function(error) { setFirebaseCoreDataError('expenses_data', error); });
         expensesRootListenerAttached = true;
     }
+}
+
+function stopSalesExpensesSync() {
+    // Keep the full cached arrays; only release Firebase subscriptions on logout.
+    if (salesRootListenerAttached && salesDataRef && salesRootValueListener) salesDataRef.off('value', salesRootValueListener);
+    if (expensesRootListenerAttached && expensesDataRef && expensesRootValueListener) expensesDataRef.off('value', expensesRootValueListener);
+    salesRootListenerAttached = false;
+    expensesRootListenerAttached = false;
+    detachIncrementalCollectionListeners('sales');
+    detachIncrementalCollectionListeners('expenses');
+    incrementalSalesExpensesActive = false;
+    incrementalSalesExpensesStarting = false;
+    salesRootSnapshotReady = false;
+    expensesRootSnapshotReady = false;
+    financialHistoryBootstrapStartedAt = 0;
 }
 
 function startIncrementalSalesExpensesListeners() {
@@ -4367,6 +4382,7 @@ function doLogout() {
     if (typeof stopSalePurchaseCostsSync === 'function') stopSalePurchaseCostsSync();
     if (typeof stopAdminPersonalTasksListener === 'function') stopAdminPersonalTasksListener();
     if (typeof stopPurchaseQueueSync === 'function') stopPurchaseQueueSync();
+    if (typeof stopSalesExpensesSync === 'function') stopSalesExpensesSync();
     currentUser = null;
     localStorage.removeItem('easyAppSync_session');
     document.body.classList.add('logged-out');
@@ -4463,6 +4479,7 @@ function enterApp() {
     else stopSalePurchaseCostsSync();
     drawChart();
     if (typeof window.easyAppSyncRenderHeaderMedals === 'function') window.easyAppSyncRenderHeaderMedals();
+    if (typeof startSalesExpensesSync === 'function') startSalesExpensesSync();
 }
 
 // ========== ADMIN ==========
