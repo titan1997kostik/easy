@@ -8368,6 +8368,8 @@ function renderActiveWorkspace() {
         try { renderStoreSalesPlans(false); } catch(e) {}
     } else if (page === 'purchase') {
         try { if (currentUser && currentUser.role === 'admin') renderPurchaseRecommendations(); } catch(e) {}
+    } else if (page === 'stock') {
+        try { if (typeof window.stockRefresh === 'function') window.stockRefresh(); } catch(e) {}
     } else if (page === 'costs') {
         try { if (isPurchaseCostOwner()) renderPurchaseCosts(); } catch(e) {}
     } else if (page === 'orgs') {
