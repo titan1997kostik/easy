@@ -2260,6 +2260,8 @@ var deletionLedgersVerifiedOnce = false;
 var syncConnectionKnown = false;
 var firebaseSyncError = '';
 var firebaseCoreDataErrors = Object.create(null);
+var sessionLedgerCheckPromise = null;
+var sessionLedgerCheckRerun = false;
 var ledgerRefreshInProgress = false;
 var ledgerRefreshToken = 0;
 var storesSnapshotVerified = false;
@@ -3104,9 +3106,12 @@ function setFirebaseCoreDataError(path, error) {
 }
 
 function clearFirebaseCoreDataError(path) {
-    delete firebaseCoreDataErrors[String(path)];
-    if (!Object.keys(firebaseCoreDataErrors).length && firebaseSyncError.indexOf(String(path)) === 0) clearFirebaseSyncError();
-    if (currentUser && isWorkspacePageActive('analytics') && typeof drawChart === 'function') drawChart();
+    var key = String(path);
+    var hadError = Object.prototype.hasOwnProperty.call(firebaseCoreDataErrors, key);
+    if (hadError) delete firebaseCoreDataErrors[key];
+    var shouldClearSyncError = !Object.keys(firebaseCoreDataErrors).length && firebaseSyncError.indexOf(key) === 0;
+    if (shouldClearSyncError) clearFirebaseSyncError();
+    if (hadError && currentUser && isWorkspacePageActive('analytics') && typeof drawChart === 'function') drawChart();
 }
 
 function readFirebaseLedger(path) {
@@ -3868,13 +3873,18 @@ db.ref('cash_collections_data').on('value', function(snapshot) {
 
 function verifyCurrentSessionAgainstServerDeletionLedgers() {
     if (!currentUser || !syncConnected || typeof db === 'undefined' || !db || typeof db.ref !== 'function') return;
+    // Several persistent listeners can report their initial snapshots together. Reuse one
+    // authoritative check and run at most one follow-up if another change arrives mid-flight.
+    if (sessionLedgerCheckPromise) {
+        sessionLedgerCheckRerun = true;
+        return;
+    }
     var checkedUserId = String(currentUser.id);
     var checkedUsername = currentUser.username;
-    Promise.all([
+    sessionLedgerCheckPromise = Promise.all([
         db.ref('deleted_user_ids_data').once('value'),
         db.ref('deleted_super_admins_data').once('value')
     ]).then(function(snaps) {
-        // Do not apply a delayed check to a different account signed in meanwhile.
         if (!currentUser || String(currentUser.id) !== checkedUserId || currentUser.username !== checkedUsername) return;
         var deletedIdsValue = snaps[0].val();
         var deletedAdminsValue = snaps[1].val();
@@ -3888,9 +3898,13 @@ function verifyCurrentSessionAgainstServerDeletionLedgers() {
         if (currentUser) { renderUserManageTable(); renderSalaryManagement(); }
     }).catch(function(error) {
         console.warn('Не удалось проверить статус учётной записи; текущая сессия сохранена:', error);
+    }).finally(function() {
+        sessionLedgerCheckPromise = null;
+        var rerun = sessionLedgerCheckRerun;
+        sessionLedgerCheckRerun = false;
+        if (rerun && currentUser && syncConnected) verifyCurrentSessionAgainstServerDeletionLedgers();
     });
 }
-
 db.ref('deleted_user_ids_data').on('value', function(snapshot) {
     clearFirebaseCoreDataError('deleted_user_ids_data');
     var val = snapshot.val();
