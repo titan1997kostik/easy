@@ -2451,7 +2451,7 @@ function attachFinancialHistoryQueries(rootRef, collectionName, cursor) {
     var overlapStart = Math.max(0, Date.now() - FINANCIAL_HISTORY_LEGACY_OVERLAP_MS);
     // Primary query includes delayed uploads from offline devices: syncUpdatedAt is stamped
     // when the write reaches Firebase, rather than when the sale/expense was first entered.
-    attachIncrementalCollectionListener(rootRef.orderByChild('syncUpdatedAt').startAt(Math.max(0, Number(cursor) || 0)), collectionName);
+    attachIncrementalCollectionListener(rootRef.orderByChild('syncUpdatedAt').startAt(Math.max(0, (Number(cursor) || 0) - 60000)), collectionName);
     // Compatibility queries catch records from already-open older app versions.
     attachIncrementalCollectionListener(rootRef.orderByChild('createdAt').startAt(overlapStart), collectionName);
     if (collectionName === 'sales') {
@@ -2493,7 +2493,10 @@ function startIncrementalSalesExpensesListeners() {
         if (!financialHistoryCacheReady) {
             // Store the bootstrap start as the high-water mark. Any write racing with the
             // full snapshot receives a later syncUpdatedAt and is replayed by the delta query.
-            var bootstrapCursor = Math.max(0, Number(financialHistoryBootstrapStartedAt) || (Date.now() - 1));
+            // A zero cursor is safe for the first local archive: existing rows are already
+            // present in the full snapshot, and duplicate query events are de-duplicated.
+            // It also avoids relying on the device clock for the first server-time cursor.
+            var bootstrapCursor = 0;
             financialHistorySyncCursors.sales = Math.max(Number(financialHistorySyncCursors.sales) || 0, bootstrapCursor);
             financialHistorySyncCursors.expenses = Math.max(Number(financialHistorySyncCursors.expenses) || 0, bootstrapCursor);
             financialHistoryCacheReady = true;
@@ -2843,7 +2846,7 @@ function uploadPendingLocalRecord(path, localItem) {
         var remotePayload = makeFirebasePayload(localItem);
         if (pathParts[0] === 'sales_data' || pathParts[0] === 'expenses_data') {
             localItem.syncUpdatedAt = Date.now();
-            remotePayload.syncUpdatedAt = localItem.syncUpdatedAt;
+            remotePayload.syncUpdatedAt = firebase.database.ServerValue.TIMESTAMP;
         }
         return db.ref(path).set(remotePayload).then(function() {
             localItem._pendingSync = false;
@@ -6573,7 +6576,7 @@ function returnSale(id) {
             var updates = {};
             updates['sales_data/' + saleKey + '/returned'] = nextReturned;
             updates['sales_data/' + saleKey + '/lastModified'] = eventTimestamp;
-            updates['sales_data/' + saleKey + '/syncUpdatedAt'] = eventTimestamp;
+            updates['sales_data/' + saleKey + '/syncUpdatedAt'] = firebase.database.ServerValue.TIMESTAMP;
             updates['return_events_data/' + eventId] = event;
             var stockReturnPromise=typeof window.stockPrepareSaleReturn==='function'?window.stockPrepareSaleReturn(remoteSale,nextReturned,eventId):Promise.resolve(null);
             return stockReturnPromise.then(function(stockChange){if(stockChange)updates['stock_movements_data/'+stockChange.movement.id]=stockChange.movement;return db.ref().update(updates).catch(function(writeError){return stockChange?stockChange.rollback().then(function(){throw writeError;}):Promise.reject(writeError);});}).then(function() {
@@ -7796,7 +7799,7 @@ function processShiftSalary(action, requestedPayout) {
                 payoutId:'pay_' + actionId, shiftIds:paidShiftIds.slice(), org:String(currentUser.org || 'mine'),
                 payoutType:action === 'partial' ? 'partial' : 'full'
             };
-            updates['expenses_data/' + payoutExpenseId] = payoutExpenseRecord;
+            updates['expenses_data/' + payoutExpenseId] = Object.assign({}, payoutExpenseRecord, { syncUpdatedAt: firebase.database.ServerValue.TIMESTAMP });
             updates['salary_payments_data/' + ('pay_' + actionId)] = {
                 id:'pay_' + actionId, userId:String(currentUser.id), employee:String(currentUser.name || ''), storeId:String(currentUser.store),
                 amount:payout, deferredPrior:deferred, newlyAccrued:pendingTotal, remainingAfter:newDeferred,
