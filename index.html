@@ -2272,8 +2272,17 @@ var salesRootValueListener = null;
 var expensesRootValueListener = null;
 var salesRootSnapshotReady = false;
 var expensesRootSnapshotReady = false;
+var salesRootListenerAttached = false;
+var expensesRootListenerAttached = false;
 var incrementalSalesExpensesActive = false;
 var incrementalSalesExpensesStarting = false;
+var financialHistoryCacheReady = false;
+var financialHistorySyncCursors = { sales: 0, expenses: 0 };
+var financialHistoryBootstrapStartedAt = 0;
+var financialHistorySubscriptions = { sales: [], expenses: [] };
+var financialHistoryFullFallback = { sales: false, expenses: false };
+var FINANCIAL_HISTORY_SYNC_VERSION = 1;
+var FINANCIAL_HISTORY_LEGACY_OVERLAP_MS = 14 * 24 * 60 * 60 * 1000;
 // Durable offline outbox: IndexedDB is the primary queue; localStorage is a fallback.
 var offlineDbPromise = null;
 var offlineQueueMemory = Object.create(null);
@@ -2313,6 +2322,31 @@ function scheduleWorkspaceRender() {
         workspaceRenderTimer = null;
         renderAll();
     }, 100);
+}
+
+function detachIncrementalCollectionListeners(collectionName) {
+    (financialHistorySubscriptions[collectionName] || []).forEach(function(entry) {
+        if (entry && entry.ref && entry.listener) entry.ref.off(entry.event, entry.listener);
+    });
+    financialHistorySubscriptions[collectionName] = [];
+}
+
+function fallbackFinancialHistoryToFullRead(collectionName, error) {
+    if (!currentUser || financialHistoryFullFallback[collectionName]) return;
+    financialHistoryFullFallback[collectionName] = true;
+    financialHistoryCacheReady = false;
+    detachIncrementalCollectionListeners(collectionName);
+    console.warn('Фильтрованная синхронизация истории ' + collectionName + ' недоступна; временно используем полный снимок:', error);
+    if (collectionName === 'sales' && !salesRootListenerAttached) {
+        salesRootSnapshotReady = false;
+        salesDataRef.on('value', salesRootValueListener, function(err) { setFirebaseCoreDataError('sales_data', err); });
+        salesRootListenerAttached = true;
+    }
+    if (collectionName === 'expenses' && !expensesRootListenerAttached) {
+        expensesRootSnapshotReady = false;
+        expensesDataRef.on('value', expensesRootValueListener, function(err) { setFirebaseCoreDataError('expenses_data', err); });
+        expensesRootListenerAttached = true;
+    }
 }
 
 function attachIncrementalCollectionListener(ref, collectionName) {
@@ -2368,6 +2402,12 @@ function attachIncrementalCollectionListener(ref, collectionName) {
             return;
         }
         var item = Object.assign({}, raw, { id: key });
+        var incomingSyncAt = Number(item.syncUpdatedAt) || 0;
+        var cursorKey = isSalesCollection ? 'sales' : 'expenses';
+        if (incomingSyncAt > Number(financialHistorySyncCursors[cursorKey] || 0)) {
+            financialHistorySyncCursors[cursorKey] = incomingSyncAt;
+            scheduleLocalCacheSave();
+        }
         if (!isValid(item, key)) {
             if (removeRecord(key)) { scheduleLocalCacheSave(); scheduleWorkspaceRender(); }
             return;
@@ -2392,33 +2432,107 @@ function attachIncrementalCollectionListener(ref, collectionName) {
         var path = collectionName === 'sales' ? 'sales_data' : 'expenses_data';
         setFirebaseCoreDataError(path, error);
         console.error('Ошибка потоковой синхронизации ' + collectionName + ':', error);
+        fallbackFinancialHistoryToFullRead(collectionName, error);
     };
-    ref.on('child_added', function(snapshot) { handle('child_added', snapshot); }, errorHandler);
-    ref.on('child_changed', function(snapshot) { handle('child_changed', snapshot); }, errorHandler);
-    ref.on('child_removed', function(snapshot) { handle('child_removed', snapshot); }, errorHandler);
+    var addedListener = function(snapshot) { handle('child_added', snapshot); };
+    var changedListener = function(snapshot) { handle('child_changed', snapshot); };
+    // Query child_removed also fires when a row merely leaves this rolling time window.
+    // Actual deletions are reflected by the authoritative deleted_* ledgers above.
+    ref.on('child_added', addedListener, errorHandler);
+    ref.on('child_changed', changedListener, errorHandler);
+    financialHistorySubscriptions[collectionName].push(
+        {ref:ref, event:'child_added', listener:addedListener},
+        {ref:ref, event:'child_changed', listener:changedListener}
+    );
+}
+
+function attachFinancialHistoryQueries(rootRef, collectionName, cursor) {
+    var overlapStart = Math.max(0, Date.now() - FINANCIAL_HISTORY_LEGACY_OVERLAP_MS);
+    // Primary query includes delayed uploads from offline devices: syncUpdatedAt is stamped
+    // when the write reaches Firebase, rather than when the sale/expense was first entered.
+    attachIncrementalCollectionListener(rootRef.orderByChild('syncUpdatedAt').startAt(Math.max(0, (Number(cursor) || 0) - 60000)), collectionName);
+    // Compatibility queries catch records from already-open older app versions.
+    attachIncrementalCollectionListener(rootRef.orderByChild('createdAt').startAt(overlapStart), collectionName);
+    if (collectionName === 'sales') {
+        attachIncrementalCollectionListener(rootRef.orderByChild('lastModified').startAt(overlapStart), collectionName);
+    }
+}
+
+function startSalesExpensesSync() {
+    if (!currentUser || !syncConnected || !deletionLedgersLoaded || !deletionLedgersFresh || !salesDataRef || !expensesDataRef) return;
+    if (financialHistoryCacheReady) {
+        // The full history is already stored locally. Keep it and request only the deltas.
+        salesRootSnapshotReady = true;
+        expensesRootSnapshotReady = true;
+        startIncrementalSalesExpensesListeners();
+        return;
+    }
+    // First visit on this browser, or a missing cache: bootstrap the complete archive once.
+    if (!financialHistoryBootstrapStartedAt) financialHistoryBootstrapStartedAt = Date.now();
+    if (!salesRootListenerAttached) {
+        salesDataRef.on('value', salesRootValueListener, function(error) { setFirebaseCoreDataError('sales_data', error); });
+        salesRootListenerAttached = true;
+    }
+    if (!expensesRootListenerAttached) {
+        expensesDataRef.on('value', expensesRootValueListener, function(error) { setFirebaseCoreDataError('expenses_data', error); });
+        expensesRootListenerAttached = true;
+    }
+}
+
+function stopSalesExpensesSync() {
+    // Keep the full cached arrays; only release Firebase subscriptions on logout.
+    if (salesRootListenerAttached && salesDataRef && salesRootValueListener) salesDataRef.off('value', salesRootValueListener);
+    if (expensesRootListenerAttached && expensesDataRef && expensesRootValueListener) expensesDataRef.off('value', expensesRootValueListener);
+    salesRootListenerAttached = false;
+    expensesRootListenerAttached = false;
+    detachIncrementalCollectionListeners('sales');
+    detachIncrementalCollectionListeners('expenses');
+    incrementalSalesExpensesActive = false;
+    incrementalSalesExpensesStarting = false;
+    salesRootSnapshotReady = false;
+    expensesRootSnapshotReady = false;
+    financialHistoryBootstrapStartedAt = 0;
 }
 
 function startIncrementalSalesExpensesListeners() {
-    // Do not detach the initial value listeners until both first snapshots have arrived.
-    if (incrementalSalesExpensesActive || incrementalSalesExpensesStarting || !syncConnected || !deletionLedgersLoaded || !deletionLedgersFresh || !salesRootSnapshotReady || !expensesRootSnapshotReady || !salesDataRef || !expensesDataRef) return;
+    if (!currentUser || incrementalSalesExpensesActive || incrementalSalesExpensesStarting || !syncConnected || !deletionLedgersLoaded || !deletionLedgersFresh || !salesRootSnapshotReady || !expensesRootSnapshotReady || !salesDataRef || !expensesDataRef) return;
     incrementalSalesExpensesStarting = true;
-    // The persistent value listeners have already loaded the initial sales/expense snapshots.
-    // Switch to child-level events without issuing another full-history read.
     try {
-        if (salesRootValueListener) salesDataRef.off('value', salesRootValueListener);
-        if (expensesRootValueListener) expensesDataRef.off('value', expensesRootValueListener);
+        if (salesRootListenerAttached && salesRootValueListener) salesDataRef.off('value', salesRootValueListener);
+        if (expensesRootListenerAttached && expensesRootValueListener) expensesDataRef.off('value', expensesRootValueListener);
+        salesRootListenerAttached = false;
+        expensesRootListenerAttached = false;
         queuedSalesSnapshot = null;
         queuedExpensesSnapshot = null;
-        attachIncrementalCollectionListener(salesDataRef, 'sales');
-        attachIncrementalCollectionListener(expensesDataRef, 'expenses');
+        if (!financialHistoryCacheReady) {
+            // Store the bootstrap start as the high-water mark. Any write racing with the
+            // full snapshot receives a later syncUpdatedAt and is replayed by the delta query.
+            // A zero cursor is safe for the first local archive: existing rows are already
+            // present in the full snapshot, and duplicate query events are de-duplicated.
+            // It also avoids relying on the device clock for the first server-time cursor.
+            var bootstrapCursor = 0;
+            financialHistorySyncCursors.sales = Math.max(Number(financialHistorySyncCursors.sales) || 0, bootstrapCursor);
+            financialHistorySyncCursors.expenses = Math.max(Number(financialHistorySyncCursors.expenses) || 0, bootstrapCursor);
+            financialHistoryCacheReady = true;
+            financialHistoryBootstrapStartedAt = 0;
+            saveAllToLocal();
+        }
+        attachFinancialHistoryQueries(salesDataRef, 'sales', financialHistorySyncCursors.sales);
+        attachFinancialHistoryQueries(expensesDataRef, 'expenses', financialHistorySyncCursors.expenses);
         incrementalSalesExpensesActive = true;
+        financialHistoryFullFallback = { sales:false, expenses:false };
         flushPendingLocalRecords();
         scheduleWorkspaceRender();
     } catch (error) {
-        // If child listeners cannot be attached, restore the full listeners so sync remains available.
-        if (salesRootValueListener) salesDataRef.on('value', salesRootValueListener, function(err) { setFirebaseCoreDataError('sales_data', err); });
-        if (expensesRootValueListener) expensesDataRef.on('value', expensesRootValueListener, function(err) { setFirebaseCoreDataError('expenses_data', err); });
-        console.warn('Не удалось переключить продажи и расходы на потоковую синхронизацию; оставляем полный слушатель:', error);
+        detachIncrementalCollectionListeners('sales');
+        detachIncrementalCollectionListeners('expenses');
+        incrementalSalesExpensesActive = false;
+        financialHistoryCacheReady = false;
+        salesRootSnapshotReady = false;
+        expensesRootSnapshotReady = false;
+        financialHistoryBootstrapStartedAt = Date.now();
+        console.warn('Не удалось включить инкрементальную синхронизацию; восстанавливаем полный режим:', error);
+        startSalesExpensesSync();
     } finally {
         incrementalSalesExpensesStarting = false;
     }
@@ -2743,7 +2857,12 @@ function uploadPendingLocalRecord(path, localItem) {
         if (pathParts[0] === 'expenses_data' && isExpenseRecordDeleted(pathParts[1])) return true;
         if (typeof db === 'undefined' || !db.ref || pendingRecordUploadInProgress[path]) return true;
         pendingRecordUploadInProgress[path] = true;
-        return db.ref(path).set(makeFirebasePayload(localItem)).then(function() {
+        var remotePayload = makeFirebasePayload(localItem);
+        if (pathParts[0] === 'sales_data' || pathParts[0] === 'expenses_data') {
+            localItem.syncUpdatedAt = Date.now();
+            remotePayload.syncUpdatedAt = firebase.database.ServerValue.TIMESTAMP;
+        }
+        return db.ref(path).set(remotePayload).then(function() {
             localItem._pendingSync = false;
             var mainCacheSaved = saveAllToLocal();
             if (mainCacheSaved) return removePendingOperation(path).then(function() { return true; });
@@ -3018,10 +3137,9 @@ function refreshDeletionLedgersFromServerAndFlush() {
         deletionLedgersFresh = true;
         deletionLedgersVerifiedOnce = true;
         clearFirebaseSyncError();
-        if (salesRootSnapshotReady && expensesRootSnapshotReady) flushPendingLocalRecords();
         refreshStoreDropdowns();
         if (currentUser) renderAll();
-        startIncrementalSalesExpensesListeners();
+        startSalesExpensesSync();
     }).catch(function(err) {
         deletionLedgersFresh = false;
         setFirebaseSyncError(err && err.firebasePath ? err.firebasePath : 'основные данные', err);
@@ -3031,9 +3149,9 @@ function refreshDeletionLedgersFromServerAndFlush() {
 }
 
 function flushPendingLocalRecords() {
-    // Wait for the initial server snapshots before reconciling offline records;
-    // otherwise an unacknowledged local record could overwrite a newer server copy.
-    if (!syncConnected || !deletionLedgersFresh || !deletionLedgersLoaded || !salesRootSnapshotReady || !expensesRootSnapshotReady) return;
+    // Wait for a signed-in session, authoritative ledgers, and both initial snapshots before
+    // reconciling offline records; otherwise a stale outbox row could overwrite a server copy.
+    if (!currentUser || !syncConnected || !deletionLedgersFresh || !deletionLedgersLoaded || !salesRootSnapshotReady || !expensesRootSnapshotReady) return;
     removeDeletedStoreDataFromMemory();
     if (typeof syncPendingOfflineShiftOpens === 'function') syncPendingOfflineShiftOpens();
     (sales || []).slice().forEach(function(item) {
@@ -3348,12 +3466,9 @@ salesRootValueListener = function(snapshot) {
     salesRootSnapshotReady = true;
     if (!deletionLedgersLoaded) { queuedSalesSnapshot = snapshot; return; }
     applySalesSnapshot(snapshot);
-    if (syncConnected && deletionLedgersFresh && expensesRootSnapshotReady) {
-        flushPendingLocalRecords();
-        startIncrementalSalesExpensesListeners();
-    }
+    if (syncConnected && deletionLedgersFresh && expensesRootSnapshotReady) startIncrementalSalesExpensesListeners();
 };
-salesDataRef.on('value', salesRootValueListener, function(error) { setFirebaseCoreDataError('sales_data', error); });
+// Attached later by startSalesExpensesSync(), after local cache and deletion ledgers are restored.
 
 // Shared product catalogue: historical sale records retain productId even when a product is archived or renamed.
 db.ref('products_catalog_data').on('value', function(snapshot) {
@@ -3383,12 +3498,9 @@ expensesRootValueListener = function(snapshot) {
     expensesRootSnapshotReady = true;
     if (!deletionLedgersLoaded) { queuedExpensesSnapshot = snapshot; return; }
     applyExpensesSnapshot(snapshot);
-    if (syncConnected && deletionLedgersFresh && salesRootSnapshotReady) {
-        flushPendingLocalRecords();
-        startIncrementalSalesExpensesListeners();
-    }
+    if (syncConnected && deletionLedgersFresh && salesRootSnapshotReady) startIncrementalSalesExpensesListeners();
 };
-expensesDataRef.on('value', expensesRootValueListener, function(error) { setFirebaseCoreDataError('expenses_data', error); });
+// Attached later by startSalesExpensesSync(), after local cache and deletion ledgers are restored.
 
 // Recurring monthly expenses are stored once in Firebase and prorated by calendar day in analytics.
 db.ref('recurring_expenses_data').on('value', function(snapshot) {
@@ -4022,6 +4134,12 @@ function saveAllToLocal() {
     invalidateAnalyticsCache();
     var localSnapshot = {
         _cacheSavedAt: Date.now(),
+        financialHistorySync: {
+            version: FINANCIAL_HISTORY_SYNC_VERSION,
+            fullCacheReady: financialHistoryCacheReady === true,
+            salesCursor: Number(financialHistorySyncCursors.sales) || 0,
+            expensesCursor: Number(financialHistorySyncCursors.expenses) || 0
+        },
         sales: sales, expenses: expenses, recurringExpenses: recurringExpenses, salaryExpenses: salaryExpenses, salaryLedger: salaryLedger, returnEvents: returnEvents, tasks: tasks, users: users, auditLog: auditLog,
         breaksData: breaksData,
         cashAdjustments: cashAdjustments, cashCollections: cashCollections, isShiftOpen: isShiftOpen, storeShifts: storeShifts,
@@ -4070,8 +4188,17 @@ function loadFromLocal() {
     if (raw) {
         try {
             var d = JSON.parse(raw);
-            sales = d.sales || [];
-            expenses = d.expenses || [];
+            sales = Array.isArray(d.sales) ? d.sales : [];
+            expenses = Array.isArray(d.expenses) ? d.expenses : [];
+            if (d.financialHistorySync && d.financialHistorySync.version === FINANCIAL_HISTORY_SYNC_VERSION &&
+                d.financialHistorySync.fullCacheReady === true && Array.isArray(d.sales) && Array.isArray(d.expenses)) {
+                financialHistoryCacheReady = true;
+                financialHistorySyncCursors.sales = Number(d.financialHistorySync.salesCursor) || 0;
+                financialHistorySyncCursors.expenses = Number(d.financialHistorySync.expensesCursor) || 0;
+            } else {
+                financialHistoryCacheReady = false;
+                financialHistorySyncCursors = { sales: 0, expenses: 0 };
+            }
             recurringExpenses = Array.isArray(d.recurringExpenses) ? d.recurringExpenses : [];
             salaryExpenses = Array.isArray(d.salaryExpenses) ? d.salaryExpenses : [];
             salaryLedger = d.salaryLedger && typeof d.salaryLedger === 'object' ? d.salaryLedger : {};
@@ -4254,6 +4381,7 @@ function doLogout() {
     if (typeof stopSalePurchaseCostsSync === 'function') stopSalePurchaseCostsSync();
     if (typeof stopAdminPersonalTasksListener === 'function') stopAdminPersonalTasksListener();
     if (typeof stopPurchaseQueueSync === 'function') stopPurchaseQueueSync();
+    if (typeof stopSalesExpensesSync === 'function') stopSalesExpensesSync();
     currentUser = null;
     localStorage.removeItem('easyAppSync_session');
     document.body.classList.add('logged-out');
@@ -4350,6 +4478,7 @@ function enterApp() {
     else stopSalePurchaseCostsSync();
     drawChart();
     if (typeof window.easyAppSyncRenderHeaderMedals === 'function') window.easyAppSyncRenderHeaderMedals();
+    if (typeof startSalesExpensesSync === 'function') startSalesExpensesSync();
 }
 
 // ========== ADMIN ==========
@@ -6463,6 +6592,7 @@ function returnSale(id) {
             var updates = {};
             updates['sales_data/' + saleKey + '/returned'] = nextReturned;
             updates['sales_data/' + saleKey + '/lastModified'] = eventTimestamp;
+            updates['sales_data/' + saleKey + '/syncUpdatedAt'] = firebase.database.ServerValue.TIMESTAMP;
             updates['return_events_data/' + eventId] = event;
             var stockReturnPromise=typeof window.stockPrepareSaleReturn==='function'?window.stockPrepareSaleReturn(remoteSale,nextReturned,eventId):Promise.resolve(null);
             return stockReturnPromise.then(function(stockChange){if(stockChange)updates['stock_movements_data/'+stockChange.movement.id]=stockChange.movement;return db.ref().update(updates).catch(function(writeError){return stockChange?stockChange.rollback().then(function(){throw writeError;}):Promise.reject(writeError);});}).then(function() {
@@ -7680,12 +7810,12 @@ function processShiftSalary(action, requestedPayout) {
                 reason:(action === 'partial' ? 'Частичная выплата зарплаты наличными: ' : 'Выплата зарплаты наличными: ') + String(currentUser.name || currentUser.username || 'Продавец'),
                 storeId:String(currentUser.store), storeName:STORES[String(currentUser.store)] || '',
                 seller:String(currentUser.name || currentUser.username || ''), userName:String(currentUser.name || currentUser.username || ''),
-                userId:String(currentUser.id), timestamp:now, createdAt:now,
+                userId:String(currentUser.id), timestamp:now, createdAt:now, syncUpdatedAt:now,
                 source:'salary_payout', paymentMethod:'Наличные', cashOnly:true,
                 payoutId:'pay_' + actionId, shiftIds:paidShiftIds.slice(), org:String(currentUser.org || 'mine'),
                 payoutType:action === 'partial' ? 'partial' : 'full'
             };
-            updates['expenses_data/' + payoutExpenseId] = payoutExpenseRecord;
+            updates['expenses_data/' + payoutExpenseId] = Object.assign({}, payoutExpenseRecord, { syncUpdatedAt: firebase.database.ServerValue.TIMESTAMP });
             updates['salary_payments_data/' + ('pay_' + actionId)] = {
                 id:'pay_' + actionId, userId:String(currentUser.id), employee:String(currentUser.name || ''), storeId:String(currentUser.store),
                 amount:payout, deferredPrior:deferred, newlyAccrued:pendingTotal, remainingAfter:newDeferred,
@@ -13559,7 +13689,7 @@ body.seller-mode #analyticsSellerPerformancePanel .seller-performance-table td:n
 </style>
 
 <script src="backup-tools.js"></script>
-<script src="stock.js?v=65"></script>
+<script src="stock.js?v=66"></script>
 <script src="business-advisor.js?v=8"></script>
 
 
