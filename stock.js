@@ -35,6 +35,13 @@
   var formSizes = [];
   var refs = {};
   var refListeners = {};
+  var balanceRefs = Object.create(null);
+  var balanceListeners = Object.create(null);
+  var balanceLoadedById = Object.create(null);
+  var productScope = '';
+  var movementScope = '';
+  var productsQueryFallback = false;
+  var movementsQueryFallback = false;
   var replenishmentCache = Object.create(null);
   var replenishmentCacheRevision = 0;
   var moveQueueItems = [], moveQueueRef = null, moveQueueListener = null, moveQueueScope = '', moveQueueError = '';
@@ -159,45 +166,127 @@
     try { sessionStorage.setItem('easyAppSync_activePage','stock'); } catch(e){}
     render();
   }
-  function load(){
-    // Stock listeners are user-scoped: do not download warehouse data on the login screen.
-    if(!user() || !window.db || !db.ref) return;
-    [['products',PRODUCTS_PATH],['balances',BALANCES_PATH],['directions',DIRECTIONS_PATH]].forEach(function(pair){
-      var name=pair[0];
-      if(refs[name]) return;
-      refs[name]=db.ref(pair[1]);
-      refListeners[name]=function(snap){
-        var v=snap.val() || {};
-        if(name==='products') products=v;
-        else if(name==='balances') balances=v;
-        else if(name==='movements') movements=v;
-        else storeDirections=v;
-        loaded[name]=true;
-        startMoveQueueSync();
-        invalidateReplenishmentCache();
-        render();
-        var analyticsPage=document.getElementById('workspacePage-analytics'),rankingPane=document.getElementById('analyticsProductRankingPane');
-        if(typeof window.renderPurchaseCardRanking==='function'&&analyticsPage&&analyticsPage.classList.contains('active')&&rankingPane&&rankingPane.style.display!=='none')window.renderPurchaseCardRanking();
-        if(typeof window.drawChart==='function'&&document.getElementById('workspacePage-analytics')&&document.getElementById('workspacePage-analytics').classList.contains('active'))window.drawChart();
-        if(typeof window.renderPurchaseRecommendations==='function'&&document.getElementById('workspacePage-purchase')&&document.getElementById('workspacePage-purchase').classList.contains('active'))window.renderPurchaseRecommendations();
-        if(name==='directions'&&typeof window.renderStoresManagement==='function')window.renderStoresManagement();
-        if(window.refreshStockSaleProducts && document.getElementById('stockSaleEnabled') && document.getElementById('stockSaleEnabled').checked) window.refreshStockSaleProducts();
-      };
-      refs[name].on('value',refListeners[name],function(err){ console.error('Stock sync '+name,err); loaded[name]=true; render(); });
+  function stockDataChanged(name){
+    if(name==='products')loaded.products=true;
+    else if(name==='directions')loaded.directions=true;
+    else if(name==='movements')loaded.movements=true;
+    startMoveQueueSync();
+    invalidateReplenishmentCache();
+    render();
+    var analyticsPage=document.getElementById('workspacePage-analytics'),rankingPane=document.getElementById('analyticsProductRankingPane');
+    if(typeof window.renderPurchaseCardRanking==='function'&&analyticsPage&&analyticsPage.classList.contains('active')&&rankingPane&&rankingPane.style.display!=='none')window.renderPurchaseCardRanking();
+    if(typeof window.drawChart==='function'&&document.getElementById('workspacePage-analytics')&&document.getElementById('workspacePage-analytics').classList.contains('active'))window.drawChart();
+    if(typeof window.renderPurchaseRecommendations==='function'&&document.getElementById('workspacePage-purchase')&&document.getElementById('workspacePage-purchase').classList.contains('active'))window.renderPurchaseRecommendations();
+    if(name==='directions'&&typeof window.renderStoresManagement==='function')window.renderStoresManagement();
+    if(window.refreshStockSaleProducts && document.getElementById('stockSaleEnabled') && document.getElementById('stockSaleEnabled').checked) window.refreshStockSaleProducts();
+  }
+  function listenForProducts(){
+    if(refs.products||!user()||!window.db||!db.ref)return;
+    var scope=org();
+    productScope=scope;
+    productsQueryFallback=false;
+    refs.products=db.ref(PRODUCTS_PATH).orderByChild('org').equalTo(scope);
+    refListeners.products=function(snap){products=snap.val()||{};stockDataChanged('products');};
+    refs.products.on('value',refListeners.products,function(error){
+      console.warn('Не удалось загрузить каталог склада по организации; используем совместимый режим:',error);
+      if(refs.products&&refListeners.products)refs.products.off('value',refListeners.products);
+      if(productsQueryFallback){loaded.products=true;render();return;}
+      productsQueryFallback=true;
+      refs.products=db.ref(PRODUCTS_PATH);
+      refs.products.on('value',refListeners.products,function(fallbackError){
+        console.error('Stock products sync',fallbackError);loaded.products=true;render();
+      });
     });
   }
+  function balanceLocationIds(){
+    return stockLocationIds().map(String).filter(Boolean);
+  }
+  function updateBalancesLoaded(){
+    var ids=balanceLocationIds();
+    loaded.balances=ids.every(function(id){return balanceLoadedById[id]===true;});
+  }
+  function syncBalanceListeners(){
+    if(!user()||!window.db||!db.ref)return;
+    var wanted=Object.create(null);
+    balanceLocationIds().forEach(function(id){wanted[id]=true;});
+    Object.keys(balanceRefs).forEach(function(id){
+      if(wanted[id])return;
+      if(balanceRefs[id]&&balanceListeners[id])balanceRefs[id].off('value',balanceListeners[id]);
+      delete balanceRefs[id];delete balanceListeners[id];delete balanceLoadedById[id];delete balances[id];
+    });
+    Object.keys(wanted).forEach(function(id){
+      if(balanceRefs[id])return;
+      balanceRefs[id]=db.ref(BALANCES_PATH+'/'+id);
+      balanceListeners[id]=function(snapshot){
+        balances[id]=snapshot.val()||{};
+        balanceLoadedById[id]=true;
+        updateBalancesLoaded();
+        stockDataChanged('balances');
+      };
+      balanceRefs[id].on('value',balanceListeners[id],function(error){
+        console.error('Stock balance sync '+id,error);
+        balanceLoadedById[id]=true;
+        updateBalancesLoaded();
+        render();
+      });
+    });
+    updateBalancesLoaded();
+  }
+  function load(){
+    // Load only records belonging to the selected organization after sign-in.
+    if(!user() || !window.db || !db.ref) return;
+    listenForProducts();
+    if(!refs.directions){
+      refs.directions=db.ref(DIRECTIONS_PATH);
+      refListeners.directions=function(snap){storeDirections=snap.val()||{};stockDataChanged('directions');};
+      refs.directions.on('value',refListeners.directions,function(err){console.error('Stock directions sync',err);loaded.directions=true;render();});
+    }
+    syncBalanceListeners();
+  }
   function loadMovements(){
-    if(refs.movements||!user()||!window.db||!db.ref)return;
-    refs.movements=db.ref(MOVEMENTS_PATH);
-    refListeners.movements=function(snap){movements=snap.val()||{};loaded.movements=true;render();};
-    refs.movements.on('value',refListeners.movements,function(err){console.error('Stock history sync',err);loaded.movements=true;render();});
+    if(!user()||!window.db||!db.ref)return;
+    var scope=org();
+    if(refs.movements&&movementScope===scope)return;
+    if(refs.movements&&refListeners.movements)refs.movements.off('value',refListeners.movements);
+    refs.movements=db.ref(MOVEMENTS_PATH).orderByChild('org').equalTo(scope);
+    movementScope=scope;movementsQueryFallback=false;
+    refListeners.movements=function(snap){movements=snap.val()||{};stockDataChanged('movements');};
+    refs.movements.on('value',refListeners.movements,function(error){
+      console.warn('Не удалось загрузить историю склада по организации; используем совместимый режим:',error);
+      if(refs.movements&&refListeners.movements)refs.movements.off('value',refListeners.movements);
+      if(movementsQueryFallback){loaded.movements=true;render();return;}
+      movementsQueryFallback=true;
+      refs.movements=db.ref(MOVEMENTS_PATH);
+      refs.movements.on('value',refListeners.movements,function(fallbackError){console.error('Stock history sync',fallbackError);loaded.movements=true;render();});
+    });
+  }
+  function syncStockSubscriptions(){
+    if(!user()||!window.db||!db.ref)return;
+    var scope=org();
+    if(refs.products&&productScope!==scope){
+      refs.products.off('value',refListeners.products);
+      delete refs.products;delete refListeners.products;
+      products={};loaded.products=false;productScope='';productsQueryFallback=false;
+    }
+    if(refs.movements&&movementScope!==scope){
+      refs.movements.off('value',refListeners.movements);
+      delete refs.movements;delete refListeners.movements;
+      movements={};loaded.movements=false;movementScope='';movementsQueryFallback=false;
+    }
+    load();
+    if(isAdmin()&&adminTab==='history')loadMovements();
   }
   function stopStockSync(){
     Object.keys(refs).forEach(function(name){
       if(refs[name]&&refListeners[name])refs[name].off('value',refListeners[name]);
     });
+    Object.keys(balanceRefs).forEach(function(id){
+      if(balanceRefs[id]&&balanceListeners[id])balanceRefs[id].off('value',balanceListeners[id]);
+    });
     refs={};refListeners={};
+    balanceRefs=Object.create(null);balanceListeners=Object.create(null);balanceLoadedById=Object.create(null);
     products={};balances={};movements={};storeDirections={};
+    productScope='';movementScope='';productsQueryFallback=false;movementsQueryFallback=false;
     loaded.products=false;loaded.balances=false;loaded.movements=false;loaded.directions=false;
     replenishmentCache=Object.create(null);replenishmentCacheRevision++;
   }
@@ -1676,13 +1765,13 @@
   }
   function expose(){
     window.stockOpenForm=openForm;window.stockCloseForm=closeForm;window.stockSave=save;window.stockReview=review;
-    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;window.stockGetReplenishmentRecommendations=getReplenishmentRecommendations;window.stockGetStoreCategoryStockSummary=getStoreCategoryStockSummary;window.stockGetCardSalesRanking=getCardSalesRanking;window.stockGetCardSalesAntiRanking=getCardSalesAntiRanking;window.stockGetStockConsolidationRecommendations=getStockConsolidationRecommendations;window.stockInvalidateReplenishmentCache=invalidateReplenishmentCache;
+    window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;window.stockGetReplenishmentRecommendations=getReplenishmentRecommendations;window.stockGetStoreCategoryStockSummary=getStoreCategoryStockSummary;window.stockGetCardSalesRanking=getCardSalesRanking;window.stockGetCardSalesAntiRanking=getCardSalesAntiRanking;window.stockGetStockConsolidationRecommendations=getStockConsolidationRecommendations;window.stockInvalidateReplenishmentCache=invalidateReplenishmentCache;window.stockSyncSubscriptions=syncStockSubscriptions;
   }
   function start(){
     expose();initPage();if(user())load();startMoveQueueSync();
     if(typeof window.switchOrg==='function' && !window.switchOrg._stockWrapped){
       var originalSwitchOrg=window.switchOrg;
-      var wrappedSwitchOrg=function(key){var result=originalSwitchOrg.apply(this,arguments);render();return result;};
+      var wrappedSwitchOrg=function(key){var result=originalSwitchOrg.apply(this,arguments);syncStockSubscriptions();startMoveQueueSync();render();return result;};
       wrappedSwitchOrg._stockWrapped=true;window.switchOrg=wrappedSwitchOrg;startMoveQueueSync();
     }
     var originalShow=window.easyAppSyncShowPage;
