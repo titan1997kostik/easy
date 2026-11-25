@@ -2260,7 +2260,11 @@ var deletionLedgersVerifiedOnce = false;
 var syncConnectionKnown = false;
 var firebaseSyncError = '';
 var firebaseCoreDataErrors = Object.create(null);
+var sessionLedgerCheckPromise = null;
+var sessionLedgerCheckRerun = false;
 var ledgerRefreshInProgress = false;
+var ledgerRefreshToken = 0;
+var storesSnapshotVerified = false;
 var queuedSalesSnapshot = null;
 var queuedExpensesSnapshot = null;
 var queuedStoresSnapshot = null;
@@ -2946,22 +2950,57 @@ function canUseStoreData() {
     return deletionLedgersVerifiedOnce === true && !!STORES && Object.keys(STORES).length > 0;
 }
 
+function completeFirebaseBootstrapIfReady() {
+    // Keep the write gate closed until both the deletion ledgers and a fresh server
+    // snapshot of the store registry have arrived.
+    if (!syncConnected || !deletionLedgersLoaded || !storesSnapshotVerified) return false;
+    if (queuedStoresSnapshot) {
+        var storesSnapshot = queuedStoresSnapshot;
+        queuedStoresSnapshot = null;
+        isRemoteChange = true;
+        try {
+            applyStoresSnapshot(storesSnapshot);
+        } finally {
+            isRemoteChange = false;
+        }
+    }
+    if (deletionLedgersFresh) return true;
+    deletionLedgersFresh = true;
+    deletionLedgersVerifiedOnce = true;
+    clearFirebaseSyncError();
+    refreshStoreDropdowns();
+    updateInternetConnectionIndicator();
+    updateCloudSyncIndicator();
+    if (currentUser) renderAll();
+    startSalesExpensesSync();
+    return true;
+}
+
+function markDeletionLedgerError(name,path,error) {
+    // A failed tombstone/reset listener makes server-side writes unsafe until it recovers.
+    deletionLedgerReady[name] = false;
+    deletionLedgersLoaded = deletionLedgersAreReady();
+    deletionLedgersFresh = false;
+    setFirebaseCoreDataError(path, error);
+    updateCloudSyncIndicator();
+    if (currentUser) renderAll();
+}
+
 function updateDeletionLedgerReady(name) {
     deletionLedgerReady[name] = true;
     deletionLedgersLoaded = deletionLedgersAreReady();
     if (!deletionLedgersLoaded) return;
     removeDeletedStoreDataFromMemory();
-    if (queuedStoresSnapshot) { var ss = queuedStoresSnapshot; queuedStoresSnapshot = null; applyStoresSnapshot(ss); }
     if (queuedSalesSnapshot) { var sl = queuedSalesSnapshot; queuedSalesSnapshot = null; applySalesSnapshot(sl); }
     if (queuedExpensesSnapshot) { var ex = queuedExpensesSnapshot; queuedExpensesSnapshot = null; applyExpensesSnapshot(ex); }
     saveAllToLocal();
     refreshStoreDropdowns();
     if (currentUser) renderAll();
-    // The persistent ledger listeners already supplied all four current snapshots.
-    // Avoid duplicate one-off reads of the same paths during mobile reconnects.
-    if (syncConnected && !deletionLedgersFresh) refreshDeletionLedgersFromServerAndFlush();
+    if (syncConnected && !deletionLedgersFresh) {
+        if (storesSnapshotVerified) completeFirebaseBootstrapIfReady();
+        else refreshDeletionLedgersFromServerAndFlush();
+    }
 }
-
 function mergeDeletionLedgerSnapshots(snapshots) {
     var remoteStores = snapshots[0].val() || {};
     var remoteResets = snapshots[1].val() || {};
@@ -3077,9 +3116,12 @@ function setFirebaseCoreDataError(path, error) {
 }
 
 function clearFirebaseCoreDataError(path) {
-    delete firebaseCoreDataErrors[String(path)];
-    if (!Object.keys(firebaseCoreDataErrors).length && firebaseSyncError.indexOf(String(path)) === 0) clearFirebaseSyncError();
-    if (currentUser && isWorkspacePageActive('analytics') && typeof drawChart === 'function') drawChart();
+    var key = String(path);
+    var hadError = Object.prototype.hasOwnProperty.call(firebaseCoreDataErrors, key);
+    if (hadError) delete firebaseCoreDataErrors[key];
+    var shouldClearSyncError = !Object.keys(firebaseCoreDataErrors).length && firebaseSyncError.indexOf(key) === 0;
+    if (shouldClearSyncError) clearFirebaseSyncError();
+    if (hadError && currentUser && isWorkspacePageActive('analytics') && typeof drawChart === 'function') drawChart();
 }
 
 function readFirebaseLedger(path) {
@@ -3113,41 +3155,28 @@ function readFirebaseLedger(path) {
 }
 
 function refreshDeletionLedgersFromServerAndFlush() {
-    if (!syncConnected || !deletionLedgersLoaded || ledgerRefreshInProgress || typeof db === 'undefined' || !db.ref) return;
+    // Start this small authoritative read as soon as Firebase connects, in parallel
+    // with the four deletion-ledger listeners instead of waiting for them to finish.
+    if (!syncConnected || ledgerRefreshInProgress || typeof db === 'undefined' || !db.ref) return;
     deletionLedgersFresh = false;
     updateCloudSyncIndicator();
     ledgerRefreshInProgress = true;
-    // Deletion/reset ledgers are maintained by the four persistent value listeners above.
-    // Re-reading them with .once() duplicated requests and could stall a single path on mobile.
-    // Sales and expenses already have live value listeners for their initial snapshots.
-    // Only refresh the small store registry here; downloading the two full history roots
-    // again duplicated traffic on every reconnect.
+    var refreshToken = ++ledgerRefreshToken;
     readFirebaseLedger('stores_data').then(function(storesSnapshot) {
-        if (!syncConnected || !deletionLedgersLoaded) {
-            deletionLedgersFresh = false;
-            return;
-        }
-        queuedStoresSnapshot = null;
-        isRemoteChange = true;
-        try {
-            applyStoresSnapshot(storesSnapshot);
-        } finally {
-            isRemoteChange = false;
-        }
-        deletionLedgersFresh = true;
-        deletionLedgersVerifiedOnce = true;
-        clearFirebaseSyncError();
-        refreshStoreDropdowns();
-        if (currentUser) renderAll();
-        startSalesExpensesSync();
+        if (refreshToken !== ledgerRefreshToken || !syncConnected) return;
+        queuedStoresSnapshot = storesSnapshot;
+        storesSnapshotVerified = true;
+        completeFirebaseBootstrapIfReady();
     }).catch(function(err) {
+        if (refreshToken !== ledgerRefreshToken || !syncConnected) return;
         deletionLedgersFresh = false;
         setFirebaseSyncError(err && err.firebasePath ? err.firebasePath : 'основные данные', err);
         updateCloudSyncIndicator();
         console.warn('Не удалось обновить данные перед синхронизацией:', err);
-    }).finally(function() { ledgerRefreshInProgress = false; });
+    }).finally(function() {
+        if (refreshToken === ledgerRefreshToken) ledgerRefreshInProgress = false;
+    });
 }
-
 function flushPendingLocalRecords() {
     // Wait for a signed-in session, authoritative ledgers, and both initial snapshots before
     // reconciling offline records; otherwise a stale outbox row could overwrite a server copy.
@@ -3341,6 +3370,7 @@ if (typeof firebase !== 'undefined' && firebase.database) {
 // ========== FIREBASE REALTIME LISTENERS ==========
 // Deletion/reset ledgers are loaded before pending records may be uploaded.
 db.ref('deleted_stores_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('deleted_stores_data');
     var remote = snapshot.val() || {};
     Object.keys(remote).forEach(function(key) { deletedStoreIds[key] = remote[key]; });
     updateDeletionLedgerReady('stores');
@@ -3348,9 +3378,10 @@ db.ref('deleted_stores_data').on('value', function(snapshot) {
     saveAllToLocal();
     refreshStoreDropdowns();
     if (currentUser) renderAll();
-}, function(error) { setFirebaseSyncError('deleted_stores_data', error); });
+}, function(error) { markDeletionLedgerError('stores', 'deleted_stores_data', error); });
 
 db.ref('store_reset_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('store_reset_data');
     var remote = snapshot.val() || {};
     Object.keys(remote).forEach(function(key) {
         var incoming = remote[key] && typeof remote[key] === 'object' ? Number(remote[key].resetAt || remote[key].timestamp || 0) : Number(remote[key] || 0);
@@ -3362,9 +3393,10 @@ db.ref('store_reset_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-}, function(error) { setFirebaseSyncError('store_reset_data', error); });
+}, function(error) { markDeletionLedgerError('resets', 'store_reset_data', error); });
 
 db.ref('deleted_sales_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('deleted_sales_data');
     var remote = snapshot.val() || {};
     Object.keys(remote).forEach(function(key) {
         deletedSalesById[key] = remote[key];
@@ -3374,9 +3406,10 @@ db.ref('deleted_sales_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-}, function(error) { setFirebaseSyncError('deleted_sales_data', error); });
+}, function(error) { markDeletionLedgerError('sales', 'deleted_sales_data', error); });
 
 db.ref('deleted_expenses_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('deleted_expenses_data');
     var remote = snapshot.val() || {};
     Object.keys(remote).forEach(function(key) {
         deletedExpensesById[key] = remote[key];
@@ -3386,7 +3419,7 @@ db.ref('deleted_expenses_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-}, function(error) { setFirebaseSyncError('deleted_expenses_data', error); });
+}, function(error) { markDeletionLedgerError('expenses', 'deleted_expenses_data', error); });
 
 function applySalesSnapshot(snapshot) {
     var data = snapshot.val() || {};
@@ -3472,6 +3505,7 @@ salesRootValueListener = function(snapshot) {
 
 // Shared product catalogue: historical sale records retain productId even when a product is archived or renamed.
 db.ref('products_catalog_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('products_catalog_data');
     var remote = snapshot.val() || {};
     var remoteItems = Object.keys(remote).map(function(key) {
         if (!remote[key] || typeof remote[key] !== 'object') return null;
@@ -3487,6 +3521,7 @@ db.ref('products_catalog_data').on('value', function(snapshot) {
     if (currentUser && isWorkspacePageActive('analytics') && typeof drawChart === 'function') drawChart();
 }, function(error) {
     console.error('Не удалось загрузить каталог товаров:', error);
+    setFirebaseCoreDataError('products_catalog_data', error);
     productCatalogLoaded = productCatalog.length > 0;
     if (typeof renderProductCatalogSelect === 'function') renderProductCatalogSelect();
     if (typeof renderProductCatalogManager === 'function') renderProductCatalogManager();
@@ -3504,6 +3539,7 @@ expensesRootValueListener = function(snapshot) {
 
 // Recurring monthly expenses are stored once in Firebase and prorated by calendar day in analytics.
 db.ref('recurring_expenses_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('recurring_expenses_data');
     var remote = snapshot.val() || {};
     var arr = [];
     Object.keys(remote).forEach(function(key) {
@@ -3527,9 +3563,10 @@ db.ref('recurring_expenses_data').on('value', function(snapshot) {
         renderRecurringExpenseManager();
         drawChart();
     }
-});
+}, function(error) { setFirebaseCoreDataError('recurring_expenses_data', error); });
 
 db.ref('salary_expenses_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('salary_expenses_data');
     var remote = snapshot.val() || {};
     var arr = [];
     Object.keys(remote).forEach(function(key) {
@@ -3550,9 +3587,10 @@ db.ref('salary_expenses_data').on('value', function(snapshot) {
         if (item && item._pendingSync === true) uploadPendingLocalRecord('salary_expenses_data/' + item.id, item);
     });
     if (currentUser) drawChart();
-});
+}, function(error) { setFirebaseCoreDataError('salary_expenses_data', error); });
 
 db.ref('return_events_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('return_events_data');
     var remote = snapshot.val() || {};
     var arr = [];
     Object.keys(remote).forEach(function(key) {
@@ -3571,9 +3609,10 @@ db.ref('return_events_data').on('value', function(snapshot) {
     invalidateAnalyticsCache();
     saveAllToLocal();
     if (currentUser) { renderAll(); if (typeof drawChart === 'function') drawChart(); }
-});
+}, function(error) { setFirebaseCoreDataError('return_events_data', error); });
 
 db.ref('salary_ledger_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('salary_ledger_data');
     var remote = snapshot.val() && typeof snapshot.val() === 'object' ? snapshot.val() : {};
     var cachedLedger = salaryLedger && typeof salaryLedger === 'object' ? salaryLedger : {};
     var nextLedger = {};
@@ -3592,9 +3631,10 @@ db.ref('salary_ledger_data').on('value', function(snapshot) {
     saveAllToLocal();
     reconcileMissingSalaryLedgerEntries();
     if (currentUser) renderSalaryBlock();
-});
+}, function(error) { setFirebaseCoreDataError('salary_ledger_data', error); });
 
 db.ref('tasks_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('tasks_data');
     var remote = snapshot.val() || {};
     var arr = [];
     Object.keys(remote).forEach(function(key) {
@@ -3605,9 +3645,10 @@ db.ref('tasks_data').on('value', function(snapshot) {
     tasksDataLoaded = true;
     saveAllToLocal();
     if (currentUser) renderTasks();
-});
+}, function(error) { setFirebaseCoreDataError('tasks_data', error); });
 
 db.ref('users_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('users_data');
     isRemoteChange = true;
     var data = snapshot.val() || {};
     var arr = [];
@@ -3649,9 +3690,10 @@ db.ref('users_data').on('value', function(snapshot) {
         if (typeof renderEmployeePerformance === 'function') renderEmployeePerformance();
     }
     isRemoteChange = false;
-});
+}, function(error) { setFirebaseCoreDataError('users_data', error); });
 
 db.ref('breaks_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('breaks_data');
     isRemoteChange = true;
     var arr = [];
     var serverIds = Object.create(null);
@@ -3677,7 +3719,7 @@ db.ref('breaks_data').on('value', function(snapshot) {
     breaksData.slice().forEach(function(item) { if (item && item._pendingSync === true) uploadPendingLocalRecord('breaks_data/' + item.id, item); });
     if (currentUser && currentUser.role === 'admin') { renderBreaksTable(); }
     isRemoteChange = false;
-});
+}, function(error) { setFirebaseCoreDataError('breaks_data', error); });
 
 db.ref('stores_data').on('value', function(snapshot) {
     clearFirebaseCoreDataError('stores_data');
@@ -3711,11 +3753,15 @@ db.ref('store_orgs_data').on('value', function(snapshot) {
         });
     }
     refreshStoreDropdowns();
+    // Stock balances depend on the store-to-organization map. Reconcile subscriptions
+    // when this map arrives, even if the store list loaded a moment earlier.
+    if (typeof window.stockSyncSubscriptions === 'function') window.stockSyncSubscriptions();
     if (currentUser) renderAll();
     isRemoteChange = false;
 }, function(error) { setFirebaseCoreDataError('store_orgs_data', error); });
 
 db.ref('audit_log_data').limitToLast(500).on('value', function(snapshot) {
+    clearFirebaseCoreDataError('audit_log_data');
     isRemoteChange = true;
     var arr = [];
     var serverIds = {};
@@ -3732,9 +3778,10 @@ db.ref('audit_log_data').limitToLast(500).on('value', function(snapshot) {
     invalidateAnalyticsCache();
     if (currentUser && currentUser.role === 'admin') { renderAuditLog(); }
     isRemoteChange = false;
-});
+}, function(error) { setFirebaseCoreDataError('audit_log_data', error); });
 
 db.ref('store_shifts_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('store_shifts_data');
     // КРИТИЧЕСКИЙ СЕЙФГАРД: Если кассир прямо сейчас нажал кнопку смены локально,
     // игнорируем входящий старый снимок сети, пока не завершится отправка на сервер.
     if (typeof isShiftMutating !== 'undefined' && isShiftMutating) {
@@ -3790,11 +3837,12 @@ db.ref('store_shifts_data').on('value', function(snapshot) {
     if (currentUser) { drawChart(); renderEmployeePerformance(); if (typeof renderStoreSalesPlans === 'function') renderStoreSalesPlans(false); }
     isRemoteChange = false;
     if (typeof syncPendingOfflineShiftOpens === 'function') syncPendingOfflineShiftOpens();
-});
+}, function(error) { setFirebaseCoreDataError('store_shifts_data', error); });
 
 
 
 db.ref('cash_adjustments_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('cash_adjustments_data');
     isRemoteChange = true;
     var val = snapshot.val() || {};
     cashAdjustments = (val && typeof val === 'object') ? val : {};
@@ -3804,11 +3852,12 @@ db.ref('cash_adjustments_data').on('value', function(snapshot) {
     });
     if (currentUser) { renderAll(); renderStoreCashTable(); }
     isRemoteChange = false;
-});
+}, function(error) { setFirebaseCoreDataError('cash_adjustments_data', error); });
 
 // Cash collection journal: one transaction bucket per store and local calendar date.
 // Collection events are movements of cash out of the drawer, not expenses.
 db.ref('cash_collections_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('cash_collections_data');
     var root = snapshot.val() || {};
     var next = [];
     Object.keys(root).forEach(function(bucketKey) {
@@ -3834,17 +3883,22 @@ db.ref('cash_collections_data').on('value', function(snapshot) {
         renderStoreCashTable();
         renderCashWidget();
     }
-});
+}, function(error) { setFirebaseCoreDataError('cash_collections_data', error); });
 
 function verifyCurrentSessionAgainstServerDeletionLedgers() {
     if (!currentUser || !syncConnected || typeof db === 'undefined' || !db || typeof db.ref !== 'function') return;
+    // Several persistent listeners can report their initial snapshots together. Reuse one
+    // authoritative check and run at most one follow-up if another change arrives mid-flight.
+    if (sessionLedgerCheckPromise) {
+        sessionLedgerCheckRerun = true;
+        return;
+    }
     var checkedUserId = String(currentUser.id);
     var checkedUsername = currentUser.username;
-    Promise.all([
+    sessionLedgerCheckPromise = Promise.all([
         db.ref('deleted_user_ids_data').once('value'),
         db.ref('deleted_super_admins_data').once('value')
     ]).then(function(snaps) {
-        // Do not apply a delayed check to a different account signed in meanwhile.
         if (!currentUser || String(currentUser.id) !== checkedUserId || currentUser.username !== checkedUsername) return;
         var deletedIdsValue = snaps[0].val();
         var deletedAdminsValue = snaps[1].val();
@@ -3858,24 +3912,30 @@ function verifyCurrentSessionAgainstServerDeletionLedgers() {
         if (currentUser) { renderUserManageTable(); renderSalaryManagement(); }
     }).catch(function(error) {
         console.warn('Не удалось проверить статус учётной записи; текущая сессия сохранена:', error);
+    }).finally(function() {
+        sessionLedgerCheckPromise = null;
+        var rerun = sessionLedgerCheckRerun;
+        sessionLedgerCheckRerun = false;
+        if (rerun && currentUser && syncConnected) verifyCurrentSessionAgainstServerDeletionLedgers();
     });
 }
-
 db.ref('deleted_user_ids_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('deleted_user_ids_data');
     var val = snapshot.val();
     deletedUserIds = val ? Object.keys(val).map(function(k){ return val[k]; }) : [];
     saveAllToLocal();
     if (syncConnected) verifyCurrentSessionAgainstServerDeletionLedgers();
     if (currentUser) { renderUserManageTable(); renderSalaryManagement(); }
-});
+}, function(error) { setFirebaseCoreDataError('deleted_user_ids_data', error); });
 
 db.ref('deleted_super_admins_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('deleted_super_admins_data');
     var val = snapshot.val();
     deletedSuperAdmins = val ? Object.keys(val).map(function(k){ return val[k]; }) : [];
     saveAllToLocal();
     if (syncConnected) verifyCurrentSessionAgainstServerDeletionLedgers();
     if (currentUser) { renderUserManageTable(); renderSalaryManagement(); }
-});
+}, function(error) { setFirebaseCoreDataError('deleted_super_admins_data', error); });
 
 // ========== FIREBASE CONNECTION STATUS ==========
 // This connection state remains internal for cloud operations; the header indicator shows internet access separately.
@@ -3895,6 +3955,12 @@ db.ref('.info/connected').on('value', function(snapshot) {
         }
     } else {
         deletionLedgersFresh = false;
+        // Invalidate any read started by the previous connection so it cannot
+        // publish stale readiness after a quick mobile reconnect.
+        ledgerRefreshToken++;
+        ledgerRefreshInProgress = false;
+        storesSnapshotVerified = false;
+        queuedStoresSnapshot = null;
         if (!incrementalSalesExpensesActive) {
             salesRootSnapshotReady = false;
             expensesRootSnapshotReady = false;
@@ -3911,6 +3977,12 @@ db.ref('.info/connected').on('value', function(snapshot) {
     syncConnectionKnown = true;
     syncConnected = false;
     deletionLedgersFresh = false;
+    ledgerRefreshToken++;
+    ledgerRefreshInProgress = false;
+    storesSnapshotVerified = false;
+    queuedStoresSnapshot = null;
+    deletionLedgerReady = { stores: false, resets: false, sales: false, expenses: false };
+    deletionLedgersLoaded = false;
     setFirebaseSyncError('.info/connected', error);
     updateInternetConnectionIndicator();
     updateCloudSyncIndicator();
@@ -12786,6 +12858,7 @@ function saveStoreSalesPlan() {
 // Keep plans available offline from the local cache and then sync from Firebase.
 if (typeof db !== 'undefined' && db && db.ref) {
     db.ref('sales_plans_data').on('value', function(snapshot) {
+        clearFirebaseCoreDataError('sales_plans_data');
         storeSalesPlans = snapshot.val() || {};
         try { localStorage.setItem('easyAppSync_storeSalesPlans', JSON.stringify(storeSalesPlans)); } catch(e) {}
         if (currentUser) {
@@ -12794,6 +12867,7 @@ if (typeof db !== 'undefined' && db && db.ref) {
         }
     }, function(error) {
         console.error('Не удалось загрузить планы продаж из Firebase:', error);
+        setFirebaseCoreDataError('sales_plans_data', error);
     });
 }
 
@@ -13691,7 +13765,7 @@ body.seller-mode #analyticsSellerPerformancePanel .seller-performance-table td:n
 </style>
 
 <script src="backup-tools.js"></script>
-<script src="stock.js?v=66"></script>
+<script src="stock.js?v=67"></script>
 <script src="business-advisor.js?v=8"></script>
 
 
