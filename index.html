@@ -2332,7 +2332,7 @@ function detachIncrementalCollectionListeners(collectionName) {
 }
 
 function fallbackFinancialHistoryToFullRead(collectionName, error) {
-    if (financialHistoryFullFallback[collectionName]) return;
+    if (!currentUser || financialHistoryFullFallback[collectionName]) return;
     financialHistoryFullFallback[collectionName] = true;
     financialHistoryCacheReady = false;
     detachIncrementalCollectionListeners(collectionName);
@@ -2496,7 +2496,7 @@ function stopSalesExpensesSync() {
 }
 
 function startIncrementalSalesExpensesListeners() {
-    if (incrementalSalesExpensesActive || incrementalSalesExpensesStarting || !syncConnected || !deletionLedgersLoaded || !deletionLedgersFresh || !salesRootSnapshotReady || !expensesRootSnapshotReady || !salesDataRef || !expensesDataRef) return;
+    if (!currentUser || incrementalSalesExpensesActive || incrementalSalesExpensesStarting || !syncConnected || !deletionLedgersLoaded || !deletionLedgersFresh || !salesRootSnapshotReady || !expensesRootSnapshotReady || !salesDataRef || !expensesDataRef) return;
     incrementalSalesExpensesStarting = true;
     try {
         if (salesRootListenerAttached && salesRootValueListener) salesDataRef.off('value', salesRootValueListener);
@@ -3150,9 +3150,9 @@ function refreshDeletionLedgersFromServerAndFlush() {
 }
 
 function flushPendingLocalRecords() {
-    // Wait for the initial server snapshots before reconciling offline records;
-    // otherwise an unacknowledged local record could overwrite a newer server copy.
-    if (!syncConnected || !deletionLedgersFresh || !deletionLedgersLoaded || !salesRootSnapshotReady || !expensesRootSnapshotReady) return;
+    // Wait for a signed-in session, authoritative ledgers, and both initial snapshots before
+    // reconciling offline records; otherwise a stale outbox row could overwrite a server copy.
+    if (!currentUser || !syncConnected || !deletionLedgersFresh || !deletionLedgersLoaded || !salesRootSnapshotReady || !expensesRootSnapshotReady) return;
     removeDeletedStoreDataFromMemory();
     if (typeof syncPendingOfflineShiftOpens === 'function') syncPendingOfflineShiftOpens();
     (sales || []).slice().forEach(function(item) {
