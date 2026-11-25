@@ -2261,6 +2261,8 @@ var syncConnectionKnown = false;
 var firebaseSyncError = '';
 var firebaseCoreDataErrors = Object.create(null);
 var ledgerRefreshInProgress = false;
+var ledgerRefreshToken = 0;
+var storesSnapshotVerified = false;
 var queuedSalesSnapshot = null;
 var queuedExpensesSnapshot = null;
 var queuedStoresSnapshot = null;
@@ -2946,22 +2948,47 @@ function canUseStoreData() {
     return deletionLedgersVerifiedOnce === true && !!STORES && Object.keys(STORES).length > 0;
 }
 
+function completeFirebaseBootstrapIfReady() {
+    // Keep the write gate closed until both the deletion ledgers and a fresh server
+    // snapshot of the store registry have arrived.
+    if (!syncConnected || !deletionLedgersLoaded || !storesSnapshotVerified) return false;
+    if (queuedStoresSnapshot) {
+        var storesSnapshot = queuedStoresSnapshot;
+        queuedStoresSnapshot = null;
+        isRemoteChange = true;
+        try {
+            applyStoresSnapshot(storesSnapshot);
+        } finally {
+            isRemoteChange = false;
+        }
+    }
+    if (deletionLedgersFresh) return true;
+    deletionLedgersFresh = true;
+    deletionLedgersVerifiedOnce = true;
+    clearFirebaseSyncError();
+    refreshStoreDropdowns();
+    updateInternetConnectionIndicator();
+    updateCloudSyncIndicator();
+    if (currentUser) renderAll();
+    startSalesExpensesSync();
+    return true;
+}
+
 function updateDeletionLedgerReady(name) {
     deletionLedgerReady[name] = true;
     deletionLedgersLoaded = deletionLedgersAreReady();
     if (!deletionLedgersLoaded) return;
     removeDeletedStoreDataFromMemory();
-    if (queuedStoresSnapshot) { var ss = queuedStoresSnapshot; queuedStoresSnapshot = null; applyStoresSnapshot(ss); }
     if (queuedSalesSnapshot) { var sl = queuedSalesSnapshot; queuedSalesSnapshot = null; applySalesSnapshot(sl); }
     if (queuedExpensesSnapshot) { var ex = queuedExpensesSnapshot; queuedExpensesSnapshot = null; applyExpensesSnapshot(ex); }
     saveAllToLocal();
     refreshStoreDropdowns();
     if (currentUser) renderAll();
-    // The persistent ledger listeners already supplied all four current snapshots.
-    // Avoid duplicate one-off reads of the same paths during mobile reconnects.
-    if (syncConnected && !deletionLedgersFresh) refreshDeletionLedgersFromServerAndFlush();
+    if (syncConnected && !deletionLedgersFresh) {
+        if (storesSnapshotVerified) completeFirebaseBootstrapIfReady();
+        else refreshDeletionLedgersFromServerAndFlush();
+    }
 }
-
 function mergeDeletionLedgerSnapshots(snapshots) {
     var remoteStores = snapshots[0].val() || {};
     var remoteResets = snapshots[1].val() || {};
@@ -3113,41 +3140,28 @@ function readFirebaseLedger(path) {
 }
 
 function refreshDeletionLedgersFromServerAndFlush() {
-    if (!syncConnected || !deletionLedgersLoaded || ledgerRefreshInProgress || typeof db === 'undefined' || !db.ref) return;
+    // Start this small authoritative read as soon as Firebase connects, in parallel
+    // with the four deletion-ledger listeners instead of waiting for them to finish.
+    if (!syncConnected || ledgerRefreshInProgress || typeof db === 'undefined' || !db.ref) return;
     deletionLedgersFresh = false;
     updateCloudSyncIndicator();
     ledgerRefreshInProgress = true;
-    // Deletion/reset ledgers are maintained by the four persistent value listeners above.
-    // Re-reading them with .once() duplicated requests and could stall a single path on mobile.
-    // Sales and expenses already have live value listeners for their initial snapshots.
-    // Only refresh the small store registry here; downloading the two full history roots
-    // again duplicated traffic on every reconnect.
+    var refreshToken = ++ledgerRefreshToken;
     readFirebaseLedger('stores_data').then(function(storesSnapshot) {
-        if (!syncConnected || !deletionLedgersLoaded) {
-            deletionLedgersFresh = false;
-            return;
-        }
-        queuedStoresSnapshot = null;
-        isRemoteChange = true;
-        try {
-            applyStoresSnapshot(storesSnapshot);
-        } finally {
-            isRemoteChange = false;
-        }
-        deletionLedgersFresh = true;
-        deletionLedgersVerifiedOnce = true;
-        clearFirebaseSyncError();
-        refreshStoreDropdowns();
-        if (currentUser) renderAll();
-        startSalesExpensesSync();
+        if (refreshToken !== ledgerRefreshToken || !syncConnected) return;
+        queuedStoresSnapshot = storesSnapshot;
+        storesSnapshotVerified = true;
+        completeFirebaseBootstrapIfReady();
     }).catch(function(err) {
+        if (refreshToken !== ledgerRefreshToken || !syncConnected) return;
         deletionLedgersFresh = false;
         setFirebaseSyncError(err && err.firebasePath ? err.firebasePath : 'основные данные', err);
         updateCloudSyncIndicator();
         console.warn('Не удалось обновить данные перед синхронизацией:', err);
-    }).finally(function() { ledgerRefreshInProgress = false; });
+    }).finally(function() {
+        if (refreshToken === ledgerRefreshToken) ledgerRefreshInProgress = false;
+    });
 }
-
 function flushPendingLocalRecords() {
     // Wait for a signed-in session, authoritative ledgers, and both initial snapshots before
     // reconciling offline records; otherwise a stale outbox row could overwrite a server copy.
@@ -3711,6 +3725,9 @@ db.ref('store_orgs_data').on('value', function(snapshot) {
         });
     }
     refreshStoreDropdowns();
+    // Stock balances depend on the store-to-organization map. Reconcile subscriptions
+    // when this map arrives, even if the store list loaded a moment earlier.
+    if (typeof window.stockSyncSubscriptions === 'function') window.stockSyncSubscriptions();
     if (currentUser) renderAll();
     isRemoteChange = false;
 }, function(error) { setFirebaseCoreDataError('store_orgs_data', error); });
@@ -3895,6 +3912,12 @@ db.ref('.info/connected').on('value', function(snapshot) {
         }
     } else {
         deletionLedgersFresh = false;
+        // Invalidate any read started by the previous connection so it cannot
+        // publish stale readiness after a quick mobile reconnect.
+        ledgerRefreshToken++;
+        ledgerRefreshInProgress = false;
+        storesSnapshotVerified = false;
+        queuedStoresSnapshot = null;
         if (!incrementalSalesExpensesActive) {
             salesRootSnapshotReady = false;
             expensesRootSnapshotReady = false;
@@ -3911,6 +3934,12 @@ db.ref('.info/connected').on('value', function(snapshot) {
     syncConnectionKnown = true;
     syncConnected = false;
     deletionLedgersFresh = false;
+    ledgerRefreshToken++;
+    ledgerRefreshInProgress = false;
+    storesSnapshotVerified = false;
+    queuedStoresSnapshot = null;
+    deletionLedgerReady = { stores: false, resets: false, sales: false, expenses: false };
+    deletionLedgersLoaded = false;
     setFirebaseSyncError('.info/connected', error);
     updateInternetConnectionIndicator();
     updateCloudSyncIndicator();
@@ -13691,7 +13720,7 @@ body.seller-mode #analyticsSellerPerformancePanel .seller-performance-table td:n
 </style>
 
 <script src="backup-tools.js"></script>
-<script src="stock.js?v=66"></script>
+<script src="stock.js?v=67"></script>
 <script src="business-advisor.js?v=8"></script>
 
 
