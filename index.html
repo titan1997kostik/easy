@@ -2270,6 +2270,8 @@ var salesDataRef = null;
 var expensesDataRef = null;
 var salesRootValueListener = null;
 var expensesRootValueListener = null;
+var salesRootSnapshotReady = false;
+var expensesRootSnapshotReady = false;
 var incrementalSalesExpensesActive = false;
 var incrementalSalesExpensesStarting = false;
 // Durable offline outbox: IndexedDB is the primary queue; localStorage is a fallback.
@@ -2397,11 +2399,11 @@ function attachIncrementalCollectionListener(ref, collectionName) {
 }
 
 function startIncrementalSalesExpensesListeners() {
-    if (incrementalSalesExpensesActive || incrementalSalesExpensesStarting || !syncConnected || !deletionLedgersLoaded || !deletionLedgersFresh || !salesDataRef || !expensesDataRef) return;
+    // Do not detach the initial value listeners until both first snapshots have arrived.
+    if (incrementalSalesExpensesActive || incrementalSalesExpensesStarting || !syncConnected || !deletionLedgersLoaded || !deletionLedgersFresh || !salesRootSnapshotReady || !expensesRootSnapshotReady || !salesDataRef || !expensesDataRef) return;
     incrementalSalesExpensesStarting = true;
-    // refreshDeletionLedgersFromServerAndFlush has just loaded and applied the authoritative
-    // sales/expenses snapshots. Reuse those in-memory arrays instead of downloading both roots
-    // a second time before attaching child-level listeners.
+    // The persistent value listeners have already loaded the initial sales/expense snapshots.
+    // Switch to child-level events without issuing another full-history read.
     try {
         if (salesRootValueListener) salesDataRef.off('value', salesRootValueListener);
         if (expensesRootValueListener) expensesDataRef.off('value', expensesRootValueListener);
@@ -2998,28 +3000,25 @@ function refreshDeletionLedgersFromServerAndFlush() {
     ledgerRefreshInProgress = true;
     // Deletion/reset ledgers are maintained by the four persistent value listeners above.
     // Re-reading them with .once() duplicated requests and could stall a single path on mobile.
-    Promise.all([
-        readFirebaseLedger('stores_data'),
-        readFirebaseLedger('sales_data'),
-        readFirebaseLedger('expenses_data')
-    ]).then(function(dataSnapshots) {
+    // Sales and expenses already have live value listeners for their initial snapshots.
+    // Only refresh the small store registry here; downloading the two full history roots
+    // again duplicated traffic on every reconnect.
+    readFirebaseLedger('stores_data').then(function(storesSnapshot) {
         if (!syncConnected || !deletionLedgersLoaded) {
             deletionLedgersFresh = false;
             return;
         }
-        queuedStoresSnapshot = queuedSalesSnapshot = queuedExpensesSnapshot = null;
+        queuedStoresSnapshot = null;
         isRemoteChange = true;
         try {
-            applyStoresSnapshot(dataSnapshots[0]);
-            applySalesSnapshot(dataSnapshots[1]);
-            applyExpensesSnapshot(dataSnapshots[2]);
+            applyStoresSnapshot(storesSnapshot);
         } finally {
             isRemoteChange = false;
         }
         deletionLedgersFresh = true;
         deletionLedgersVerifiedOnce = true;
         clearFirebaseSyncError();
-        flushPendingLocalRecords();
+        if (salesRootSnapshotReady && expensesRootSnapshotReady) flushPendingLocalRecords();
         refreshStoreDropdowns();
         if (currentUser) renderAll();
         startIncrementalSalesExpensesListeners();
@@ -3032,7 +3031,9 @@ function refreshDeletionLedgersFromServerAndFlush() {
 }
 
 function flushPendingLocalRecords() {
-    if (!syncConnected || !deletionLedgersFresh || !deletionLedgersLoaded) return;
+    // Wait for the initial server snapshots before reconciling offline records;
+    // otherwise an unacknowledged local record could overwrite a newer server copy.
+    if (!syncConnected || !deletionLedgersFresh || !deletionLedgersLoaded || !salesRootSnapshotReady || !expensesRootSnapshotReady) return;
     removeDeletedStoreDataFromMemory();
     if (typeof syncPendingOfflineShiftOpens === 'function') syncPendingOfflineShiftOpens();
     (sales || []).slice().forEach(function(item) {
@@ -3344,8 +3345,13 @@ function applyStoresSnapshot(snapshot) {
 salesDataRef = db.ref('sales_data');
 salesRootValueListener = function(snapshot) {
     clearFirebaseCoreDataError('sales_data');
+    salesRootSnapshotReady = true;
     if (!deletionLedgersLoaded) { queuedSalesSnapshot = snapshot; return; }
     applySalesSnapshot(snapshot);
+    if (syncConnected && deletionLedgersFresh && expensesRootSnapshotReady) {
+        flushPendingLocalRecords();
+        startIncrementalSalesExpensesListeners();
+    }
 };
 salesDataRef.on('value', salesRootValueListener, function(error) { setFirebaseCoreDataError('sales_data', error); });
 
@@ -3374,8 +3380,13 @@ db.ref('products_catalog_data').on('value', function(snapshot) {
 expensesDataRef = db.ref('expenses_data');
 expensesRootValueListener = function(snapshot) {
     clearFirebaseCoreDataError('expenses_data');
+    expensesRootSnapshotReady = true;
     if (!deletionLedgersLoaded) { queuedExpensesSnapshot = snapshot; return; }
     applyExpensesSnapshot(snapshot);
+    if (syncConnected && deletionLedgersFresh && salesRootSnapshotReady) {
+        flushPendingLocalRecords();
+        startIncrementalSalesExpensesListeners();
+    }
 };
 expensesDataRef.on('value', expensesRootValueListener, function(error) { setFirebaseCoreDataError('expenses_data', error); });
 
@@ -3772,6 +3783,10 @@ db.ref('.info/connected').on('value', function(snapshot) {
         }
     } else {
         deletionLedgersFresh = false;
+        if (!incrementalSalesExpensesActive) {
+            salesRootSnapshotReady = false;
+            expensesRootSnapshotReady = false;
+        }
         deletionLedgerReady = { stores: false, resets: false, sales: false, expenses: false };
         deletionLedgersLoaded = false;
         if (st) st.textContent = 'Нет соединения с облаком';
