@@ -235,7 +235,7 @@
     refs.products.on('value',refListeners.products,function(error){
       console.warn('Не удалось загрузить каталог склада по организации; используем совместимый режим:',error);
       if(refs.products&&refListeners.products)refs.products.off('value',refListeners.products);
-      if(productsQueryFallback){loaded.products=true;render();return;}
+      if(productsQueryFallback){stockLoadErrors.products=stockLoadErrorMessage(error);loaded.products=false;render();return;}
       productsQueryFallback=true;
       refs.products=db.ref(PRODUCTS_PATH);
       refs.products.on('value',refListeners.products,function(fallbackError){
