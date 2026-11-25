@@ -2436,14 +2436,13 @@ function attachIncrementalCollectionListener(ref, collectionName) {
     };
     var addedListener = function(snapshot) { handle('child_added', snapshot); };
     var changedListener = function(snapshot) { handle('child_changed', snapshot); };
-    var removedListener = function(snapshot) { handle('child_removed', snapshot); };
+    // Query child_removed also fires when a row merely leaves this rolling time window.
+    // Actual deletions are reflected by the authoritative deleted_* ledgers above.
     ref.on('child_added', addedListener, errorHandler);
     ref.on('child_changed', changedListener, errorHandler);
-    ref.on('child_removed', removedListener, errorHandler);
     financialHistorySubscriptions[collectionName].push(
         {ref:ref, event:'child_added', listener:addedListener},
-        {ref:ref, event:'child_changed', listener:changedListener},
-        {ref:ref, event:'child_removed', listener:removedListener}
+        {ref:ref, event:'child_changed', listener:changedListener}
     );
 }
 
