@@ -5,7 +5,7 @@
 'use strict';
 var APP_CACHE = 'easy-app-sync-shell-v65';
 var RUNTIME_CACHE = 'easy-app-sync-static-v65';
-var IMAGE_CACHE = 'easy-app-sync-product-images-v1';
+var IMAGE_CACHE = 'easy-app-sync-product-images-v2';
 
 self.addEventListener('install', function(event) {
   event.waitUntil(
@@ -82,10 +82,13 @@ function trimProductImageCache(cache) {
   });
 }
 
-function handleProductImage(request, event) {
+function handleProductImage(request) {
   return caches.open(IMAGE_CACHE).then(function(cache) {
     return cache.match(request).then(function(cached) {
-      var refresh = fetch(request, { cache: 'reload' }).then(function(response) {
+      // Cloudinary upload URLs include a version. Reuse a cached thumbnail instead of
+      // downloading it again on every card re-render or screen revisit.
+      if (cached) return cached;
+      return fetch(request).then(function(response) {
         if (response && response.ok && response.type !== 'opaque') {
           return cache.put(request, response.clone()).then(function() {
             return trimProductImageCache(cache);
@@ -93,11 +96,6 @@ function handleProductImage(request, event) {
         }
         return response;
       });
-      if (cached) {
-        event.waitUntil(refresh.catch(function() {}));
-        return cached;
-      }
-      return refresh;
     });
   });
 }
@@ -142,7 +140,7 @@ self.addEventListener('fetch', function(event) {
 
   // Product thumbnails from Cloudinary use a dedicated bounded cache; Firebase data is untouched.
   if (isProductImage(request, url)) {
-    event.respondWith(handleProductImage(request, event));
+    event.respondWith(handleProductImage(request));
     return;
   }
 

@@ -34,6 +34,7 @@
   var mergeSelectingStoreId = '';
   var formSizes = [];
   var refs = {};
+  var refListeners = {};
   var replenishmentCache = Object.create(null);
   var replenishmentCacheRevision = 0;
   var moveQueueItems = [], moveQueueRef = null, moveQueueListener = null, moveQueueScope = '', moveQueueError = '';
@@ -127,8 +128,8 @@
   function setStatus(msg,isError){ var el=document.getElementById('stockStatus'); if(el){el.textContent=msg || '';el.style.color=isError?'#b42318':'var(--text-light)';} }
   function cardPhotoUrl(url){
     url=String(url||'');
-    // Deliver only a thumbnail close to the 76px card image size; keep the original URL in Firebase.
-    return url.replace('/image/upload/','/image/upload/c_fill,w_240,h_240,q_auto:low,f_auto/');
+    // Deliver a 160px thumbnail for 56–76px cards; keep the original URL in Firebase.
+    return url.replace('/image/upload/','/image/upload/c_fill,w_160,h_160,q_auto:low,f_auto/');
   }
   function initPage(){
     var shell=document.getElementById('workspaceShell');
@@ -159,12 +160,13 @@
     render();
   }
   function load(){
-    if(!window.db || !db.ref) return;
+    // Stock listeners are user-scoped: do not download warehouse data on the login screen.
+    if(!user() || !window.db || !db.ref) return;
     [['products',PRODUCTS_PATH],['balances',BALANCES_PATH],['directions',DIRECTIONS_PATH]].forEach(function(pair){
       var name=pair[0];
       if(refs[name]) return;
       refs[name]=db.ref(pair[1]);
-      refs[name].on('value',function(snap){
+      refListeners[name]=function(snap){
         var v=snap.val() || {};
         if(name==='products') products=v;
         else if(name==='balances') balances=v;
@@ -180,10 +182,25 @@
         if(typeof window.renderPurchaseRecommendations==='function'&&document.getElementById('workspacePage-purchase')&&document.getElementById('workspacePage-purchase').classList.contains('active'))window.renderPurchaseRecommendations();
         if(name==='directions'&&typeof window.renderStoresManagement==='function')window.renderStoresManagement();
         if(window.refreshStockSaleProducts && document.getElementById('stockSaleEnabled') && document.getElementById('stockSaleEnabled').checked) window.refreshStockSaleProducts();
-      },function(err){ console.error('Stock sync '+name,err); loaded[name]=true; render(); });
+      };
+      refs[name].on('value',refListeners[name],function(err){ console.error('Stock sync '+name,err); loaded[name]=true; render(); });
     });
   }
-  function loadMovements(){ if(refs.movements||!window.db||!db.ref)return; refs.movements=db.ref(MOVEMENTS_PATH); refs.movements.on('value',function(snap){movements=snap.val()||{};loaded.movements=true;render();},function(err){console.error('Stock history sync',err);loaded.movements=true;render();}); }
+  function loadMovements(){
+    if(refs.movements||!user()||!window.db||!db.ref)return;
+    refs.movements=db.ref(MOVEMENTS_PATH);
+    refListeners.movements=function(snap){movements=snap.val()||{};loaded.movements=true;render();};
+    refs.movements.on('value',refListeners.movements,function(err){console.error('Stock history sync',err);loaded.movements=true;render();});
+  }
+  function stopStockSync(){
+    Object.keys(refs).forEach(function(name){
+      if(refs[name]&&refListeners[name])refs[name].off('value',refListeners[name]);
+    });
+    refs={};refListeners={};
+    products={};balances={};movements={};storeDirections={};
+    loaded.products=false;loaded.balances=false;loaded.movements=false;loaded.directions=false;
+    replenishmentCache=Object.create(null);replenishmentCacheRevision++;
+  }
   function getStoreDirectionSetting(storeKey){return String(storeDirections[String(storeKey)]||'');}
   function saveStoreDirectionSetting(storeKey,direction){
     var key=String(storeKey||''),value=String(direction||'');
@@ -1198,18 +1215,24 @@
       var file=input.files&&input.files[0];input.remove();if(!file)return;
       if(!/^image\//i.test(file.type)){alert('Выберите файл изображения.');return;}
       if(file.size>8*1024*1024){alert('Фото должно быть не больше 8 МБ.');return;}
-      setStatus('Загружаем новую фотографию…');
-      var data=new FormData();data.append('file',file);data.append('upload_preset','easy_stock_photos');data.append('folder','stock-products/'+String(p.org||'org').replace(/[^a-zA-Z0-9_-]/g,'_'));
-      var xhr=new XMLHttpRequest();xhr.open('POST','https://api.cloudinary.com/v1_1/gnesaxoh/image/upload',true);xhr.timeout=45000;
-      xhr.onload=function(){
-        var response={};try{response=JSON.parse(xhr.responseText||'{}');}catch(e){}
-        if(xhr.status<200||xhr.status>=300||!response.secure_url){setStatus('');alert(response.error&&response.error.message||'Не удалось загрузить фотографию.');return;}
-        var patch={};patch[PRODUCTS_PATH+'/'+id+'/photoUrl']=response.secure_url;patch[PRODUCTS_PATH+'/'+id+'/photoPublicId']=response.public_id||'';patch[PRODUCTS_PATH+'/'+id+'/updatedAt']=Date.now();patch[PRODUCTS_PATH+'/'+id+'/updatedById']=String(user().id);
-        db.ref().update(patch).then(function(){p.photoUrl=response.secure_url;p.photoPublicId=response.public_id||'';p.updatedAt=Date.now();addAuditSafe('stock_product_photo','Продавец обновил фото товара: '+(p.name||id));setStatus('Фотография обновлена.');render();}).catch(function(e){setStatus('');alert('Фото загружено, но не удалось сохранить карточку: '+(e&&e.message||e));});
-      };
-      xhr.onerror=function(){setStatus('');alert('Не удалось связаться с Cloudinary. Проверьте интернет.');};
-      xhr.ontimeout=function(){setStatus('');alert('Загрузка фото не завершилась за 45 секунд.');};
-      xhr.send(data);
+      setStatus('Подготавливаем фотографию…');
+      prepareStockPhoto(file).then(function(preparedFile){
+        var data=new FormData();
+        data.append('file',preparedFile,preparedFile.name||file.name||'product-photo.jpg');
+        data.append('upload_preset','easy_stock_photos');
+        data.append('folder','stock-products/'+String(p.org||'org').replace(/[^a-zA-Z0-9_-]/g,'_'));
+        var xhr=new XMLHttpRequest();xhr.open('POST','https://api.cloudinary.com/v1_1/gnesaxoh/image/upload',true);xhr.timeout=45000;
+        xhr.onload=function(){
+          var response={};try{response=JSON.parse(xhr.responseText||'{}');}catch(e){}
+          if(xhr.status<200||xhr.status>=300||!response.secure_url){setStatus('');alert(response.error&&response.error.message||'Не удалось загрузить фотографию.');return;}
+          var patch={};patch[PRODUCTS_PATH+'/'+id+'/photoUrl']=response.secure_url;patch[PRODUCTS_PATH+'/'+id+'/photoPublicId']=response.public_id||'';patch[PRODUCTS_PATH+'/'+id+'/updatedAt']=Date.now();patch[PRODUCTS_PATH+'/'+id+'/updatedById']=String(user().id);
+          db.ref().update(patch).then(function(){p.photoUrl=response.secure_url;p.photoPublicId=response.public_id||'';p.updatedAt=Date.now();addAuditSafe('stock_product_photo','Продавец обновил фото товара: '+(p.name||id));setStatus('Фотография обновлена.');render();}).catch(function(e){setStatus('');alert('Фото загружено, но не удалось сохранить карточку: '+(e&&e.message||e));});
+        };
+        xhr.onerror=function(){setStatus('');alert('Не удалось связаться с Cloudinary. Проверьте интернет.');};
+        xhr.ontimeout=function(){setStatus('');alert('Загрузка фото не завершилась за 45 секунд.');};
+        setStatus('Загружаем сжатую фотографию…');
+        xhr.send(data);
+      }).catch(function(error){setStatus('');console.error('Stock photo preparation failed:',error);alert('Не удалось подготовить фотографию. Попробуйте другое изображение.');});
     },{once:true});
     input.click();
   }
@@ -1656,7 +1679,7 @@
     window.stockAdjust=adjust;window.stockAddSizes=addSizes;window.stockDelete=deleteProduct;window.stockMove=moveProduct;window.stockSetSearch=setSearch;window.stockSetFilter=setFilter;window.stockGetSaleOptions=getSaleOptions;window.stockGetStoreDirection=getStoreDirectionSetting;window.stockSaveStoreDirection=saveStoreDirectionSetting;window.stockCompleteSale=completeSaleFromStock;window.stockPrepareSaleReturn=prepareSaleReturn;window.stockPrepareSaleDelete=prepareSaleDelete;window.stockRefresh=render;window.stockGetFinancialSummary=getFinancialSummary;window.stockGetReplenishmentRecommendations=getReplenishmentRecommendations;window.stockGetStoreCategoryStockSummary=getStoreCategoryStockSummary;window.stockGetCardSalesRanking=getCardSalesRanking;window.stockGetCardSalesAntiRanking=getCardSalesAntiRanking;window.stockGetStockConsolidationRecommendations=getStockConsolidationRecommendations;window.stockInvalidateReplenishmentCache=invalidateReplenishmentCache;
   }
   function start(){
-    expose();load();initPage();startMoveQueueSync();
+    expose();initPage();if(user())load();startMoveQueueSync();
     if(typeof window.switchOrg==='function' && !window.switchOrg._stockWrapped){
       var originalSwitchOrg=window.switchOrg;
       var wrappedSwitchOrg=function(key){var result=originalSwitchOrg.apply(this,arguments);render();return result;};
@@ -1667,8 +1690,8 @@
       var wrapped=function(id){if(id==='stock'){show();return;}var result=originalShow.apply(this,arguments);if(id==='stores'&&typeof window.renderStoresManagement==='function')window.renderStoresManagement();return result;};
       wrapped._stockWrapped=true;window.easyAppSyncShowPage=wrapped;
     }
-    if(typeof window.enterApp==='function'&&!window.enterApp._stockMoveQueueWrapped){var originalEnterApp=window.enterApp;var wrappedEnterApp=function(){var result=originalEnterApp.apply(this,arguments);startMoveQueueSync();return result;};wrappedEnterApp._stockMoveQueueWrapped=true;window.enterApp=wrappedEnterApp;}
-    if(typeof window.doLogout==='function'&&!window.doLogout._stockMoveQueueWrapped){var originalDoLogout=window.doLogout;var wrappedDoLogout=function(){stopMoveQueueSync();moveQueueItems=[];return originalDoLogout.apply(this,arguments);};wrappedDoLogout._stockMoveQueueWrapped=true;window.doLogout=wrappedDoLogout;}
+    if(typeof window.enterApp==='function'&&!window.enterApp._stockMoveQueueWrapped){var originalEnterApp=window.enterApp;var wrappedEnterApp=function(){var result=originalEnterApp.apply(this,arguments);load();startMoveQueueSync();return result;};wrappedEnterApp._stockMoveQueueWrapped=true;window.enterApp=wrappedEnterApp;}
+    if(typeof window.doLogout==='function'&&!window.doLogout._stockMoveQueueWrapped){var originalDoLogout=window.doLogout;var wrappedDoLogout=function(){var result=originalDoLogout.apply(this,arguments);stopMoveQueueSync();moveQueueItems=[];stopStockSync();return result;};wrappedDoLogout._stockMoveQueueWrapped=true;window.doLogout=wrappedDoLogout;}
     // Avoid observing stockRoot mutations: render() updates innerHTML and would retrigger itself.
     if(user())render();
   }
