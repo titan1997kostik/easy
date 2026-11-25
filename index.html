@@ -3362,7 +3362,7 @@ db.ref('deleted_stores_data').on('value', function(snapshot) {
     saveAllToLocal();
     refreshStoreDropdowns();
     if (currentUser) renderAll();
-}, function(error) { setFirebaseSyncError('deleted_stores_data', error); });
+}, function(error) { setFirebaseCoreDataError('deleted_stores_data', error); });
 
 db.ref('store_reset_data').on('value', function(snapshot) {
     var remote = snapshot.val() || {};
@@ -3376,7 +3376,7 @@ db.ref('store_reset_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-}, function(error) { setFirebaseSyncError('store_reset_data', error); });
+}, function(error) { setFirebaseCoreDataError('store_reset_data', error); });
 
 db.ref('deleted_sales_data').on('value', function(snapshot) {
     var remote = snapshot.val() || {};
@@ -3388,7 +3388,7 @@ db.ref('deleted_sales_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-}, function(error) { setFirebaseSyncError('deleted_sales_data', error); });
+}, function(error) { setFirebaseCoreDataError('deleted_sales_data', error); });
 
 db.ref('deleted_expenses_data').on('value', function(snapshot) {
     var remote = snapshot.val() || {};
@@ -3400,7 +3400,7 @@ db.ref('deleted_expenses_data').on('value', function(snapshot) {
     removeDeletedStoreDataFromMemory();
     saveAllToLocal();
     if (currentUser) renderAll();
-}, function(error) { setFirebaseSyncError('deleted_expenses_data', error); });
+}, function(error) { setFirebaseCoreDataError('deleted_expenses_data', error); });
 
 function applySalesSnapshot(snapshot) {
     var data = snapshot.val() || {};
@@ -3486,6 +3486,7 @@ salesRootValueListener = function(snapshot) {
 
 // Shared product catalogue: historical sale records retain productId even when a product is archived or renamed.
 db.ref('products_catalog_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('products_catalog_data');
     var remote = snapshot.val() || {};
     var remoteItems = Object.keys(remote).map(function(key) {
         if (!remote[key] || typeof remote[key] !== 'object') return null;
@@ -3501,6 +3502,7 @@ db.ref('products_catalog_data').on('value', function(snapshot) {
     if (currentUser && isWorkspacePageActive('analytics') && typeof drawChart === 'function') drawChart();
 }, function(error) {
     console.error('Не удалось загрузить каталог товаров:', error);
+    setFirebaseCoreDataError('products_catalog_data', error);
     productCatalogLoaded = productCatalog.length > 0;
     if (typeof renderProductCatalogSelect === 'function') renderProductCatalogSelect();
     if (typeof renderProductCatalogManager === 'function') renderProductCatalogManager();
@@ -3518,6 +3520,7 @@ expensesRootValueListener = function(snapshot) {
 
 // Recurring monthly expenses are stored once in Firebase and prorated by calendar day in analytics.
 db.ref('recurring_expenses_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('recurring_expenses_data');
     var remote = snapshot.val() || {};
     var arr = [];
     Object.keys(remote).forEach(function(key) {
@@ -3541,9 +3544,10 @@ db.ref('recurring_expenses_data').on('value', function(snapshot) {
         renderRecurringExpenseManager();
         drawChart();
     }
-});
+}, function(error) { setFirebaseCoreDataError('recurring_expenses_data', error); });
 
 db.ref('salary_expenses_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('salary_expenses_data');
     var remote = snapshot.val() || {};
     var arr = [];
     Object.keys(remote).forEach(function(key) {
@@ -3564,9 +3568,10 @@ db.ref('salary_expenses_data').on('value', function(snapshot) {
         if (item && item._pendingSync === true) uploadPendingLocalRecord('salary_expenses_data/' + item.id, item);
     });
     if (currentUser) drawChart();
-});
+}, function(error) { setFirebaseCoreDataError('salary_expenses_data', error); });
 
 db.ref('return_events_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('return_events_data');
     var remote = snapshot.val() || {};
     var arr = [];
     Object.keys(remote).forEach(function(key) {
@@ -3585,9 +3590,10 @@ db.ref('return_events_data').on('value', function(snapshot) {
     invalidateAnalyticsCache();
     saveAllToLocal();
     if (currentUser) { renderAll(); if (typeof drawChart === 'function') drawChart(); }
-});
+}, function(error) { setFirebaseCoreDataError('return_events_data', error); });
 
 db.ref('salary_ledger_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('salary_ledger_data');
     var remote = snapshot.val() && typeof snapshot.val() === 'object' ? snapshot.val() : {};
     var cachedLedger = salaryLedger && typeof salaryLedger === 'object' ? salaryLedger : {};
     var nextLedger = {};
@@ -3606,9 +3612,10 @@ db.ref('salary_ledger_data').on('value', function(snapshot) {
     saveAllToLocal();
     reconcileMissingSalaryLedgerEntries();
     if (currentUser) renderSalaryBlock();
-});
+}, function(error) { setFirebaseCoreDataError('salary_ledger_data', error); });
 
 db.ref('tasks_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('tasks_data');
     var remote = snapshot.val() || {};
     var arr = [];
     Object.keys(remote).forEach(function(key) {
@@ -3619,9 +3626,10 @@ db.ref('tasks_data').on('value', function(snapshot) {
     tasksDataLoaded = true;
     saveAllToLocal();
     if (currentUser) renderTasks();
-});
+}, function(error) { setFirebaseCoreDataError('tasks_data', error); });
 
 db.ref('users_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('users_data');
     isRemoteChange = true;
     var data = snapshot.val() || {};
     var arr = [];
@@ -3663,9 +3671,10 @@ db.ref('users_data').on('value', function(snapshot) {
         if (typeof renderEmployeePerformance === 'function') renderEmployeePerformance();
     }
     isRemoteChange = false;
-});
+}, function(error) { setFirebaseCoreDataError('users_data', error); });
 
 db.ref('breaks_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('breaks_data');
     isRemoteChange = true;
     var arr = [];
     var serverIds = Object.create(null);
@@ -3691,7 +3700,7 @@ db.ref('breaks_data').on('value', function(snapshot) {
     breaksData.slice().forEach(function(item) { if (item && item._pendingSync === true) uploadPendingLocalRecord('breaks_data/' + item.id, item); });
     if (currentUser && currentUser.role === 'admin') { renderBreaksTable(); }
     isRemoteChange = false;
-});
+}, function(error) { setFirebaseCoreDataError('breaks_data', error); });
 
 db.ref('stores_data').on('value', function(snapshot) {
     clearFirebaseCoreDataError('stores_data');
@@ -3733,6 +3742,7 @@ db.ref('store_orgs_data').on('value', function(snapshot) {
 }, function(error) { setFirebaseCoreDataError('store_orgs_data', error); });
 
 db.ref('audit_log_data').limitToLast(500).on('value', function(snapshot) {
+    clearFirebaseCoreDataError('audit_log_data');
     isRemoteChange = true;
     var arr = [];
     var serverIds = {};
@@ -3749,9 +3759,10 @@ db.ref('audit_log_data').limitToLast(500).on('value', function(snapshot) {
     invalidateAnalyticsCache();
     if (currentUser && currentUser.role === 'admin') { renderAuditLog(); }
     isRemoteChange = false;
-});
+}, function(error) { setFirebaseCoreDataError('audit_log_data', error); });
 
 db.ref('store_shifts_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('store_shifts_data');
     // КРИТИЧЕСКИЙ СЕЙФГАРД: Если кассир прямо сейчас нажал кнопку смены локально,
     // игнорируем входящий старый снимок сети, пока не завершится отправка на сервер.
     if (typeof isShiftMutating !== 'undefined' && isShiftMutating) {
@@ -3807,11 +3818,12 @@ db.ref('store_shifts_data').on('value', function(snapshot) {
     if (currentUser) { drawChart(); renderEmployeePerformance(); if (typeof renderStoreSalesPlans === 'function') renderStoreSalesPlans(false); }
     isRemoteChange = false;
     if (typeof syncPendingOfflineShiftOpens === 'function') syncPendingOfflineShiftOpens();
-});
+}, function(error) { setFirebaseCoreDataError('store_shifts_data', error); });
 
 
 
 db.ref('cash_adjustments_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('cash_adjustments_data');
     isRemoteChange = true;
     var val = snapshot.val() || {};
     cashAdjustments = (val && typeof val === 'object') ? val : {};
@@ -3821,11 +3833,12 @@ db.ref('cash_adjustments_data').on('value', function(snapshot) {
     });
     if (currentUser) { renderAll(); renderStoreCashTable(); }
     isRemoteChange = false;
-});
+}, function(error) { setFirebaseCoreDataError('cash_adjustments_data', error); });
 
 // Cash collection journal: one transaction bucket per store and local calendar date.
 // Collection events are movements of cash out of the drawer, not expenses.
 db.ref('cash_collections_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('cash_collections_data');
     var root = snapshot.val() || {};
     var next = [];
     Object.keys(root).forEach(function(bucketKey) {
@@ -3851,7 +3864,7 @@ db.ref('cash_collections_data').on('value', function(snapshot) {
         renderStoreCashTable();
         renderCashWidget();
     }
-});
+}, function(error) { setFirebaseCoreDataError('cash_collections_data', error); });
 
 function verifyCurrentSessionAgainstServerDeletionLedgers() {
     if (!currentUser || !syncConnected || typeof db === 'undefined' || !db || typeof db.ref !== 'function') return;
@@ -3879,20 +3892,22 @@ function verifyCurrentSessionAgainstServerDeletionLedgers() {
 }
 
 db.ref('deleted_user_ids_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('deleted_user_ids_data');
     var val = snapshot.val();
     deletedUserIds = val ? Object.keys(val).map(function(k){ return val[k]; }) : [];
     saveAllToLocal();
     if (syncConnected) verifyCurrentSessionAgainstServerDeletionLedgers();
     if (currentUser) { renderUserManageTable(); renderSalaryManagement(); }
-});
+}, function(error) { setFirebaseCoreDataError('deleted_user_ids_data', error); });
 
 db.ref('deleted_super_admins_data').on('value', function(snapshot) {
+    clearFirebaseCoreDataError('deleted_super_admins_data');
     var val = snapshot.val();
     deletedSuperAdmins = val ? Object.keys(val).map(function(k){ return val[k]; }) : [];
     saveAllToLocal();
     if (syncConnected) verifyCurrentSessionAgainstServerDeletionLedgers();
     if (currentUser) { renderUserManageTable(); renderSalaryManagement(); }
-});
+}, function(error) { setFirebaseCoreDataError('deleted_super_admins_data', error); });
 
 // ========== FIREBASE CONNECTION STATUS ==========
 // This connection state remains internal for cloud operations; the header indicator shows internet access separately.
@@ -12815,6 +12830,7 @@ function saveStoreSalesPlan() {
 // Keep plans available offline from the local cache and then sync from Firebase.
 if (typeof db !== 'undefined' && db && db.ref) {
     db.ref('sales_plans_data').on('value', function(snapshot) {
+        clearFirebaseCoreDataError('sales_plans_data');
         storeSalesPlans = snapshot.val() || {};
         try { localStorage.setItem('easyAppSync_storeSalesPlans', JSON.stringify(storeSalesPlans)); } catch(e) {}
         if (currentUser) {
@@ -12823,6 +12839,7 @@ if (typeof db !== 'undefined' && db && db.ref) {
         }
     }, function(error) {
         console.error('Не удалось загрузить планы продаж из Firebase:', error);
+        setFirebaseCoreDataError('sales_plans_data', error);
     });
 }
 
