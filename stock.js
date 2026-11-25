@@ -10,6 +10,7 @@
   var movements = {};
   var storeDirections = {};
   var loaded = { products:false, balances:false, movements:false, directions:false };
+  var stockLoadErrors = { products:'', balances:Object.create(null), movements:'', directions:'' };
   var activeFilter = 'all';
   var adminTab = 'shops';
   var selectedStoreId = '';
@@ -74,12 +75,56 @@
   }
   function storeId(){ return isSeller() ? String(user().store || '') : ''; }
   function warehouseId(){ return 'warehouse__' + org(); }
-  function stockLocationIds(){ return visibleStoreIds().concat([warehouseId()]); }
+  function stockLocationIds(){
+    // Sellers only need their own store balance. Admins retain the full organization view.
+    if(isSeller())return storeId()?[storeId()]:[];
+    return visibleStoreIds().concat([warehouseId()]);
+  }
   function stockLocationName(id){ return String(id)===warehouseId() ? 'Склад хранения' : String(window.STORES[id]||id); }
   function storeDirection(id){ return String(storeDirections[String(id)] || ''); }
   function visibleStoreIds(){ return typeof getVisibleStoreKeys === 'function' ? getVisibleStoreKeys().map(String) : Object.keys(window.STORES || {}); }
   function canUse(){ return !!(user() && typeof canUseStoreData === 'function' && canUseStoreData() && window.db && db.ref); }
-  function statusText(){ return loaded.products&&loaded.balances&&loaded.directions ? '' : 'Загружаем складские данные из Firebase…'; }
+  function stockLoadErrorMessage(error){ return String(error&&error.message||error||'ошибка Firebase'); }
+  function stockLoadErrorMessages(){
+    var errors=[];
+    if(stockLoadErrors.products)errors.push('Каталог товаров: '+stockLoadErrors.products);
+    if(stockLoadErrors.directions)errors.push('Направления магазинов: '+stockLoadErrors.directions);
+    Object.keys(stockLoadErrors.balances).forEach(function(id){
+      errors.push('Остатки («'+stockLocationName(id)+'»): '+stockLoadErrors.balances[id]);
+    });
+    if(isAdmin()&&adminTab==='history'&&stockLoadErrors.movements)errors.push('История операций: '+stockLoadErrors.movements);
+    return errors;
+  }
+  function hasStockLoadErrors(){ return stockLoadErrorMessages().length>0; }
+  function statusText(){
+    var errors=stockLoadErrorMessages();
+    if(errors.length)return 'Не удалось загрузить часть данных склада. '+errors.join(' | ');
+    return loaded.products&&loaded.balances&&loaded.directions ? '' : 'Загружаем складские данные из Firebase…';
+  }
+  function retryFailedLoads(){
+    if(stockLoadErrors.products){
+      if(refs.products&&refListeners.products)refs.products.off('value',refListeners.products);
+      delete refs.products;delete refListeners.products;
+      loaded.products=false;productScope='';productsQueryFallback=false;stockLoadErrors.products='';
+    }
+    if(stockLoadErrors.directions){
+      if(refs.directions&&refListeners.directions)refs.directions.off('value',refListeners.directions);
+      delete refs.directions;delete refListeners.directions;
+      loaded.directions=false;stockLoadErrors.directions='';
+    }
+    Object.keys(stockLoadErrors.balances).forEach(function(id){
+      if(balanceRefs[id]&&balanceListeners[id])balanceRefs[id].off('value',balanceListeners[id]);
+      delete balanceRefs[id];delete balanceListeners[id];delete balanceLoadedById[id];delete balances[id];
+      delete stockLoadErrors.balances[id];
+    });
+    if(stockLoadErrors.movements){
+      if(refs.movements&&refListeners.movements)refs.movements.off('value',refListeners.movements);
+      delete refs.movements;delete refListeners.movements;
+      loaded.movements=false;movementScope='';movementsQueryFallback=false;stockLoadErrors.movements='';
+    }
+    syncStockSubscriptions();
+    render();
+  }
   function allProducts(){ return Object.keys(products).map(function(k){return products[k];}).filter(function(p){return p && p.org === org() && !p.mergedInto;}); }
   function sellerCanSee(p){
     if (!p || p.org !== org()) return false;
@@ -167,9 +212,9 @@
     render();
   }
   function stockDataChanged(name){
-    if(name==='products')loaded.products=true;
-    else if(name==='directions')loaded.directions=true;
-    else if(name==='movements')loaded.movements=true;
+    if(name==='products'){loaded.products=true;stockLoadErrors.products='';}
+    else if(name==='directions'){loaded.directions=true;stockLoadErrors.directions='';}
+    else if(name==='movements'){loaded.movements=true;stockLoadErrors.movements='';}
     startMoveQueueSync();
     invalidateReplenishmentCache();
     render();
@@ -186,7 +231,7 @@
     productScope=scope;
     productsQueryFallback=false;
     refs.products=db.ref(PRODUCTS_PATH).orderByChild('org').equalTo(scope);
-    refListeners.products=function(snap){products=snap.val()||{};stockDataChanged('products');};
+    refListeners.products=function(snap){products=snap.val()||{};stockLoadErrors.products='';stockDataChanged('products');};
     refs.products.on('value',refListeners.products,function(error){
       console.warn('Не удалось загрузить каталог склада по организации; используем совместимый режим:',error);
       if(refs.products&&refListeners.products)refs.products.off('value',refListeners.products);
@@ -194,7 +239,9 @@
       productsQueryFallback=true;
       refs.products=db.ref(PRODUCTS_PATH);
       refs.products.on('value',refListeners.products,function(fallbackError){
-        console.error('Stock products sync',fallbackError);loaded.products=true;render();
+        console.error('Stock products sync',fallbackError);
+        stockLoadErrors.products=stockLoadErrorMessage(fallbackError);
+        loaded.products=false;render();
       });
     });
   }
@@ -212,20 +259,22 @@
     Object.keys(balanceRefs).forEach(function(id){
       if(wanted[id])return;
       if(balanceRefs[id]&&balanceListeners[id])balanceRefs[id].off('value',balanceListeners[id]);
-      delete balanceRefs[id];delete balanceListeners[id];delete balanceLoadedById[id];delete balances[id];
+      delete balanceRefs[id];delete balanceListeners[id];delete balanceLoadedById[id];delete balances[id];delete stockLoadErrors.balances[id];
     });
     Object.keys(wanted).forEach(function(id){
       if(balanceRefs[id])return;
       balanceRefs[id]=db.ref(BALANCES_PATH+'/'+id);
       balanceListeners[id]=function(snapshot){
         balances[id]=snapshot.val()||{};
+        delete stockLoadErrors.balances[id];
         balanceLoadedById[id]=true;
         updateBalancesLoaded();
         stockDataChanged('balances');
       };
       balanceRefs[id].on('value',balanceListeners[id],function(error){
         console.error('Stock balance sync '+id,error);
-        balanceLoadedById[id]=true;
+        stockLoadErrors.balances[id]=stockLoadErrorMessage(error);
+        delete balanceLoadedById[id];
         updateBalancesLoaded();
         render();
       });
@@ -238,8 +287,11 @@
     listenForProducts();
     if(!refs.directions){
       refs.directions=db.ref(DIRECTIONS_PATH);
-      refListeners.directions=function(snap){storeDirections=snap.val()||{};stockDataChanged('directions');};
-      refs.directions.on('value',refListeners.directions,function(err){console.error('Stock directions sync',err);loaded.directions=true;render();});
+      refListeners.directions=function(snap){storeDirections=snap.val()||{};stockLoadErrors.directions='';stockDataChanged('directions');};
+      refs.directions.on('value',refListeners.directions,function(err){
+        console.error('Stock directions sync',err);
+        stockLoadErrors.directions=stockLoadErrorMessage(err);loaded.directions=false;render();
+      });
     }
     syncBalanceListeners();
   }
@@ -250,14 +302,17 @@
     if(refs.movements&&refListeners.movements)refs.movements.off('value',refListeners.movements);
     refs.movements=db.ref(MOVEMENTS_PATH).orderByChild('org').equalTo(scope);
     movementScope=scope;movementsQueryFallback=false;
-    refListeners.movements=function(snap){movements=snap.val()||{};stockDataChanged('movements');};
+    refListeners.movements=function(snap){movements=snap.val()||{};stockLoadErrors.movements='';stockDataChanged('movements');};
     refs.movements.on('value',refListeners.movements,function(error){
       console.warn('Не удалось загрузить историю склада по организации; используем совместимый режим:',error);
       if(refs.movements&&refListeners.movements)refs.movements.off('value',refListeners.movements);
-      if(movementsQueryFallback){loaded.movements=true;render();return;}
+      if(movementsQueryFallback){stockLoadErrors.movements=stockLoadErrorMessage(error);loaded.movements=false;render();return;}
       movementsQueryFallback=true;
       refs.movements=db.ref(MOVEMENTS_PATH);
-      refs.movements.on('value',refListeners.movements,function(fallbackError){console.error('Stock history sync',fallbackError);loaded.movements=true;render();});
+      refs.movements.on('value',refListeners.movements,function(fallbackError){
+        console.error('Stock history sync',fallbackError);
+        stockLoadErrors.movements=stockLoadErrorMessage(fallbackError);loaded.movements=false;render();
+      });
     });
   }
   function syncStockSubscriptions(){
@@ -266,12 +321,12 @@
     if(refs.products&&productScope!==scope){
       refs.products.off('value',refListeners.products);
       delete refs.products;delete refListeners.products;
-      products={};loaded.products=false;productScope='';productsQueryFallback=false;
+      products={};loaded.products=false;productScope='';productsQueryFallback=false;stockLoadErrors.products='';
     }
     if(refs.movements&&movementScope!==scope){
       refs.movements.off('value',refListeners.movements);
       delete refs.movements;delete refListeners.movements;
-      movements={};loaded.movements=false;movementScope='';movementsQueryFallback=false;
+      movements={};loaded.movements=false;movementScope='';movementsQueryFallback=false;stockLoadErrors.movements='';
     }
     load();
     if(isAdmin()&&adminTab==='history')loadMovements();
@@ -288,6 +343,7 @@
     products={};balances={};movements={};storeDirections={};
     productScope='';movementScope='';productsQueryFallback=false;movementsQueryFallback=false;
     loaded.products=false;loaded.balances=false;loaded.movements=false;loaded.directions=false;
+    stockLoadErrors={products:'',balances:Object.create(null),movements:'',directions:''};
     replenishmentCache=Object.create(null);replenishmentCacheRevision++;
   }
   function getStoreDirectionSetting(storeKey){return String(storeDirections[String(storeKey)]||'');}
@@ -486,6 +542,13 @@
     }
     return html;
   }
+  function renderLoadState(root,message,canRetry){
+    root.innerHTML='<div class="card" style="white-space:pre-line;">'+esc(message)+
+      (canRetry?'<div style="margin-top:12px;"><button type="button" class="btn btn-secondary" data-stock-retry>Повторить загрузку</button></div>':'')+
+      '</div>';
+    var retryButton=root.querySelector('[data-stock-retry]');
+    if(retryButton)retryButton.addEventListener('click',retryFailedLoads);
+  }
   function render(){
     ensureStockActionStyles();
     if(!initPage()) return;
@@ -494,7 +557,7 @@
     var root=document.getElementById('stockRoot'); if(!root) return;
     if(!user()){root.innerHTML='<div class="card">Войдите в приложение, чтобы открыть склад.</div>';return;}
     if(!canUse()){root.innerHTML='<div class="card">Склад станет доступен после проверки подключения к Firebase.</div>';return;}
-    var loading=statusText(); if(loading){root.innerHTML='<div class="card">'+esc(loading)+'</div>';return;} if(isAdmin()&&adminTab==='history'&&!loaded.movements){root.innerHTML='<div class="card">Загружаем историю складских операций…</div>';loadMovements();return;}
+    var loading=statusText(); if(loading){renderLoadState(root,loading,hasStockLoadErrors());return;} if(isAdmin()&&adminTab==='history'&&!loaded.movements){renderLoadState(root,'Загружаем историю складских операций…',false);loadMovements();return;}
     if(isSeller() && (!storeId() || !storeDirection(storeId()))){
       root.innerHTML='<div class="card"><b>Склад ещё не настроен.</b><p>Попросите администратора назначить направление вашего магазина в разделе «Управление магазинами».</p></div>';return;
     }
